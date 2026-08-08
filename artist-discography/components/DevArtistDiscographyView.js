@@ -20,7 +20,7 @@ import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 
-export default function ArtistDiscographyView({ data, health }) {
+export default function DevArtistDiscographyView({ data, health }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

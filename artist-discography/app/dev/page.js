@@ -1,11 +1,11 @@
 import { loadArtistData } from '../../lib/artistData'
-import ArtistDiscographyView from '../ArtistDiscographyView'
+import DevArtistDiscographyView from '../../components/DevArtistDiscographyView'
 
 export default function DevPage() {
   const { data, health } = loadArtistData()
 
   return (
-    <ArtistDiscographyView
+    <DevArtistDiscographyView
       data={data}
       health={health}
     />
