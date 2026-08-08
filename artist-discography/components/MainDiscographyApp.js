@@ -244,26 +244,30 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           transition: 'background-color 0.3s ease',
         }}
       >
-        {/* Top Screen-Height Hero Section */}
-        <ArtistHero
-          artist={artist}
-          onLogoClick={currentView === 'SINGLE_PROJECT' ? navigateToHome : undefined}
-        />
+        {/* Top Screen-Height Hero Section (Only on main discography view) */}
+        {currentView !== 'SINGLE_PROJECT' && (
+          <ArtistHero
+            artist={artist}
+            onLogoClick={undefined}
+          />
+        )}
 
-        {/* Contained Floating Sticky Nav Bar */}
-        <FloatingNavBar
-          activeTypes={activeTypes}
-          onToggleType={handleToggleType}
-          onResetTypes={handleResetTypes}
-          sortOrder={sortOrder}
-          onSortChange={setSortOrder}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          darkMode={darkMode}
-          onToggleTheme={() => setDarkMode(prev => !prev)}
-          selectedPlatform={selectedPlatform}
-          onOpenPlatformModal={() => setPlatformModalOpen(true)}
-        />
+        {/* Contained Floating Sticky Nav Bar (Only on main discography view) */}
+        {currentView !== 'SINGLE_PROJECT' && (
+          <FloatingNavBar
+            activeTypes={activeTypes}
+            onToggleType={handleToggleType}
+            onResetTypes={handleResetTypes}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            darkMode={darkMode}
+            onToggleTheme={() => setDarkMode(prev => !prev)}
+            selectedPlatform={selectedPlatform}
+            onOpenPlatformModal={() => setPlatformModalOpen(true)}
+          />
+        )}
 
         {/* Main Content Projects Container */}
         <Container maxWidth="md" sx={{ mt: 4, flexGrow: 1 }}>
