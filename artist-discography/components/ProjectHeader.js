@@ -15,7 +15,7 @@ const PLATFORM_ICONS = {
   tidal: '/tidal.webp',
   pandora: '/pandora.webp',
   amazon: '/amazon.webp',
-  itunes: '/apple.webp',
+  itunes: '/itunes.webp',
 }
 
 export default function ProjectHeader({

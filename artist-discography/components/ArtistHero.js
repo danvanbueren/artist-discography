@@ -19,6 +19,7 @@ const SOCIAL_ICONS = {
   tidal: '/tidal.webp',
   pandora: '/pandora.webp',
   amazon: '/amazon.webp',
+  itunes: '/itunes.webp',
 }
 
 export default function ArtistHero({ artist }) {

@@ -24,6 +24,7 @@ export const STREAMING_PLATFORMS = [
   { id: 'amazon', name: 'Amazon Music', icon: '/amazon.webp' },
   { id: 'soundcloud', name: 'SoundCloud', icon: '/soundcloud.webp' },
   { id: 'pandora', name: 'Pandora', icon: '/pandora.webp' },
+  { id: 'itunes', name: 'iTunes Store', icon: '/itunes.webp' },
 ]
 
 export default function PlatformSelectorModal({
