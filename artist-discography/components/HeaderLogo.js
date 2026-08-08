@@ -1,8 +1,15 @@
 'use client'
 
-import { Box } from '@mui/material'
+import { Box, useTheme } from '@mui/material'
+import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
 
 export default function HeaderLogo({ onClick }) {
+  const theme = useTheme()
+  const isDarkMode = theme.palette.mode === 'dark'
+  const analysis = useLogoAnalysis('/api/logo')
+  const logoFilter = getLogoFilter(analysis, isDarkMode, 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))')
+  const hoverLogoFilter = getLogoFilter(analysis, isDarkMode, 'drop-shadow(0px 8px 24px rgba(0,0,0,0.45))')
+
   return (
     <Box
       sx={{
@@ -23,11 +30,11 @@ export default function HeaderLogo({ onClick }) {
           objectFit: 'contain',
           cursor: onClick ? 'pointer' : 'default',
           transition: 'transform 0.25s ease-in-out, filter 0.25s ease-in-out',
-          filter: 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))',
+          filter: logoFilter,
           '&:hover': onClick
             ? {
                 transform: 'scale(1.04)',
-                filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.45))',
+                filter: hoverLogoFilter,
               }
             : {},
         }}

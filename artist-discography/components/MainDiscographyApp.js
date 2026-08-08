@@ -20,11 +20,14 @@ import AudioPlayerBar from './AudioPlayerBar'
 import DevHealthDrawer from './DevHealthDrawer'
 import SubduedText from './SubduedText'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
+import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // System Theme Preference Detection
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
   const [darkMode, setDarkMode] = useState(true)
+  const logoAnalysis = useLogoAnalysis('/api/logo')
+  const singleLogoFilter = getLogoFilter(logoAnalysis, darkMode, 'none')
 
   useEffect(() => {
     const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('themeMode') : null
@@ -365,6 +368,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                       height: { xs: 36, sm: 48, md: 54 },
                       maxWidth: 150,
                       objectFit: 'contain',
+                      filter: singleLogoFilter,
                     }}
                   />
                   <Typography
