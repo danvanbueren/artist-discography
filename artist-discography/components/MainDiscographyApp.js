@@ -11,6 +11,7 @@ import {
   Typography,
   Snackbar,
 } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero from './ArtistHero'
 import FloatingNavBar from './FloatingNavBar'
 import PlatformSelectorModal from './PlatformSelectorModal'
@@ -21,8 +22,30 @@ import SubduedText from './SubduedText'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
-  // Theme state
+  // System Theme Preference Detection
+  const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
   const [darkMode, setDarkMode] = useState(true)
+
+  useEffect(() => {
+    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('themeMode') : null
+    if (savedTheme === 'dark') {
+      setDarkMode(true)
+    } else if (savedTheme === 'light') {
+      setDarkMode(false)
+    } else {
+      setDarkMode(systemPrefersDark)
+    }
+  }, [systemPrefersDark])
+
+  const handleToggleTheme = useCallback(() => {
+    setDarkMode(prev => {
+      const nextMode = !prev
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('themeMode', nextMode ? 'dark' : 'light')
+      }
+      return nextMode
+    })
+  }, [])
 
   // SPA View & Route State
   const [currentView, setCurrentView] = useState('ALL_PROJECTS')
@@ -292,7 +315,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             darkMode={darkMode}
-            onToggleTheme={() => setDarkMode(prev => !prev)}
+            onToggleTheme={handleToggleTheme}
             selectedPlatform={selectedPlatform}
             onOpenPlatformModal={() => setPlatformModalOpen(true)}
           />
