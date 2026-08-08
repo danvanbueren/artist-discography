@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Box,
   Container,
+  Paper,
   Chip,
   IconButton,
   Tooltip,
@@ -11,23 +12,43 @@ import {
   InputAdornment,
   Button,
   Stack,
+  Typography,
   useTheme,
+  Collapse,
+  Fade,
 } from '@mui/material'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import SortRoundedIcon from '@mui/icons-material/SortRounded'
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
+import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded'
+import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded'
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded'
 import HeadsetRoundedIcon from '@mui/icons-material/HeadsetRounded'
-import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
+import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
 
-const PROJECT_TYPES = ['All', 'Album', 'EP', 'Single', 'Collaboration']
+export const FILTER_OPTIONS = [
+  'LP',
+  'EP',
+  'Single',
+  'Feature',
+  'Remix',
+  'Bootleg',
+  'Flip',
+  'Edit',
+]
 
 export default function FloatingNavBar({
-  activeType,
-  onTypeChange,
-  sortOrder,
+  activeTypes = [],
+  onToggleType,
+  onResetTypes,
+  sortOrder = 'newest',
   onSortChange,
-  searchQuery,
+  searchQuery = '',
   onSearchChange,
   darkMode,
   onToggleTheme,
@@ -35,176 +56,396 @@ export default function FloatingNavBar({
   onOpenPlatformModal,
 }) {
   const theme = useTheme()
-  const [showSearch, setShowSearch] = useState(false)
+  const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
+  const inactivityTimerRef = useRef(null)
+
+  // Reset 5-second inactivity timeout timer
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current)
+    }
+    if (navMode !== 'main') {
+      inactivityTimerRef.current = setTimeout(() => {
+        setNavMode('main')
+      }, 5000)
+    }
+  }, [navMode])
+
+  useEffect(() => {
+    resetInactivityTimer()
+    return () => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+    }
+  }, [navMode, resetInactivityTimer])
+
+  // Track any user interaction inside navbar to keep sub-menu open
+  const handleUserInteraction = () => {
+    resetInactivityTimer()
+  }
+
+  const isSearchActive = Boolean(searchQuery && searchQuery.trim() !== '')
+  const isFilterActive = activeTypes.length > 0
 
   return (
-    <Box
+    <Container
+      maxWidth="md"
       sx={{
         position: 'sticky',
-        top: 0,
+        top: 16,
         zIndex: 1100,
-        py: 1.5,
-        px: { xs: 1.5, sm: 3 },
-        backdropFilter: 'blur(16px)',
-        bgcolor: theme.palette.mode === 'dark'
-          ? 'rgba(18, 18, 24, 0.85)'
-          : 'rgba(255, 255, 255, 0.85)',
-        borderBottom: '1px solid',
-        borderColor: theme.palette.mode === 'dark'
-          ? 'rgba(255, 255, 255, 0.08)'
-          : 'rgba(0, 0, 0, 0.08)',
-        transition: 'background-color 0.3s ease, border-color 0.3s ease',
+        px: { xs: 1.5, sm: 2 },
       }}
+      onClick={handleUserInteraction}
     >
-      <Container
-        maxWidth="md"
-        disableGutters
+      <Paper
+        elevation={4}
         sx={{
+          borderRadius: 4,
+          py: 1.25,
+          px: { xs: 2, sm: 3 },
+          backdropFilter: 'blur(16px)',
+          bgcolor: theme.palette.mode === 'dark'
+            ? 'rgba(18, 18, 26, 0.88)'
+            : 'rgba(255, 255, 255, 0.88)',
+          border: '1px solid',
+          borderColor: theme.palette.mode === 'dark'
+            ? 'rgba(255, 255, 255, 0.12)'
+            : 'rgba(0, 0, 0, 0.12)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+          transition: 'all 0.3s ease',
           display: 'flex',
           alignItems: 'center',
-          justify: 'space-between',
-          gap: 1.5,
+          minHeight: 58,
         }}
       >
-        {/* Left: Filter Chips */}
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0.75,
-            overflowX: 'auto',
-            py: 0.5,
-            scrollbarWidth: 'none',
-            '&::-webkit-scrollbar': { display: 'none' },
-            flexShrink: 1,
-          }}
-        >
-          {PROJECT_TYPES.map(type => {
-            const isSelected = activeType === type
-            return (
-              <Chip
-                key={type}
-                label={type === 'All' ? 'All Releases' : type}
-                clickable
-                onClick={() => onTypeChange(type)}
-                color={isSelected ? 'primary' : 'default'}
-                variant={isSelected ? 'filled' : 'outlined'}
+        {/* Back Button when inside a sub-menu */}
+        {navMode !== 'main' && (
+          <Fade in={navMode !== 'main'}>
+            <Tooltip title="Back to Menu" arrow>
+              <IconButton
                 size="small"
-                sx={{
-                  fontWeight: isSelected ? 700 : 500,
-                  fontSize: '0.825rem',
-                  borderRadius: 2,
-                  px: 0.5,
-                  transition: 'all 0.2s ease',
-                }}
-              />
-            )
-          })}
-        </Box>
+                onClick={() => setNavMode('main')}
+                sx={{ mr: 1.5, color: 'text.secondary' }}
+              >
+                <ArrowBackRoundedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Fade>
+        )}
 
-        {/* Right: Actions Stack */}
-        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0 }}>
-          {/* Search Toggle / Input */}
-          {showSearch ? (
+        {/* --- MAIN MENU MODE --- */}
+        {navMode === 'main' && (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              width: '100%',
+              justifyContent: 'space-around',
+              alignItems: 'center',
+            }}
+          >
+            {/* 1. SEARCH ICON & RESET */}
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              <Tooltip title="Search" arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setNavMode('search')}
+                  sx={{
+                    p: 1,
+                    borderRadius: 2,
+                    border: isSearchActive ? '2px solid' : '1px solid transparent',
+                    borderColor: isSearchActive ? 'primary.main' : 'transparent',
+                    bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
+                    color: isSearchActive ? 'primary.main' : 'inherit',
+                  }}
+                >
+                  <SearchRoundedIcon />
+                </IconButton>
+              </Tooltip>
+
+              {isSearchActive && (
+                <Tooltip title="Clear Search" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSearchChange('')
+                    }}
+                    sx={{
+                      p: 0.75,
+                      borderRadius: 2,
+                      border: '2px solid',
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                    }}
+                  >
+                    <RestartAltRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+
+            {/* 2. FILTER ICON & RESET */}
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              <Tooltip title="Filter Projects" arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setNavMode('filter')}
+                  sx={{
+                    p: 1,
+                    borderRadius: 2,
+                    border: isFilterActive ? '2px solid' : '1px solid transparent',
+                    borderColor: isFilterActive ? 'primary.main' : 'transparent',
+                    bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
+                    color: isFilterActive ? 'primary.main' : 'inherit',
+                  }}
+                >
+                  <TuneRoundedIcon />
+                </IconButton>
+              </Tooltip>
+
+              {isFilterActive && (
+                <Tooltip title="Reset Filters" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onResetTypes()
+                    }}
+                    sx={{
+                      p: 0.75,
+                      borderRadius: 2,
+                      border: '2px solid',
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                    }}
+                  >
+                    <RestartAltRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+
+            {/* 3. SORT ICON */}
+            <Tooltip title="Sort Ordering" arrow>
+              <IconButton
+                size="small"
+                onClick={() => setNavMode('sort')}
+                sx={{ p: 1, borderRadius: 2 }}
+              >
+                <SortRoundedIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* 4. SETTINGS ICON */}
+            <Tooltip title="Settings & Preferences" arrow>
+              <IconButton
+                size="small"
+                onClick={() => setNavMode('settings')}
+                sx={{ p: 1, borderRadius: 2 }}
+              >
+                <SettingsRoundedIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        )}
+
+        {/* --- SEARCH MODE (Full-width text input expand) --- */}
+        {navMode === 'search' && (
+          <Box sx={{ flexGrow: 1 }}>
             <TextField
               value={searchQuery}
-              onChange={e => onSearchChange(e.target.value)}
-              placeholder="Search projects & tracks..."
+              onChange={(e) => {
+                onSearchChange(e.target.value)
+                resetInactivityTimer()
+              }}
+              placeholder="Search by title, artist, or track..."
               size="small"
+              fullWidth
               autoFocus
               slotProps={{
                 htmlInput: {
-                  sx: { py: 0.5, px: 1, fontSize: '0.85rem' },
+                  sx: { py: 0.75, fontSize: '0.95rem' },
                 },
                 input: {
-                  endAdornment: (
+                  endAdornment: searchQuery ? (
                     <InputAdornment position="end">
                       <IconButton
                         size="small"
                         onClick={() => {
                           onSearchChange('')
-                          setShowSearch(false)
+                          resetInactivityTimer()
                         }}
                       >
                         <ClearRoundedIcon fontSize="small" />
                       </IconButton>
                     </InputAdornment>
-                  ),
+                  ) : null,
                 },
               }}
-              sx={{ width: { xs: 160, sm: 220 } }}
             />
-          ) : (
-            <Tooltip title="Search Discography" arrow>
-              <IconButton
-                size="small"
-                onClick={() => setShowSearch(true)}
-                sx={{
-                  bgcolor: searchQuery ? 'action.selected' : 'transparent',
-                }}
-              >
-                <SearchRoundedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+          </Box>
+        )}
 
-          {/* Sort Toggle */}
-          <Tooltip title={`Sorted: ${sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}`} arrow>
-            <IconButton
-              size="small"
-              onClick={() => onSortChange(sortOrder === 'newest' ? 'oldest' : 'newest')}
-              sx={{
-                bgcolor: sortOrder === 'oldest' ? 'action.selected' : 'transparent',
+        {/* --- FILTER MODE (Multi-select: LP, EP, Single, Feature, Remix, Bootleg, Flip, Edit) --- */}
+        {navMode === 'filter' && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 0.75,
+              overflowX: 'auto',
+              py: 0.5,
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              flexGrow: 1,
+            }}
+          >
+            {FILTER_OPTIONS.map((type) => {
+              const isSelected = activeTypes.includes(type)
+              return (
+                <Chip
+                  key={type}
+                  label={type}
+                  clickable
+                  onClick={() => {
+                    onToggleType(type)
+                    resetInactivityTimer()
+                  }}
+                  color={isSelected ? 'primary' : 'default'}
+                  variant={isSelected ? 'filled' : 'outlined'}
+                  size="small"
+                  sx={{
+                    fontWeight: isSelected ? 700 : 500,
+                    fontSize: '0.825rem',
+                    borderRadius: 2,
+                    px: 0.5,
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              );
+            })}
+          </Box>
+        )}
+
+        {/* --- SORT MODE --- */}
+        {navMode === 'sort' && (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              overflowX: 'auto',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              flexGrow: 1,
+              alignItems: 'center',
+            }}
+          >
+            <Chip
+              icon={<ArrowDownwardRoundedIcon fontSize="small" />}
+              label="Newest First"
+              clickable
+              onClick={() => {
+                onSortChange('newest')
+                resetInactivityTimer()
               }}
-            >
-              <SortRoundedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+              color={sortOrder === 'newest' ? 'primary' : 'default'}
+              variant={sortOrder === 'newest' ? 'filled' : 'outlined'}
+              size="small"
+            />
+            <Chip
+              icon={<ArrowUpwardRoundedIcon fontSize="small" />}
+              label="Oldest First"
+              clickable
+              onClick={() => {
+                onSortChange('oldest')
+                resetInactivityTimer()
+              }}
+              color={sortOrder === 'oldest' ? 'primary' : 'default'}
+              variant={sortOrder === 'oldest' ? 'filled' : 'outlined'}
+              size="small"
+            />
+            <Chip
+              icon={<SortByAlphaRoundedIcon fontSize="small" />}
+              label="Title A-Z"
+              clickable
+              onClick={() => {
+                onSortChange('title-asc')
+                resetInactivityTimer()
+              }}
+              color={sortOrder === 'title-asc' ? 'primary' : 'default'}
+              variant={sortOrder === 'title-asc' ? 'filled' : 'outlined'}
+              size="small"
+            />
+            <Chip
+              icon={<SortByAlphaRoundedIcon fontSize="small" />}
+              label="Title Z-A"
+              clickable
+              onClick={() => {
+                onSortChange('title-desc')
+                resetInactivityTimer()
+              }}
+              color={sortOrder === 'title-desc' ? 'primary' : 'default'}
+              variant={sortOrder === 'title-desc' ? 'filled' : 'outlined'}
+              size="small"
+            />
+          </Stack>
+        )}
 
-          {/* Platform Selector Button */}
-          <Tooltip title="Preferred Music Platform" arrow>
+        {/* --- SETTINGS MODE (Theme toggle & Platform selector) --- */}
+        {navMode === 'settings' && (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              flexGrow: 1,
+              justifyContent: 'space-around',
+              alignItems: 'center',
+            }}
+          >
             <Button
               size="small"
               variant="outlined"
-              onClick={onOpenPlatformModal}
+              onClick={() => {
+                onOpenPlatformModal()
+                resetInactivityTimer()
+              }}
               startIcon={<HeadsetRoundedIcon fontSize="small" />}
               sx={{
-                borderRadius: 4,
+                borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: '0.775rem',
-                py: 0.25,
-                px: 1.2,
-                whiteSpace: 'nowrap',
-                display: { xs: 'none', sm: 'inline-flex' },
+                fontSize: '0.85rem',
               }}
             >
-              {selectedPlatform ? selectedPlatform.toUpperCase() : 'Platform'}
+              {selectedPlatform ? selectedPlatform.toUpperCase() : 'Preferred Platform'}
             </Button>
-          </Tooltip>
 
-          {/* Mobile Platform Icon Button */}
-          <Tooltip title="Preferred Music Platform" arrow>
-            <IconButton
+            <Button
               size="small"
-              onClick={onOpenPlatformModal}
-              sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+              variant="outlined"
+              onClick={() => {
+                onToggleTheme()
+                resetInactivityTimer()
+              }}
+              startIcon={
+                darkMode ? (
+                  <LightModeRoundedIcon fontSize="small" color="warning" />
+                ) : (
+                  <DarkModeRoundedIcon fontSize="small" />
+                )
+              }
+              sx={{
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+              }}
             >
-              <HeadsetRoundedIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-
-          {/* Dark/Light Mode Toggle */}
-          <Tooltip title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'} arrow>
-            <IconButton size="small" onClick={onToggleTheme}>
-              {darkMode ? (
-                <LightModeRoundedIcon fontSize="small" color="warning" />
-              ) : (
-                <DarkModeRoundedIcon fontSize="small" />
-              )}
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Container>
-    </Box>
+              {darkMode ? 'Light Theme' : 'Dark Theme'}
+            </Button>
+          </Stack>
+        )}
+      </Paper>
+    </Container>
   )
 }

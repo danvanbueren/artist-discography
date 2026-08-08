@@ -8,7 +8,6 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
-  Typography,
 } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import ArtistHero from './ArtistHero'
@@ -25,7 +24,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [darkMode, setDarkMode] = useState(true)
 
   // SPA View & Route State
-  const [currentView, setCurrentView] = useState('ALL_PROJECTS') // 'ALL_PROJECTS' | 'SINGLE_PROJECT'
+  const [currentView, setCurrentView] = useState('ALL_PROJECTS')
   const [selectedProject, setSelectedProject] = useState(null)
   const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(null)
 
@@ -37,9 +36,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [playingTrack, setPlayingTrack] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
 
-  // Filter & Sort State
-  const [activeType, setActiveType] = useState('All')
-  const [sortOrder, setSortOrder] = useState('newest')
+  // Multi-Select Type Filters & Sorting State
+  const [activeTypes, setActiveTypes] = useState([]) // e.g. ['LP', 'EP']
+  const [sortOrder, setSortOrder] = useState('newest') // 'newest' | 'oldest' | 'title-asc' | 'title-desc'
   const [searchQuery, setSearchQuery] = useState('')
 
   const theme = useMemo(
@@ -54,8 +53,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             main: '#f48fb1',
           },
           background: {
-            default: darkMode ? '#0b0b10' : '#f8f9fa',
-            paper: darkMode ? '#14141e' : '#ffffff',
+            default: darkMode ? '#0a0a0f' : '#f6f7fa',
+            paper: darkMode ? '#13131c' : '#ffffff',
           },
         },
         typography: {
@@ -83,6 +82,16 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     } catch {}
   }
 
+  const handleToggleType = (type) => {
+    setActiveTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    )
+  }
+
+  const handleResetTypes = () => {
+    setActiveTypes([])
+  }
+
   // Parse path and sync SPA state with URL
   const syncStateFromLocation = useCallback(() => {
     const path = window.location.pathname
@@ -108,7 +117,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         if (matchedTrack) {
           setHighlightedTrackSlug(slugify(matchedTrack.name))
         } else {
-          // Fail gracefully: track slug invalid, strip track slug from URL
           const validProjSlug = slugify(matchedProject.name) || projSlug
           window.history.replaceState({}, '', `/${validProjSlug}`)
           setHighlightedTrackSlug(null)
@@ -117,7 +125,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         setHighlightedTrackSlug(null)
       }
     } else {
-      // Fail gracefully: invalid project slug, redirect to home /
       window.history.replaceState({}, '', '/')
       setCurrentView('ALL_PROJECTS')
       setSelectedProject(null)
@@ -125,7 +132,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }, [projects])
 
-  // Sync on mount and browser back/forward buttons
+  // Sync on mount and browser back/forward popstate
   useEffect(() => {
     syncStateFromLocation()
 
@@ -184,9 +191,11 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const filteredProjects = useMemo(() => {
     let result = [...projects]
 
-    // Type filter
-    if (activeType !== 'All') {
-      result = result.filter(p => (p.type || '').toLowerCase() === activeType.toLowerCase())
+    // Multi-Select Type Filter
+    if (activeTypes.length > 0) {
+      result = result.filter(p =>
+        activeTypes.some(t => (p.type || '').toLowerCase() === t.toLowerCase())
+      )
     }
 
     // Search filter
@@ -200,15 +209,26 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       })
     }
 
-    // Sort order
+    // Sort order variants
     result.sort((a, b) => {
-      const dateA = new Date(a.date || 0).getTime()
-      const dateB = new Date(b.date || 0).getTime()
-      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB
+      if (sortOrder === 'newest') {
+        const dateA = new Date(a.date || 0).getTime()
+        const dateB = new Date(b.date || 0).getTime()
+        return dateB - dateA
+      } else if (sortOrder === 'oldest') {
+        const dateA = new Date(a.date || 0).getTime()
+        const dateB = new Date(b.date || 0).getTime()
+        return dateA - dateB
+      } else if (sortOrder === 'title-asc') {
+        return (a.name || '').localeCompare(b.name || '')
+      } else if (sortOrder === 'title-desc') {
+        return (b.name || '').localeCompare(a.name || '')
+      }
+      return 0
     })
 
     return result
-  }, [projects, activeType, searchQuery, sortOrder])
+  }, [projects, activeTypes, searchQuery, sortOrder])
 
   return (
     <ThemeProvider theme={theme}>
@@ -221,20 +241,21 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           flexDirection: 'column',
           bgcolor: 'background.default',
           color: 'text.primary',
-          pb: playingTrack ? 10 : 4,
+          pb: playingTrack ? 12 : 6,
           transition: 'background-color 0.3s ease',
         }}
       >
-        {/* Header Logo */}
-        <HeaderLogo onClick={currentView === 'SINGLE_PROJECT' ? navigateToHome : undefined} />
+        {/* Top Screen-Height Hero Section */}
+        <Box>
+          <HeaderLogo onClick={currentView === 'SINGLE_PROJECT' ? navigateToHome : undefined} />
+          <ArtistHero artist={artist} />
+        </Box>
 
-        {/* Hero Section */}
-        <ArtistHero artist={artist} />
-
-        {/* Sticky Floating Nav Bar */}
+        {/* Contained Floating Sticky Nav Bar */}
         <FloatingNavBar
-          activeType={activeType}
-          onTypeChange={setActiveType}
+          activeTypes={activeTypes}
+          onToggleType={handleToggleType}
+          onResetTypes={handleResetTypes}
           sortOrder={sortOrder}
           onSortChange={setSortOrder}
           searchQuery={searchQuery}
@@ -245,8 +266,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           onOpenPlatformModal={() => setPlatformModalOpen(true)}
         />
 
-        {/* Main Content View Container */}
-        <Container maxWidth="md" sx={{ mt: 3, flexGrow: 1 }}>
+        {/* Main Content Projects Container */}
+        <Container maxWidth="md" sx={{ mt: 4, flexGrow: 1 }}>
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
             <ProjectCard
               project={selectedProject}
@@ -261,12 +282,12 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
               selectedPlatform={selectedPlatform}
             />
           ) : (
-            <Stack spacing={3}>
+            <Stack spacing={4}>
               {filteredProjects.length === 0 ? (
-                <Box sx={{ py: 8, textAlign: 'center' }}>
+                <Box sx={{ py: 10, textAlign: 'center' }}>
                   <SubduedText
                     value=""
-                    placeholder="No projects match your selected filter."
+                    placeholder="No projects match your selected filter or search query."
                     variant="h6"
                   />
                 </Box>
@@ -290,7 +311,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           )}
         </Container>
 
-        {/* Platform Selector Modal */}
+        {/* Preferred Platform Selector Modal */}
         <PlatformSelectorModal
           open={platformModalOpen}
           onClose={() => setPlatformModalOpen(false)}
@@ -298,7 +319,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           onSelectPlatform={handleSelectPlatform}
         />
 
-        {/* Persistent Bottom Audio Player Bar */}
+        {/* Contained Floating Audio Player Bar */}
         <AudioPlayerBar
           playingTrack={playingTrack}
           isPlaying={isPlaying}

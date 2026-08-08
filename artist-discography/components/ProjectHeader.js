@@ -45,7 +45,6 @@ export default function ProjectHeader({
   }
 
   const handleHeaderClick = (e) => {
-    // Prevent triggering single view if user clicked a direct external link button
     if (e.target.closest('a') || e.target.closest('button')) {
       return
     }
@@ -58,11 +57,11 @@ export default function ProjectHeader({
     <Box
       onClick={handleHeaderClick}
       sx={{
-        p: { xs: 2, sm: 3 },
+        p: { xs: 2.5, sm: 3.5 },
         display: 'flex',
         flexDirection: { xs: 'column', sm: 'row' },
         alignItems: { xs: 'flex-start', sm: 'center' },
-        gap: { xs: 2, sm: 3 },
+        gap: { xs: 2.5, sm: 3.5 },
         cursor: onSelectProject && !isSingleView ? 'pointer' : 'default',
         borderRadius: 3,
         transition: 'background-color 0.25s ease',
@@ -76,12 +75,12 @@ export default function ProjectHeader({
       {/* Left: Album Cover Art */}
       <Box
         sx={{
-          width: { xs: 90, sm: 110, md: 130 },
-          height: { xs: 90, sm: 110, md: 130 },
-          borderRadius: 2.5,
+          width: { xs: 100, sm: 130, md: 150 },
+          height: { xs: 100, sm: 130, md: 150 },
+          borderRadius: 3,
           overflow: 'hidden',
           flexShrink: 0,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
           bgcolor: 'rgba(255,255,255,0.06)',
           display: 'flex',
           alignItems: 'center',
@@ -99,25 +98,25 @@ export default function ProjectHeader({
         ) : (
           <AlbumRoundedIcon
             sx={{
-              fontSize: { xs: 48, sm: 60 },
-              color: 'rgba(255,255,255,0.3)',
+              fontSize: { xs: 56, sm: 72 },
+              color: 'rgba(255,255,255,0.35)',
             }}
           />
         )}
       </Box>
 
       {/* Right: Metadata Stack */}
-      <Stack spacing={0.75} sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
-        {/* Type Badge & Date */}
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <Stack spacing={1} sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
+        {/* Type Badge */}
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           {type ? (
             <Chip
               label={type.toUpperCase()}
               size="small"
               sx={{
-                height: 20,
-                fontSize: '0.675rem',
-                fontWeight: 700,
+                height: 22,
+                fontSize: '0.7rem',
+                fontWeight: 800,
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
                 borderRadius: 1,
@@ -128,8 +127,8 @@ export default function ProjectHeader({
               label="PROJECT"
               size="small"
               sx={{
-                height: 20,
-                fontSize: '0.675rem',
+                height: 22,
+                fontSize: '0.7rem',
                 fontWeight: 500,
                 fontStyle: 'italic',
                 opacity: 0.6,
@@ -138,14 +137,7 @@ export default function ProjectHeader({
               }}
             />
           )}
-
-          <SubduedText
-            value={date}
-            placeholder="Release Date"
-            variant="caption"
-            sx={{ fontSize: '0.8rem' }}
-          />
-        </Stack>
+        </Box>
 
         {/* Project Title */}
         <SubduedText
@@ -155,54 +147,73 @@ export default function ProjectHeader({
           component="h2"
           sx={{
             fontWeight: 800,
-            fontSize: { xs: '1.25rem', sm: '1.6rem' },
-            lineHeight: 1.2,
+            fontSize: { xs: '1.35rem', sm: '1.75rem' },
+            lineHeight: 1.25,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         />
 
-        {/* Artist Name */}
-        <SubduedText
-          value={pArtist}
-          placeholder="Artist"
-          variant="subtitle1"
-          sx={{
-            fontWeight: 500,
-            fontSize: { xs: '0.9rem', sm: '1rem' },
-            color: 'text.secondary',
-          }}
-        />
+        {/* Artist Name & Release Date on SAME HORIZONTAL LINE */}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: 'center', flexWrap: 'wrap' }}
+        >
+          <SubduedText
+            value={pArtist}
+            placeholder="Artist"
+            variant="subtitle1"
+            sx={{
+              fontWeight: 600,
+              fontSize: { xs: '0.95rem', sm: '1.05rem' },
+              color: 'text.secondary',
+            }}
+          />
 
-        {/* Streaming Service Icons Stack */}
+          {pArtist && date && (
+            <Typography variant="body2" sx={{ color: 'text.disabled', mx: 0.5 }}>
+              •
+            </Typography>
+          )}
+
+          <SubduedText
+            value={date}
+            placeholder="Release Date"
+            variant="caption"
+            sx={{ fontSize: '0.9rem', color: 'text.secondary' }}
+          />
+        </Stack>
+
+        {/* Platform Streaming Icons (LARGER 28px) */}
         {availablePlatforms.length > 0 && (
           <Stack
             direction="row"
-            spacing={1}
-            sx={{ pt: 0.75, flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}
+            spacing={1.25}
+            sx={{ pt: 1, flexWrap: 'wrap', gap: 1, alignItems: 'center' }}
           >
             {availablePlatforms.map(({ key, url, icon }) => {
               const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
               return (
-                <Tooltip key={key} title={`Open on ${key.toUpperCase()}`} arrow>
+                <Tooltip key={key} title={`Listen on ${key.toUpperCase()}`} arrow>
                   <IconButton
                     component="a"
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    size="small"
+                    size="medium"
                     sx={{
-                      p: 0.5,
-                      borderRadius: 1.5,
-                      border: '1px solid',
-                      borderColor: isPreferred ? 'primary.main' : 'rgba(255,255,255,0.1)',
-                      bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.15)' : 'rgba(255,255,255,0.03)',
-                      transition: 'transform 0.2s ease, border-color 0.2s ease',
+                      p: 0.75,
+                      borderRadius: 2,
+                      border: '1.5px solid',
+                      borderColor: isPreferred ? 'primary.main' : 'rgba(255,255,255,0.12)',
+                      bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.18)' : 'rgba(255,255,255,0.04)',
+                      transition: 'transform 0.2s ease, border-color 0.2s ease, bgcolor 0.2s ease',
                       '&:hover': {
-                        transform: 'scale(1.12)',
+                        transform: 'scale(1.18)',
                         borderColor: 'primary.light',
-                        bgcolor: 'rgba(255,255,255,0.1)',
+                        bgcolor: 'rgba(255,255,255,0.15)',
                       },
                     }}
                   >
@@ -211,10 +222,10 @@ export default function ProjectHeader({
                         component="img"
                         src={icon}
                         alt={key}
-                        sx={{ width: 18, height: 18, objectFit: 'contain' }}
+                        sx={{ width: 28, height: 28, objectFit: 'contain' }}
                       />
                     ) : (
-                      <LaunchRoundedIcon sx={{ fontSize: 16 }} />
+                      <LaunchRoundedIcon sx={{ fontSize: 22 }} />
                     )}
                   </IconButton>
                 </Tooltip>

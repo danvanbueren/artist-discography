@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   Box,
   Container,
+  Paper,
   Typography,
   IconButton,
   Slider,
@@ -46,113 +47,122 @@ export default function AudioPlayerBar({
       <Box
         sx={{
           position: 'fixed',
-          bottom: 0,
+          bottom: 16,
           left: 0,
           right: 0,
           zIndex: 1200,
-          bgcolor: theme.palette.mode === 'dark'
-            ? 'rgba(24, 24, 32, 0.95)'
-            : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderTop: '1px solid',
-          borderColor: theme.palette.mode === 'dark'
-            ? 'rgba(255, 255, 255, 0.12)'
-            : 'rgba(0, 0, 0, 0.12)',
-          boxShadow: '0 -6px 24px rgba(0,0,0,0.3)',
-          py: 1,
-          px: { xs: 2, sm: 3 },
+          px: { xs: 1.5, sm: 2 },
+          pointerEvents: 'none',
         }}
       >
-        <Container maxWidth="md" disableGutters>
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            {/* Track Info */}
-            <Stack direction="row" spacing={1.5} sx={{ minWidth: 0, flex: 1, alignItems: 'center' }}>
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1.5,
-                  bgcolor: 'primary.main',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'primary.contrastText',
-                  flexShrink: 0,
-                }}
-              >
-                <MusicNoteRoundedIcon fontSize="small" />
-              </Box>
-              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
-                <Typography
-                  variant="body2"
-                  fontWeight={700}
-                  noWrap
-                  sx={{ fontSize: '0.875rem' }}
-                >
-                  {playingTrack.name || 'Untitled Track'}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  noWrap
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  Now Playing • {playingTrack.artist || 'Artist'}
-                </Typography>
-              </Box>
-            </Stack>
-
-            {/* Audio Controls */}
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <IconButton
-                color="primary"
-                onClick={onTogglePlay}
-                sx={{
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  p: 0.75,
-                  '&:hover': { bgcolor: 'primary.dark' },
-                }}
-              >
-                {isPlaying ? (
-                  <PauseRoundedIcon fontSize="small" />
-                ) : (
-                  <PlayArrowRoundedIcon fontSize="small" />
-                )}
-              </IconButton>
-
-              <IconButton
-                size="small"
-                onClick={onClosePlayer}
-                sx={{ color: 'text.secondary' }}
-              >
-                <CloseRoundedIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          </Stack>
-
-          {/* Progress Bar */}
-          <Slider
-            size="small"
-            value={progress}
-            onChange={(_, val) => setProgress(val)}
+        <Container maxWidth="md" disableGutters sx={{ pointerEvents: 'auto' }}>
+          <Paper
+            elevation={6}
             sx={{
-              py: 0,
-              mt: 0.5,
-              height: 3,
-              '& .MuiSlider-thumb': {
-                width: 8,
-                height: 8,
-                '&:hover, &.Mui-focused, &.Mui-active': {
-                  boxShadow: 'none',
-                },
-              },
+              borderRadius: 4,
+              py: 1.25,
+              px: { xs: 2, sm: 3 },
+              bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(24, 24, 34, 0.95)'
+                : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid',
+              borderColor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.12)'
+                : 'rgba(0, 0, 0, 0.12)',
+              boxShadow: '0 12px 36px rgba(0,0,0,0.35)',
             }}
-          />
+          >
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              {/* Track Info */}
+              <Stack direction="row" spacing={1.5} sx={{ minWidth: 0, flex: 1, alignItems: 'center' }}>
+                <Box
+                  sx={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 2,
+                    bgcolor: 'primary.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'primary.contrastText',
+                    flexShrink: 0,
+                  }}
+                >
+                  <MusicNoteRoundedIcon fontSize="small" />
+                </Box>
+                <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                  <Typography
+                    variant="body2"
+                    fontWeight={700}
+                    noWrap
+                    sx={{ fontSize: '0.9rem' }}
+                  >
+                    {playingTrack.name || 'Untitled Track'}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    sx={{ fontSize: '0.775rem' }}
+                  >
+                    Now Playing • {playingTrack.artist || 'Artist'}
+                  </Typography>
+                </Box>
+              </Stack>
+
+              {/* Audio Playback Controls */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <IconButton
+                  color="primary"
+                  onClick={onTogglePlay}
+                  sx={{
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    p: 0.85,
+                    '&:hover': { bgcolor: 'primary.dark' },
+                  }}
+                >
+                  {isPlaying ? (
+                    <PauseRoundedIcon fontSize="small" />
+                  ) : (
+                    <PlayArrowRoundedIcon fontSize="small" />
+                  )}
+                </IconButton>
+
+                <IconButton
+                  size="small"
+                  onClick={onClosePlayer}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  <CloseRoundedIcon fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Stack>
+
+            {/* Audio Progress Slider */}
+            <Slider
+              size="small"
+              value={progress}
+              onChange={(_, val) => setProgress(val)}
+              sx={{
+                py: 0,
+                mt: 0.75,
+                height: 3,
+                '& .MuiSlider-thumb': {
+                  width: 10,
+                  height: 10,
+                  '&:hover, &.Mui-focused, &.Mui-active': {
+                    boxShadow: 'none',
+                  },
+                },
+              }}
+            />
+          </Paper>
         </Container>
       </Box>
     </Collapse>

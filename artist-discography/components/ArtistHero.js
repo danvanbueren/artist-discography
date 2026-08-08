@@ -42,7 +42,12 @@ export default function ArtistHero({ artist }) {
       sx={{
         textAlign: 'center',
         px: { xs: 2, sm: 4 },
-        py: { xs: 2, sm: 3 },
+        py: { xs: 6, sm: 10, md: 14 },
+        minHeight: { xs: '55vh', sm: '65vh' },
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
       <SubduedText
@@ -53,8 +58,8 @@ export default function ArtistHero({ artist }) {
         sx={{
           fontWeight: 800,
           letterSpacing: '-0.02em',
-          fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' },
-          mb: 1.5,
+          fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
+          mb: 2,
           fontFamily: 'Roboto, sans-serif',
           background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
           WebkitBackgroundClip: name ? 'text' : 'none',
@@ -67,10 +72,10 @@ export default function ArtistHero({ artist }) {
         placeholder="Artist description and bio will appear here."
         variant="body1"
         sx={{
-          maxWidth: 680,
+          maxWidth: 720,
           mx: 'auto',
-          fontSize: { xs: '0.95rem', sm: '1.05rem' },
-          lineHeight: 1.6,
+          fontSize: { xs: '1.05rem', sm: '1.2rem' },
+          lineHeight: 1.7,
           color: 'text.secondary',
         }}
       />
@@ -78,8 +83,14 @@ export default function ArtistHero({ artist }) {
       {activeLinks.length > 0 && (
         <Stack
           direction="row"
-          spacing={1.5}
-          sx={{ mt: 2.5, flexWrap: 'wrap', gap: 1, justifyContent: 'center', alignItems: 'center' }}
+          spacing={2}
+          sx={{
+            mt: 4,
+            flexWrap: 'wrap',
+            gap: 1.5,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
         >
           {activeLinks.map(({ key, url, icon }) => (
             <Tooltip key={key} title={key.toUpperCase()} arrow>
@@ -88,16 +99,18 @@ export default function ArtistHero({ artist }) {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                size="small"
+                size="large"
                 sx={{
-                  p: 0.75,
+                  p: 1.25,
                   borderRadius: '50%',
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  backdropFilter: 'blur(4px)',
-                  transition: 'transform 0.2s ease, bgcolor 0.2s ease',
+                  bgcolor: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
                   '&:hover': {
-                    transform: 'scale(1.15)',
-                    bgcolor: 'rgba(255,255,255,0.15)',
+                    transform: 'scale(1.2)',
+                    bgcolor: 'rgba(255,255,255,0.18)',
+                    borderColor: 'primary.main',
                   },
                 }}
               >
@@ -105,7 +118,7 @@ export default function ArtistHero({ artist }) {
                   component="img"
                   src={icon}
                   alt={key}
-                  sx={{ width: 22, height: 22, objectFit: 'contain' }}
+                  sx={{ width: 32, height: 32, objectFit: 'contain' }}
                 />
               </IconButton>
             </Tooltip>

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Box, Stack, Typography, IconButton, Tooltip } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
-import EqualizerRoundedIcon from '@mui/icons-material/EqualizerRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import SubduedText from './SubduedText'
 
@@ -37,7 +36,6 @@ export default function TrackRow({
   const artist = track?.artist || projectArtist || ''
   const links = track?.links ?? {}
 
-  // Filter non-empty platform links
   const availableLinks = []
   for (const [key, url] of Object.entries(links)) {
     if (url && typeof url === 'string' && url.trim() !== '') {
@@ -50,7 +48,6 @@ export default function TrackRow({
   }
 
   const handleRowClick = (e) => {
-    // If clicking a direct external platform link, don't trigger track select
     if (e.target.closest('a')) {
       return
     }
@@ -66,14 +63,14 @@ export default function TrackRow({
       onClick={handleRowClick}
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '36px 1fr auto', sm: '48px 1fr auto' },
+        gridTemplateColumns: { xs: '40px 1fr auto', sm: '52px 1fr auto' },
         alignItems: 'center',
-        py: 1.25,
+        py: 1.5,
         px: { xs: 1.5, sm: 2 },
         borderRadius: 2,
         cursor: 'pointer',
         bgcolor: isHighlighted
-          ? 'rgba(144, 202, 249, 0.12)'
+          ? 'rgba(144, 202, 249, 0.14)'
           : isPlayingThisTrack
           ? 'rgba(144, 202, 249, 0.08)'
           : hovered
@@ -113,7 +110,7 @@ export default function TrackRow({
             sx={{
               fontWeight: isHighlighted ? 700 : 500,
               color: isHighlighted ? 'primary.main' : 'text.secondary',
-              fontSize: '0.875rem',
+              fontSize: '0.9rem',
             }}
           >
             {index + 1}
@@ -129,7 +126,7 @@ export default function TrackRow({
           variant="body1"
           sx={{
             fontWeight: isHighlighted ? 700 : 600,
-            fontSize: { xs: '0.9rem', sm: '0.95rem' },
+            fontSize: { xs: '0.95rem', sm: '1rem' },
             color: isHighlighted ? 'primary.main' : 'text.primary',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -142,7 +139,7 @@ export default function TrackRow({
           placeholder="Artist"
           variant="caption"
           sx={{
-            fontSize: '0.8rem',
+            fontSize: '0.825rem',
             color: 'text.secondary',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -151,8 +148,8 @@ export default function TrackRow({
         />
       </Stack>
 
-      {/* Col 3: Platform Links */}
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+      {/* Col 3: Platform Links (Enlarged 22px icons) */}
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
         {availableLinks.map(({ key, url, icon }) => {
           const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
           return (
@@ -165,17 +162,17 @@ export default function TrackRow({
                 size="small"
                 onClick={(e) => e.stopPropagation()}
                 sx={{
-                  p: 0.4,
-                  borderRadius: 1,
-                  border: isPreferred ? '1px solid' : 'none',
+                  p: 0.6,
+                  borderRadius: 1.5,
+                  border: isPreferred ? '1.5px solid' : '1px solid transparent',
                   borderColor: isPreferred ? 'primary.main' : 'transparent',
                   bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                  opacity: isPreferred || hovered ? 1 : 0.7,
-                  transition: 'transform 0.15s ease, opacity 0.15s ease',
+                  opacity: isPreferred || hovered ? 1 : 0.75,
+                  transition: 'transform 0.18s ease, opacity 0.18s ease, bgcolor 0.18s ease',
                   '&:hover': {
-                    transform: 'scale(1.15)',
+                    transform: 'scale(1.18)',
                     opacity: 1,
-                    bgcolor: 'rgba(255,255,255,0.1)',
+                    bgcolor: 'rgba(255,255,255,0.12)',
                   },
                 }}
               >
@@ -184,10 +181,10 @@ export default function TrackRow({
                     component="img"
                     src={icon}
                     alt={key}
-                    sx={{ width: 16, height: 16, objectFit: 'contain' }}
+                    sx={{ width: 22, height: 22, objectFit: 'contain' }}
                   />
                 ) : (
-                  <LaunchRoundedIcon sx={{ fontSize: 14 }} />
+                  <LaunchRoundedIcon sx={{ fontSize: 18 }} />
                 )}
               </IconButton>
             </Tooltip>

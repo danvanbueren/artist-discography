@@ -9,8 +9,8 @@ export default function HeaderLogo({ onClick }) {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        pt: { xs: 3, sm: 4 },
-        pb: { xs: 1, sm: 2 },
+        pt: { xs: 5, sm: 8, md: 10 },
+        pb: { xs: 2, sm: 3 },
       }}
     >
       <Box
@@ -19,16 +19,16 @@ export default function HeaderLogo({ onClick }) {
         alt="Artist Logo"
         onClick={onClick}
         sx={{
-          maxHeight: { xs: 70, sm: 90, md: 110 },
+          maxHeight: { xs: 90, sm: 120, md: 150 },
           maxWidth: '85%',
           objectFit: 'contain',
           cursor: onClick ? 'pointer' : 'default',
           transition: 'transform 0.25s ease-in-out, filter 0.25s ease-in-out',
-          filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.25))',
+          filter: 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))',
           '&:hover': onClick
             ? {
-                transform: 'scale(1.03)',
-                filter: 'drop-shadow(0px 6px 16px rgba(0,0,0,0.35))',
+                transform: 'scale(1.04)',
+                filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.45))',
               }
             : {},
         }}
