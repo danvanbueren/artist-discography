@@ -8,10 +8,9 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
-  Button,
   Typography,
+  Tooltip,
 } from '@mui/material'
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
 import ArtistHero from './ArtistHero'
 import FloatingNavBar from './FloatingNavBar'
 import PlatformSelectorModal from './PlatformSelectorModal'
@@ -273,74 +272,66 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         )}
 
         {/* Main Content Projects Container */}
-        <Container maxWidth="md" sx={{ mt: { xs: 2, sm: 3 }, flexGrow: 1 }}>
+        <Container maxWidth="md" sx={{ mt: { xs: 1, sm: 2 }, flexGrow: 1 }}>
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
             <Stack spacing={3}>
-              {/* Single Project Page Header: Back Button + Horizontal Logo & Artist Name */}
-              <Stack
-                direction="row"
-                spacing={2}
+              {/* Single Project Page Header: Centered Horizontal Logo & Artist Name Button */}
+              <Box
                 sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  py: 1,
+                  py: { xs: 2.5, sm: 4, md: 5 },
                 }}
               >
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<ArrowBackRoundedIcon fontSize="small" />}
-                  onClick={navigateToHome}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: 3,
-                    py: 0.6,
-                    px: 1.75,
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  Back to All Releases
-                </Button>
-
-                {/* Horizontal Logo & Artist Name */}
-                <Stack
-                  direction="row"
-                  spacing={1.5}
-                  onClick={navigateToHome}
-                  sx={{
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
-                    '&:hover': {
-                      transform: 'scale(1.03)',
-                    },
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src="/api/logo"
-                    alt="Artist Logo"
+                <Tooltip title="Back to All Releases" arrow placement="bottom">
+                  <Stack
+                    direction="row"
+                    spacing={2}
+                    onClick={navigateToHome}
                     sx={{
-                      height: { xs: 32, sm: 40 },
-                      maxWidth: 120,
-                      objectFit: 'contain',
-                    }}
-                  />
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 800,
-                      fontSize: { xs: '1.05rem', sm: '1.25rem' },
-                      background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
-                      WebkitBackgroundClip: artist.name ? 'text' : 'none',
-                      WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      px: { xs: 2, sm: 3 },
+                      py: 1.25,
+                      borderRadius: 4,
+                      bgcolor: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      backdropFilter: 'blur(8px)',
+                      transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
+                      '&:hover': {
+                        transform: 'scale(1.04)',
+                        bgcolor: 'rgba(255,255,255,0.08)',
+                        borderColor: 'primary.main',
+                      },
                     }}
                   >
-                    {artist.name || 'Artist'}
-                  </Typography>
-                </Stack>
-              </Stack>
+                    <Box
+                      component="img"
+                      src="/api/logo"
+                      alt="Artist Logo"
+                      sx={{
+                        height: { xs: 36, sm: 48, md: 54 },
+                        maxWidth: 150,
+                        objectFit: 'contain',
+                      }}
+                    />
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: { xs: '1.15rem', sm: '1.4rem' },
+                        background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
+                        WebkitBackgroundClip: artist.name ? 'text' : 'none',
+                        WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
+                      }}
+                    >
+                      {artist.name || 'Artist'}
+                    </Typography>
+                  </Stack>
+                </Tooltip>
+              </Box>
 
               <ProjectCard
                 project={selectedProject}
