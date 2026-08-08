@@ -5,7 +5,6 @@ import {
   Box,
   Badge,
   IconButton,
-  Tooltip,
   Drawer,
   Typography,
   Alert,
@@ -35,26 +34,24 @@ export default function DevHealthDrawer({ health }) {
           zIndex: 1300,
         }}
       >
-        <Tooltip title="Data Health Report (Dev Mode)" arrow placement="left">
-          <IconButton
-            color="warning"
-            onClick={() => setOpen(true)}
-            sx={{
-              bgcolor: 'background.paper',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-              border: '1px solid',
-              borderColor: 'warning.main',
-              p: 1.25,
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-            }}
-          >
-            <Badge badgeContent={issues.length} color="error">
-              <BugReportRoundedIcon />
-            </Badge>
-          </IconButton>
-        </Tooltip>
+        <IconButton
+          color="warning"
+          onClick={() => setOpen(true)}
+          sx={{
+            bgcolor: 'background.paper',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+            border: '1px solid',
+            borderColor: 'warning.main',
+            p: 1.25,
+            '&:hover': {
+              bgcolor: 'action.hover',
+            },
+          }}
+        >
+          <Badge badgeContent={issues.length} color="error">
+            <BugReportRoundedIcon />
+          </Badge>
+        </IconButton>
       </Box>
 
       <Drawer

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Stack, Typography, IconButton, Tooltip } from '@mui/material'
+import { Box, Stack, Typography, IconButton } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
@@ -153,41 +153,40 @@ export default function TrackRow({
         {availableLinks.map(({ key, url, icon }) => {
           const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
           return (
-            <Tooltip key={key} title={`Listen on ${key.toUpperCase()}`} arrow>
-              <IconButton
-                component="a"
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="small"
-                onClick={(e) => e.stopPropagation()}
-                sx={{
-                  p: 0.6,
-                  borderRadius: 1.5,
-                  border: isPreferred ? '1.5px solid' : '1px solid transparent',
-                  borderColor: isPreferred ? 'primary.main' : 'transparent',
-                  bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                  opacity: isPreferred || hovered ? 1 : 0.75,
-                  transition: 'transform 0.18s ease, opacity 0.18s ease, bgcolor 0.18s ease',
-                  '&:hover': {
-                    transform: 'scale(1.18)',
-                    opacity: 1,
-                    bgcolor: 'rgba(255,255,255,0.12)',
-                  },
-                }}
-              >
-                {icon ? (
-                  <Box
-                    component="img"
-                    src={icon}
-                    alt={key}
-                    sx={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 1.5 }}
-                  />
-                ) : (
-                  <LaunchRoundedIcon sx={{ fontSize: 18 }} />
-                )}
-              </IconButton>
-            </Tooltip>
+            <IconButton
+              key={key}
+              component="a"
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+              onClick={(e) => e.stopPropagation()}
+              sx={{
+                p: 0.6,
+                borderRadius: 1.5,
+                border: isPreferred ? '1.5px solid' : '1px solid transparent',
+                borderColor: isPreferred ? 'primary.main' : 'transparent',
+                bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
+                opacity: isPreferred || hovered ? 1 : 0.75,
+                transition: 'transform 0.18s ease, opacity 0.18s ease, bgcolor 0.18s ease',
+                '&:hover': {
+                  transform: 'scale(1.18)',
+                  opacity: 1,
+                  bgcolor: 'rgba(255,255,255,0.12)',
+                },
+              }}
+            >
+              {icon ? (
+                <Box
+                  component="img"
+                  src={icon}
+                  alt={key}
+                  sx={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 1.5 }}
+                />
+              ) : (
+                <LaunchRoundedIcon sx={{ fontSize: 18 }} />
+              )}
+            </IconButton>
           )
         })}
       </Stack>

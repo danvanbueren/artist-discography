@@ -7,7 +7,6 @@ import {
   Paper,
   Chip,
   IconButton,
-  Tooltip,
   TextField,
   InputAdornment,
   Button,
@@ -121,15 +120,13 @@ export default function FloatingNavBar({
         {/* Back Button when inside a sub-menu */}
         {navMode !== 'main' && (
           <Fade in={navMode !== 'main'}>
-            <Tooltip title="Back to Menu" arrow>
-              <IconButton
-                size="small"
-                onClick={() => setNavMode('main')}
-                sx={{ mr: 1.5, color: 'text.secondary' }}
-              >
-                <ArrowBackRoundedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <IconButton
+              size="small"
+              onClick={() => setNavMode('main')}
+              sx={{ mr: 1.5, color: 'text.secondary' }}
+            >
+              <ArrowBackRoundedIcon fontSize="small" />
+            </IconButton>
           </Fade>
         )}
 
@@ -146,107 +143,95 @@ export default function FloatingNavBar({
           >
             {/* 1. SEARCH ICON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-              <Tooltip title="Search" arrow>
-                <IconButton
-                  size="small"
-                  onClick={() => setNavMode('search')}
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    border: isSearchActive ? '2px solid' : '1px solid transparent',
-                    borderColor: isSearchActive ? 'primary.main' : 'transparent',
-                    bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                    color: isSearchActive ? 'primary.main' : 'inherit',
-                  }}
-                >
-                  <SearchRoundedIcon />
-                </IconButton>
-              </Tooltip>
+              <IconButton
+                size="small"
+                onClick={() => setNavMode('search')}
+                sx={{
+                  p: 1,
+                  borderRadius: 2,
+                  border: isSearchActive ? '2px solid' : '1px solid transparent',
+                  borderColor: isSearchActive ? 'primary.main' : 'transparent',
+                  bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
+                  color: isSearchActive ? 'primary.main' : 'inherit',
+                }}
+              >
+                <SearchRoundedIcon />
+              </IconButton>
 
               {isSearchActive && (
-                <Tooltip title="Clear Search" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onSearchChange('')
-                    }}
-                    sx={{
-                      p: 0.75,
-                      borderRadius: 2,
-                      border: '2px solid',
-                      borderColor: 'primary.main',
-                      color: 'primary.main',
-                    }}
-                  >
-                    <RestartAltRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onSearchChange('')
+                  }}
+                  sx={{
+                    p: 0.75,
+                    borderRadius: 2,
+                    border: '2px solid',
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                  }}
+                >
+                  <RestartAltRoundedIcon fontSize="small" />
+                </IconButton>
               )}
             </Stack>
 
             {/* 2. FILTER ICON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-              <Tooltip title="Filter Projects" arrow>
-                <IconButton
-                  size="small"
-                  onClick={() => setNavMode('filter')}
-                  sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    border: isFilterActive ? '2px solid' : '1px solid transparent',
-                    borderColor: isFilterActive ? 'primary.main' : 'transparent',
-                    bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                    color: isFilterActive ? 'primary.main' : 'inherit',
-                  }}
-                >
-                  <TuneRoundedIcon />
-                </IconButton>
-              </Tooltip>
+              <IconButton
+                size="small"
+                onClick={() => setNavMode('filter')}
+                sx={{
+                  p: 1,
+                  borderRadius: 2,
+                  border: isFilterActive ? '2px solid' : '1px solid transparent',
+                  borderColor: isFilterActive ? 'primary.main' : 'transparent',
+                  bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
+                  color: isFilterActive ? 'primary.main' : 'inherit',
+                }}
+              >
+                <TuneRoundedIcon />
+              </IconButton>
 
               {isFilterActive && (
-                <Tooltip title="Reset Filters" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onResetTypes()
-                    }}
-                    sx={{
-                      p: 0.75,
-                      borderRadius: 2,
-                      border: '2px solid',
-                      borderColor: 'primary.main',
-                      color: 'primary.main',
-                    }}
-                  >
-                    <RestartAltRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onResetTypes()
+                  }}
+                  sx={{
+                    p: 0.75,
+                    borderRadius: 2,
+                    border: '2px solid',
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                  }}
+                >
+                  <RestartAltRoundedIcon fontSize="small" />
+                </IconButton>
               )}
             </Stack>
 
             {/* 3. SORT ICON */}
-            <Tooltip title="Sort Ordering" arrow>
-              <IconButton
-                size="small"
-                onClick={() => setNavMode('sort')}
-                sx={{ p: 1, borderRadius: 2 }}
-              >
-                <SortRoundedIcon />
-              </IconButton>
-            </Tooltip>
+            <IconButton
+              size="small"
+              onClick={() => setNavMode('sort')}
+              sx={{ p: 1, borderRadius: 2 }}
+            >
+              <SortRoundedIcon />
+            </IconButton>
 
             {/* 4. SETTINGS ICON */}
-            <Tooltip title="Settings & Preferences" arrow>
-              <IconButton
-                size="small"
-                onClick={() => setNavMode('settings')}
-                sx={{ p: 1, borderRadius: 2 }}
-              >
-                <SettingsRoundedIcon />
-              </IconButton>
-            </Tooltip>
+            <IconButton
+              size="small"
+              onClick={() => setNavMode('settings')}
+              sx={{ p: 1, borderRadius: 2 }}
+            >
+              <SettingsRoundedIcon />
+            </IconButton>
           </Stack>
         )}
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Stack, IconButton, Tooltip } from '@mui/material'
+import { Box, Stack, IconButton } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
 
@@ -105,35 +105,34 @@ export default function ArtistHero({ artist, onLogoClick }) {
             }}
           >
             {activeLinks.map(({ key, url, icon }) => (
-              <Tooltip key={key} title={key.toUpperCase()} arrow placement="top">
-                <IconButton
-                  component="a"
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <IconButton
+                key={key}
+                component="a"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  p: 0.5,
+                  transition: 'transform 0.25s ease',
+                  '&:hover': {
+                    transform: 'scale(1.15)',
+                    bgcolor: 'transparent',
+                  },
+                }}
+              >
+                <Box
+                  component="img"
+                  src={icon}
+                  alt={key}
                   sx={{
-                    p: 0.5,
-                    transition: 'transform 0.25s ease',
-                    '&:hover': {
-                      transform: 'scale(1.15)',
-                      bgcolor: 'transparent',
-                    },
+                    width: { xs: 54, sm: 64, md: 72 },
+                    height: { xs: 54, sm: 64, md: 72 },
+                    objectFit: 'contain',
+                    borderRadius: { xs: 2.5, sm: 3 },
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
                   }}
-                >
-                  <Box
-                    component="img"
-                    src={icon}
-                    alt={key}
-                    sx={{
-                      width: { xs: 54, sm: 64, md: 72 },
-                      height: { xs: 54, sm: 64, md: 72 },
-                      objectFit: 'contain',
-                      borderRadius: { xs: 2.5, sm: 3 },
-                      boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
-                    }}
-                  />
-                </IconButton>
-              </Tooltip>
+                />
+              </IconButton>
             ))}
           </Stack>
         </Box>

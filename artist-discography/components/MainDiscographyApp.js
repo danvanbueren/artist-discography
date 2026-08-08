@@ -9,7 +9,6 @@ import {
   createTheme,
   CssBaseline,
   Typography,
-  Tooltip,
 } from '@mui/material'
 import ArtistHero from './ArtistHero'
 import FloatingNavBar from './FloatingNavBar'
@@ -284,53 +283,51 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                   py: { xs: 2.5, sm: 4, md: 5 },
                 }}
               >
-                <Tooltip title="Back to All Releases" arrow placement="bottom">
-                  <Stack
-                    direction="row"
-                    spacing={2}
-                    onClick={navigateToHome}
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  onClick={navigateToHome}
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    px: { xs: 2, sm: 3 },
+                    py: 1.25,
+                    borderRadius: 4,
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    backdropFilter: 'blur(8px)',
+                    transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
+                    '&:hover': {
+                      transform: 'scale(1.04)',
+                      bgcolor: 'rgba(255,255,255,0.08)',
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/api/logo"
+                    alt="Artist Logo"
                     sx={{
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      px: { xs: 2, sm: 3 },
-                      py: 1.25,
-                      borderRadius: 4,
-                      bgcolor: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      backdropFilter: 'blur(8px)',
-                      transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
-                      '&:hover': {
-                        transform: 'scale(1.04)',
-                        bgcolor: 'rgba(255,255,255,0.08)',
-                        borderColor: 'primary.main',
-                      },
+                      height: { xs: 36, sm: 48, md: 54 },
+                      maxWidth: 150,
+                      objectFit: 'contain',
+                    }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: { xs: '1.15rem', sm: '1.4rem' },
+                      background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
+                      WebkitBackgroundClip: artist.name ? 'text' : 'none',
+                      WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
                     }}
                   >
-                    <Box
-                      component="img"
-                      src="/api/logo"
-                      alt="Artist Logo"
-                      sx={{
-                        height: { xs: 36, sm: 48, md: 54 },
-                        maxWidth: 150,
-                        objectFit: 'contain',
-                      }}
-                    />
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 800,
-                        fontSize: { xs: '1.15rem', sm: '1.4rem' },
-                        background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
-                        WebkitBackgroundClip: artist.name ? 'text' : 'none',
-                        WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
-                      }}
-                    >
-                      {artist.name || 'Artist'}
-                    </Typography>
-                  </Stack>
-                </Tooltip>
+                    {artist.name || 'Artist'}
+                  </Typography>
+                </Stack>
               </Box>
 
               <ProjectCard

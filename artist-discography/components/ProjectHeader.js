@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Stack, Typography, IconButton, Tooltip, Chip } from '@mui/material'
+import { Box, Stack, Typography, IconButton, Chip } from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import SubduedText from './SubduedText'
@@ -196,39 +196,38 @@ export default function ProjectHeader({
             {availablePlatforms.map(({ key, url, icon }) => {
               const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
               return (
-                <Tooltip key={key} title={`Listen on ${key.toUpperCase()}`} arrow>
-                  <IconButton
-                    component="a"
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    size="medium"
-                    sx={{
-                      p: 0.75,
-                      borderRadius: 2,
-                      border: '1.5px solid',
-                      borderColor: isPreferred ? 'primary.main' : 'rgba(255,255,255,0.12)',
-                      bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.18)' : 'rgba(255,255,255,0.04)',
-                      transition: 'transform 0.2s ease, border-color 0.2s ease, bgcolor 0.2s ease',
-                      '&:hover': {
-                        transform: 'scale(1.18)',
-                        borderColor: 'primary.light',
-                        bgcolor: 'rgba(255,255,255,0.15)',
-                      },
-                    }}
-                  >
-                    {icon ? (
-                      <Box
-                        component="img"
-                        src={icon}
-                        alt={key}
-                        sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}
-                      />
-                    ) : (
-                      <LaunchRoundedIcon sx={{ fontSize: 22 }} />
-                    )}
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  key={key}
+                  component="a"
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="medium"
+                  sx={{
+                    p: 0.75,
+                    borderRadius: 2,
+                    border: '1.5px solid',
+                    borderColor: isPreferred ? 'primary.main' : 'rgba(255,255,255,0.12)',
+                    bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.18)' : 'rgba(255,255,255,0.04)',
+                    transition: 'transform 0.2s ease, border-color 0.2s ease, bgcolor 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.18)',
+                      borderColor: 'primary.light',
+                      bgcolor: 'rgba(255,255,255,0.15)',
+                    },
+                  }}
+                >
+                  {icon ? (
+                    <Box
+                      component="img"
+                      src={icon}
+                      alt={key}
+                      sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}
+                    />
+                  ) : (
+                    <LaunchRoundedIcon sx={{ fontSize: 22 }} />
+                  )}
+                </IconButton>
               )
             })}
           </Stack>
