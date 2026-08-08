@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Stack, IconButton } from '@mui/material'
+import { Box, Stack, IconButton, useTheme } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
 
@@ -24,6 +24,8 @@ const SOCIAL_ICONS = {
 }
 
 export default function ArtistHero({ artist, onLogoClick }) {
+  const theme = useTheme()
+  const isDark = theme.palette.mode === 'dark'
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
   const platforms = artist?.links?.platforms ?? {}
@@ -65,7 +67,9 @@ export default function ArtistHero({ artist, onLogoClick }) {
           fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
           mb: 2,
           fontFamily: 'Roboto, sans-serif',
-          background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
+          background: isDark
+            ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
+            : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
           WebkitBackgroundClip: name ? 'text' : 'none',
           WebkitTextFillColor: name ? 'transparent' : 'inherit',
         }}

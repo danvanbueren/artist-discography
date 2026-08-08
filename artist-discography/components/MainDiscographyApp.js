@@ -345,13 +345,14 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     px: { xs: 2, sm: 3 },
                     py: 1.25,
                     borderRadius: 4,
-                    bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    bgcolor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                    border: '1px solid',
+                    borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
                     backdropFilter: 'blur(8px)',
                     transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
                     '&:hover': {
                       transform: 'scale(1.04)',
-                      bgcolor: 'rgba(255,255,255,0.08)',
+                      bgcolor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                       borderColor: 'primary.main',
                     },
                   }}
@@ -371,7 +372,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     sx={{
                       fontWeight: 800,
                       fontSize: { xs: '1.15rem', sm: '1.4rem' },
-                      background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
+                      background: darkMode
+                        ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
+                        : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
                       WebkitBackgroundClip: artist.name ? 'text' : 'none',
                       WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
                     }}
