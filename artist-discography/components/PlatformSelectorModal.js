@@ -108,9 +108,11 @@ export default function PlatformSelectorModal({
                 </ListItemIcon>
                 <ListItemText
                   primary={platform.name}
-                  primaryTypographyProps={{
-                    fontWeight: isSelected ? 700 : 500,
-                    fontSize: '0.95rem',
+                  slotProps={{
+                    primary: {
+                      fontWeight: isSelected ? 700 : 500,
+                      fontSize: '0.95rem',
+                    },
                   }}
                 />
               </ListItemButton>
