@@ -9,7 +9,6 @@ import {
   createTheme,
   CssBaseline,
 } from '@mui/material'
-import HeaderLogo from './HeaderLogo'
 import ArtistHero from './ArtistHero'
 import FloatingNavBar from './FloatingNavBar'
 import PlatformSelectorModal from './PlatformSelectorModal'
@@ -246,10 +245,10 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         }}
       >
         {/* Top Screen-Height Hero Section */}
-        <Box>
-          <HeaderLogo onClick={currentView === 'SINGLE_PROJECT' ? navigateToHome : undefined} />
-          <ArtistHero artist={artist} />
-        </Box>
+        <ArtistHero
+          artist={artist}
+          onLogoClick={currentView === 'SINGLE_PROJECT' ? navigateToHome : undefined}
+        />
 
         {/* Contained Floating Sticky Nav Bar */}
         <FloatingNavBar

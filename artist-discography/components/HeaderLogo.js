@@ -9,8 +9,7 @@ export default function HeaderLogo({ onClick }) {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        pt: { xs: 5, sm: 8, md: 10 },
-        pb: { xs: 2, sm: 3 },
+        mb: { xs: 2.5, sm: 3.5, md: 4.5 },
       }}
     >
       <Box

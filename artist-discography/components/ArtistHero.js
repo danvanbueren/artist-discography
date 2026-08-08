@@ -1,6 +1,7 @@
 'use client'
 
 import { Box, Stack, IconButton, Tooltip } from '@mui/material'
+import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
 
 const SOCIAL_ICONS = {
@@ -22,7 +23,7 @@ const SOCIAL_ICONS = {
   itunes: '/itunes.webp',
 }
 
-export default function ArtistHero({ artist }) {
+export default function ArtistHero({ artist, onLogoClick }) {
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
   const platforms = artist?.links?.platforms ?? {}
@@ -44,13 +45,15 @@ export default function ArtistHero({ artist }) {
         textAlign: 'center',
         px: { xs: 2, sm: 4 },
         py: { xs: 6, sm: 10, md: 14 },
-        minHeight: { xs: '55vh', sm: '65vh' },
+        minHeight: { xs: '65vh', sm: '75vh' },
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
       }}
     >
+      <HeaderLogo onClick={onLogoClick} />
+
       <SubduedText
         value={name}
         placeholder="Artist Name"
