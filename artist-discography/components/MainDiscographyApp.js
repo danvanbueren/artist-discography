@@ -240,7 +240,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           flexDirection: 'column',
           bgcolor: 'background.default',
           color: 'text.primary',
-          pb: playingTrack ? 12 : 6,
+          pb: playingTrack ? { xs: 20, sm: 24, md: 28 } : { xs: 8, sm: 12 },
           transition: 'background-color 0.3s ease',
         }}
       >
