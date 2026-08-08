@@ -59,12 +59,12 @@ export default function FloatingNavBar({
   const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
   const inactivityTimerRef = useRef(null)
 
-  // Reset 5-second inactivity timeout timer
+  // Reset 5-second inactivity timeout timer (disabled in search mode)
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current)
     }
-    if (navMode !== 'main') {
+    if (navMode !== 'main' && navMode !== 'search') {
       inactivityTimerRef.current = setTimeout(() => {
         setNavMode('main')
       }, 5000)
@@ -250,14 +250,22 @@ export default function FloatingNavBar({
           </Stack>
         )}
 
-        {/* --- SEARCH MODE (Full-width text input expand) --- */}
+        {/* --- SEARCH MODE (Full-width text input expand, no timeout, immediate onBlur return, Enter submit) --- */}
         {navMode === 'search' && (
           <Box sx={{ flexGrow: 1 }}>
             <TextField
               value={searchQuery}
               onChange={(e) => {
                 onSearchChange(e.target.value)
-                resetInactivityTimer()
+              }}
+              onBlur={() => {
+                setNavMode('main')
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  setNavMode('main')
+                }
               }}
               placeholder="Search by title, artist, or track..."
               size="small"
@@ -272,9 +280,9 @@ export default function FloatingNavBar({
                     <InputAdornment position="end">
                       <IconButton
                         size="small"
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.preventDefault()
                           onSearchChange('')
-                          resetInactivityTimer()
                         }}
                       >
                         <ClearRoundedIcon fontSize="small" />
