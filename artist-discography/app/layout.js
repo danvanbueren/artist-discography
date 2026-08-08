@@ -10,6 +10,9 @@ const PROJECT_NAME = packageJson.name
   .map(word => word.charAt(0).toUpperCase() + word.slice(1))
   .join(' ')
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const metadata = {
   title: PROJECT_NAME,
   description: `${PROJECT_NAME} - A web app designed to showcase an artist's complete music discography, including albums, EPs, singles, and collaborations, with direct links to listen across all published streaming platforms.`,
@@ -17,8 +20,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <Providers>
           {children}
         </Providers>

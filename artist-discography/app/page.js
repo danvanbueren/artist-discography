@@ -1,9 +1,13 @@
-import { Typography } from "@mui/material"
+import { loadArtistData } from '../lib/artistData'
+import ArtistDiscographyView from './ArtistDiscographyView'
 
 export default function Home() {
+  const { data, health } = loadArtistData()
+
   return (
-    <main>
-      <Typography>test</Typography>
-    </main>
+    <ArtistDiscographyView
+      data={data}
+      health={health}
+    />
   )
 }
