@@ -8,7 +8,10 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
+  Button,
+  Typography,
 } from '@mui/material'
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
 import ArtistHero from './ArtistHero'
 import FloatingNavBar from './FloatingNavBar'
 import PlatformSelectorModal from './PlatformSelectorModal'
@@ -270,20 +273,87 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         )}
 
         {/* Main Content Projects Container */}
-        <Container maxWidth="md" sx={{ mt: 4, flexGrow: 1 }}>
+        <Container maxWidth="md" sx={{ mt: { xs: 2, sm: 3 }, flexGrow: 1 }}>
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
-            <ProjectCard
-              project={selectedProject}
-              artistName={artist.name}
-              onSelectProject={navigateToProject}
-              onBackToAll={navigateToHome}
-              isSingleView={true}
-              onPlayTrack={handlePlayTrack}
-              playingTrack={playingTrack}
-              highlightedTrackSlug={highlightedTrackSlug}
-              onSelectTrack={(track) => navigateToTrack(selectedProject, track)}
-              selectedPlatform={selectedPlatform}
-            />
+            <Stack spacing={3}>
+              {/* Single Project Page Header: Back Button + Horizontal Logo & Artist Name */}
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  py: 1,
+                }}
+              >
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<ArrowBackRoundedIcon fontSize="small" />}
+                  onClick={navigateToHome}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderRadius: 3,
+                    py: 0.6,
+                    px: 1.75,
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  Back to All Releases
+                </Button>
+
+                {/* Horizontal Logo & Artist Name */}
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  onClick={navigateToHome}
+                  sx={{
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.03)',
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src="/api/logo"
+                    alt="Artist Logo"
+                    sx={{
+                      height: { xs: 32, sm: 40 },
+                      maxWidth: 120,
+                      objectFit: 'contain',
+                    }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                      fontSize: { xs: '1.05rem', sm: '1.25rem' },
+                      background: 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)',
+                      WebkitBackgroundClip: artist.name ? 'text' : 'none',
+                      WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
+                    }}
+                  >
+                    {artist.name || 'Artist'}
+                  </Typography>
+                </Stack>
+              </Stack>
+
+              <ProjectCard
+                project={selectedProject}
+                artistName={artist.name}
+                onSelectProject={navigateToProject}
+                isSingleView={true}
+                onPlayTrack={handlePlayTrack}
+                playingTrack={playingTrack}
+                highlightedTrackSlug={highlightedTrackSlug}
+                onSelectTrack={(track) => navigateToTrack(selectedProject, track)}
+                selectedPlatform={selectedPlatform}
+              />
+            </Stack>
           ) : (
             <Stack spacing={4}>
               {filteredProjects.length === 0 ? (

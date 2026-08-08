@@ -1,7 +1,6 @@
 'use client'
 
-import { Paper, Box, Button } from '@mui/material'
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
+import { Paper } from '@mui/material'
 import ProjectHeader from './ProjectHeader'
 import TrackList from './TrackList'
 
@@ -35,22 +34,6 @@ export default function ProjectCard({
           : {},
       }}
     >
-      {isSingleView && onBackToAll && (
-        <Box sx={{ pt: 2, px: 3 }}>
-          <Button
-            size="small"
-            startIcon={<ArrowBackRoundedIcon />}
-            onClick={onBackToAll}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              borderRadius: 2,
-            }}
-          >
-            Back to All Releases
-          </Button>
-        </Box>
-      )}
 
       <ProjectHeader
         project={project}
