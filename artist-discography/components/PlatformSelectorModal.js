@@ -103,7 +103,7 @@ export default function PlatformSelectorModal({
                     component="img"
                     src={platform.icon}
                     alt={platform.name}
-                    sx={{ width: 26, height: 26, objectFit: 'contain' }}
+                    sx={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 1.5 }}
                   />
                 </ListItemIcon>
                 <ListItemText

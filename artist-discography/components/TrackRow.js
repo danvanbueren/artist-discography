@@ -181,7 +181,7 @@ export default function TrackRow({
                     component="img"
                     src={icon}
                     alt={key}
-                    sx={{ width: 22, height: 22, objectFit: 'contain' }}
+                    sx={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 1.5 }}
                   />
                 ) : (
                   <LaunchRoundedIcon sx={{ fontSize: 18 }} />

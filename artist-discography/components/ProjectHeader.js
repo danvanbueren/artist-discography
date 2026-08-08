@@ -222,7 +222,7 @@ export default function ProjectHeader({
                         component="img"
                         src={icon}
                         alt={key}
-                        sx={{ width: 28, height: 28, objectFit: 'contain' }}
+                        sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}
                       />
                     ) : (
                       <LaunchRoundedIcon sx={{ fontSize: 22 }} />

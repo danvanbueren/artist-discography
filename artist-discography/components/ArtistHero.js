@@ -105,16 +105,11 @@ export default function ArtistHero({ artist, onLogoClick }) {
                 rel="noopener noreferrer"
                 size="large"
                 sx={{
-                  p: 1.25,
-                  borderRadius: '50%',
-                  bgcolor: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(8px)',
-                  transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
+                  p: 0.5,
+                  transition: 'transform 0.25s ease',
                   '&:hover': {
-                    transform: 'scale(1.2)',
-                    bgcolor: 'rgba(255,255,255,0.18)',
-                    borderColor: 'primary.main',
+                    transform: 'scale(1.22)',
+                    bgcolor: 'transparent',
                   },
                 }}
               >
@@ -122,7 +117,13 @@ export default function ArtistHero({ artist, onLogoClick }) {
                   component="img"
                   src={icon}
                   alt={key}
-                  sx={{ width: 32, height: 32, objectFit: 'contain' }}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    objectFit: 'contain',
+                    borderRadius: 2,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  }}
                 />
               </IconButton>
             </Tooltip>
