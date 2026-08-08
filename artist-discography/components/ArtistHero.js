@@ -85,50 +85,58 @@ export default function ArtistHero({ artist, onLogoClick }) {
       />
 
       {activeLinks.length > 0 && (
-        <Stack
-          direction="row"
-          spacing={2}
+        <Box
           sx={{
-            mt: 4,
-            flexWrap: 'wrap',
-            gap: 1.5,
-            justifyContent: 'center',
-            alignItems: 'center',
+            maxWidth: 'md',
+            width: '100%',
+            mx: 'auto',
+            mt: { xs: 4, sm: 5 },
+            px: 2,
           }}
         >
-          {activeLinks.map(({ key, url, icon }) => (
-            <Tooltip key={key} title={key.toUpperCase()} arrow>
-              <IconButton
-                component="a"
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="large"
-                sx={{
-                  p: 0.5,
-                  transition: 'transform 0.25s ease',
-                  '&:hover': {
-                    transform: 'scale(1.22)',
-                    bgcolor: 'transparent',
-                  },
-                }}
-              >
-                <Box
-                  component="img"
-                  src={icon}
-                  alt={key}
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              flexWrap: 'wrap',
+              gap: { xs: 1.5, sm: 2.5 },
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {activeLinks.map(({ key, url, icon }) => (
+              <Tooltip key={key} title={key.toUpperCase()} arrow placement="top">
+                <IconButton
+                  component="a"
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
-                    width: 36,
-                    height: 36,
-                    objectFit: 'contain',
-                    borderRadius: 2,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                    p: 0.5,
+                    transition: 'transform 0.25s ease',
+                    '&:hover': {
+                      transform: 'scale(1.15)',
+                      bgcolor: 'transparent',
+                    },
                   }}
-                />
-              </IconButton>
-            </Tooltip>
-          ))}
-        </Stack>
+                >
+                  <Box
+                    component="img"
+                    src={icon}
+                    alt={key}
+                    sx={{
+                      width: { xs: 54, sm: 64, md: 72 },
+                      height: { xs: 54, sm: 64, md: 72 },
+                      objectFit: 'contain',
+                      borderRadius: { xs: 2.5, sm: 3 },
+                      boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+                    }}
+                  />
+                </IconButton>
+              </Tooltip>
+            ))}
+          </Stack>
+        </Box>
       )}
     </Box>
   )
