@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Stack, IconButton, useTheme } from '@mui/material'
+import { Box, useTheme } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
 
@@ -98,29 +98,31 @@ export default function ArtistHero({ artist, onLogoClick }) {
             px: 2,
           }}
         >
-          <Stack
-            direction="row"
-            spacing={2}
+          <Box
             sx={{
+              display: 'flex',
               flexWrap: 'wrap',
-              gap: { xs: 1.5, sm: 2.5 },
               justifyContent: 'center',
               alignItems: 'center',
+              gap: { xs: 2, sm: 3 },
             }}
           >
             {activeLinks.map(({ key, url, icon }) => (
-              <IconButton
+              <Box
                 key={key}
                 component="a"
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{
-                  p: 0.5,
-                  transition: 'transform 0.25s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: { xs: 2.5, sm: 3 },
+                  transition: 'transform 0.25s ease, opacity 0.25s ease',
+                  textDecoration: 'none',
                   '&:hover': {
-                    transform: 'scale(1.15)',
-                    bgcolor: 'transparent',
+                    transform: 'scale(1.12)',
                   },
                 }}
               >
@@ -134,11 +136,12 @@ export default function ArtistHero({ artist, onLogoClick }) {
                     objectFit: 'contain',
                     borderRadius: { xs: 2.5, sm: 3 },
                     boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+                    display: 'block',
                   }}
                 />
-              </IconButton>
+              </Box>
             ))}
-          </Stack>
+          </Box>
         </Box>
       )}
     </Box>
