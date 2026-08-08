@@ -1,0 +1,199 @@
+'use client'
+
+import { useState } from 'react'
+import { Box, Stack, Typography, IconButton, Tooltip } from '@mui/material'
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
+import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
+import EqualizerRoundedIcon from '@mui/icons-material/EqualizerRounded'
+import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
+import SubduedText from './SubduedText'
+
+const TRACK_PLATFORM_ICONS = {
+  spotify: '/spotify.webp',
+  apple: '/apple.webp',
+  youtube: '/youtube.webp',
+  soundcloud: '/soundcloud.webp',
+  bandcamp: '/bandcamp.webp',
+  deezer: '/deezer.webp',
+  tidal: '/tidal.webp',
+  pandora: '/pandora.webp',
+  amazon: '/amazon.webp',
+  itunes: '/apple.webp',
+}
+
+export default function TrackRow({
+  track,
+  index,
+  projectArtist,
+  onPlayTrack,
+  isPlayingThisTrack,
+  isHighlighted,
+  onSelectTrack,
+  selectedPlatform,
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const name = track?.name ?? ''
+  const artist = track?.artist || projectArtist || ''
+  const links = track?.links ?? {}
+
+  // Filter non-empty platform links
+  const availableLinks = []
+  for (const [key, url] of Object.entries(links)) {
+    if (url && typeof url === 'string' && url.trim() !== '') {
+      availableLinks.push({
+        key,
+        url,
+        icon: TRACK_PLATFORM_ICONS[key],
+      })
+    }
+  }
+
+  const handleRowClick = (e) => {
+    // If clicking a direct external platform link, don't trigger track select
+    if (e.target.closest('a')) {
+      return
+    }
+    if (onSelectTrack) {
+      onSelectTrack(track)
+    }
+  }
+
+  return (
+    <Box
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={handleRowClick}
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '36px 1fr auto', sm: '48px 1fr auto' },
+        alignItems: 'center',
+        py: 1.25,
+        px: { xs: 1.5, sm: 2 },
+        borderRadius: 2,
+        cursor: 'pointer',
+        bgcolor: isHighlighted
+          ? 'rgba(144, 202, 249, 0.12)'
+          : isPlayingThisTrack
+          ? 'rgba(144, 202, 249, 0.08)'
+          : hovered
+          ? 'action.hover'
+          : 'transparent',
+        borderLeft: isHighlighted ? '3px solid' : '3px solid transparent',
+        borderColor: isHighlighted ? 'primary.main' : 'transparent',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+      }}
+    >
+      {/* Col 1: Track Number / Play Indicator */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isPlayingThisTrack ? (
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onPlayTrack) onPlayTrack(track)
+            }}
+          >
+            <PauseRoundedIcon fontSize="small" />
+          </IconButton>
+        ) : hovered ? (
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onPlayTrack) onPlayTrack(track)
+            }}
+          >
+            <PlayArrowRoundedIcon fontSize="small" />
+          </IconButton>
+        ) : (
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: isHighlighted ? 700 : 500,
+              color: isHighlighted ? 'primary.main' : 'text.secondary',
+              fontSize: '0.875rem',
+            }}
+          >
+            {index + 1}
+          </Typography>
+        )}
+      </Box>
+
+      {/* Col 2: Track Name & Artist Stack */}
+      <Stack spacing={0.25} sx={{ minWidth: 0, px: 1 }}>
+        <SubduedText
+          value={name}
+          placeholder="Untitled Track"
+          variant="body1"
+          sx={{
+            fontWeight: isHighlighted ? 700 : 600,
+            fontSize: { xs: '0.9rem', sm: '0.95rem' },
+            color: isHighlighted ? 'primary.main' : 'text.primary',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        />
+
+        <SubduedText
+          value={artist}
+          placeholder="Artist"
+          variant="caption"
+          sx={{
+            fontSize: '0.8rem',
+            color: 'text.secondary',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        />
+      </Stack>
+
+      {/* Col 3: Platform Links */}
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        {availableLinks.map(({ key, url, icon }) => {
+          const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
+          return (
+            <Tooltip key={key} title={`Listen on ${key.toUpperCase()}`} arrow>
+              <IconButton
+                component="a"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="small"
+                onClick={(e) => e.stopPropagation()}
+                sx={{
+                  p: 0.4,
+                  borderRadius: 1,
+                  border: isPreferred ? '1px solid' : 'none',
+                  borderColor: isPreferred ? 'primary.main' : 'transparent',
+                  bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
+                  opacity: isPreferred || hovered ? 1 : 0.7,
+                  transition: 'transform 0.15s ease, opacity 0.15s ease',
+                  '&:hover': {
+                    transform: 'scale(1.15)',
+                    opacity: 1,
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                  },
+                }}
+              >
+                {icon ? (
+                  <Box
+                    component="img"
+                    src={icon}
+                    alt={key}
+                    sx={{ width: 16, height: 16, objectFit: 'contain' }}
+                  />
+                ) : (
+                  <LaunchRoundedIcon sx={{ fontSize: 14 }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          )
+        })}
+      </Stack>
+    </Box>
+  )
+}
