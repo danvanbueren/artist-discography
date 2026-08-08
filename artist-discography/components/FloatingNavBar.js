@@ -102,7 +102,7 @@ export default function FloatingNavBar({
         </Box>
 
         {/* Right: Actions Stack */}
-        <Stack direction="row" spacing={0.75} alignItems="center" flexShrink={0}>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0 }}>
           {/* Search Toggle / Input */}
           {showSearch ? (
             <TextField

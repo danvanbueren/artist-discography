@@ -79,9 +79,7 @@ export default function ArtistHero({ artist }) {
         <Stack
           direction="row"
           spacing={1.5}
-          justifyContent="center"
-          alignItems="center"
-          sx={{ mt: 2.5, flexWrap: 'wrap', gap: 1 }}
+          sx={{ mt: 2.5, flexWrap: 'wrap', gap: 1, justifyContent: 'center', alignItems: 'center' }}
         >
           {activeLinks.map(({ key, url, icon }) => (
             <Tooltip key={key} title={key.toUpperCase()} arrow>

@@ -152,7 +152,7 @@ export default function TrackRow({
       </Stack>
 
       {/* Col 3: Platform Links */}
-      <Stack direction="row" spacing={0.5} alignItems="center">
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
         {availableLinks.map(({ key, url, icon }) => {
           const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
           return (

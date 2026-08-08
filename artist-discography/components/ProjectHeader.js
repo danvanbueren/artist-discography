@@ -109,7 +109,7 @@ export default function ProjectHeader({
       {/* Right: Metadata Stack */}
       <Stack spacing={0.75} sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
         {/* Type Badge & Date */}
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           {type ? (
             <Chip
               label={type.toUpperCase()}
@@ -180,8 +180,7 @@ export default function ProjectHeader({
           <Stack
             direction="row"
             spacing={1}
-            alignItems="center"
-            sx={{ pt: 0.75, flexWrap: 'wrap', gap: 0.75 }}
+            sx={{ pt: 0.75, flexWrap: 'wrap', gap: 0.75, alignItems: 'center' }}
           >
             {availablePlatforms.map(({ key, url, icon }) => {
               const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()

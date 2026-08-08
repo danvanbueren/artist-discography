@@ -72,7 +72,7 @@ export default function DevHealthDrawer({ health }) {
         }}
       >
         <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6" fontWeight={700}>
               Dev Data Health Report
             </Typography>

@@ -66,12 +66,11 @@ export default function AudioPlayerBar({
         <Container maxWidth="md" disableGutters>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
             spacing={2}
+            sx={{ alignItems: 'center', justifyContent: 'space-between' }}
           >
             {/* Track Info */}
-            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+            <Stack direction="row" spacing={1.5} sx={{ minWidth: 0, flex: 1, alignItems: 'center' }}>
               <Box
                 sx={{
                   width: 40,
@@ -80,7 +79,7 @@ export default function AudioPlayerBar({
                   bgcolor: 'primary.main',
                   display: 'flex',
                   alignItems: 'center',
-                  justify: 'center',
+                  justifyContent: 'center',
                   color: 'primary.contrastText',
                   flexShrink: 0,
                 }}
@@ -108,7 +107,7 @@ export default function AudioPlayerBar({
             </Stack>
 
             {/* Audio Controls */}
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <IconButton
                 color="primary"
                 onClick={onTogglePlay}
