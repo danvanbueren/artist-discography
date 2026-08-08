@@ -9,6 +9,7 @@ import {
   createTheme,
   CssBaseline,
   Typography,
+  Snackbar,
 } from '@mui/material'
 import ArtistHero from './ArtistHero'
 import FloatingNavBar from './FloatingNavBar'
@@ -32,9 +33,36 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [selectedPlatform, setSelectedPlatform] = useState('')
   const [platformModalOpen, setPlatformModalOpen] = useState(false)
 
-  // Audio Player State
+  // Audio Player & Queue State
   const [playingTrack, setPlayingTrack] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [audioQueue, setAudioQueue] = useState([])
+
+  // Toast / Notification State
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastOpen, setToastOpen] = useState(false)
+
+  const showToast = useCallback((msg) => {
+    setToastMessage(msg)
+    setToastOpen(true)
+  }, [])
+
+  const handleAddToQueue = useCallback((track, proj) => {
+    setAudioQueue(prev => [...prev, { track, project: proj }])
+    showToast(`Added "${track?.name || 'track'}" to queue`)
+  }, [showToast])
+
+  const handleSkipNext = useCallback(() => {
+    if (audioQueue.length > 0) {
+      const [nextItem, ...restQueue] = audioQueue
+      setAudioQueue(restQueue)
+      setPlayingTrack(nextItem.track)
+      setIsPlaying(true)
+      showToast(`Now playing "${nextItem.track?.name || 'track'}"`)
+    } else {
+      setIsPlaying(false)
+    }
+  }, [audioQueue, showToast])
 
   // Multi-Select Type Filters & Sorting State
   const [activeTypes, setActiveTypes] = useState([]) // e.g. ['LP', 'EP']
@@ -336,6 +364,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 onSelectProject={navigateToProject}
                 isSingleView={true}
                 onPlayTrack={handlePlayTrack}
+                onAddToQueue={handleAddToQueue}
+                onShowToast={showToast}
                 playingTrack={playingTrack}
                 highlightedTrackSlug={highlightedTrackSlug}
                 onSelectTrack={(track) => navigateToTrack(selectedProject, track)}
@@ -361,6 +391,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     onSelectProject={navigateToProject}
                     isSingleView={false}
                     onPlayTrack={handlePlayTrack}
+                    onAddToQueue={handleAddToQueue}
+                    onShowToast={showToast}
                     playingTrack={playingTrack}
                     highlightedTrackSlug={null}
                     onSelectTrack={(track) => navigateToTrack(proj, track)}
@@ -389,6 +421,18 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             setPlayingTrack(null)
             setIsPlaying(false)
           }}
+          queueCount={audioQueue.length}
+          onSkipNext={handleSkipNext}
+        />
+
+        {/* Feedback Snackbar / Toast */}
+        <Snackbar
+          open={toastOpen}
+          autoHideDuration={3000}
+          onClose={() => setToastOpen(false)}
+          message={toastMessage}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ mb: playingTrack ? 10 : 2 }}
         />
 
         {/* Dev Data Health Drawer Badge */}

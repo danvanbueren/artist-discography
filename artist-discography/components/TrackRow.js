@@ -5,7 +5,11 @@ import { Box, Stack, Typography, IconButton } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
+import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
+import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import SubduedText from './SubduedText'
+import { slugify } from '../lib/slugs'
 
 const TRACK_PLATFORM_ICONS = {
   spotify: '/spotify.webp',
@@ -23,14 +27,18 @@ const TRACK_PLATFORM_ICONS = {
 export default function TrackRow({
   track,
   index,
+  project,
   projectArtist,
   onPlayTrack,
+  onAddToQueue,
+  onShowToast,
   isPlayingThisTrack,
   isHighlighted,
   onSelectTrack,
   selectedPlatform,
 }) {
   const [hovered, setHovered] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const name = track?.name ?? ''
   const artist = track?.artist || projectArtist || ''
@@ -148,8 +156,8 @@ export default function TrackRow({
         />
       </Stack>
 
-      {/* Col 3: Platform Links (Enlarged 22px icons) */}
-      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+      {/* Col 3: Actions & Streaming Links */}
+      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
         {availableLinks.map(({ key, url, icon }) => {
           const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
           return (
@@ -189,6 +197,59 @@ export default function TrackRow({
             </IconButton>
           )
         })}
+
+        {/* Add to Queue Button */}
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onAddToQueue) onAddToQueue(track, project)
+          }}
+          sx={{
+            p: 0.6,
+            borderRadius: 1.5,
+            opacity: hovered ? 1 : 0.65,
+            transition: 'transform 0.18s ease, opacity 0.18s ease',
+            '&:hover': {
+              transform: 'scale(1.18)',
+              opacity: 1,
+              bgcolor: 'rgba(255,255,255,0.12)',
+              color: 'primary.main',
+            },
+          }}
+        >
+          <QueueMusicRoundedIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+
+        {/* Share Track Link Button */}
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation()
+            const pSlug = slugify(project?.name || '')
+            const tSlug = slugify(track?.name || '')
+            const shareUrl = `${window.location.origin}/${pSlug}/${tSlug}`
+            navigator.clipboard.writeText(shareUrl)
+            setCopied(true)
+            if (onShowToast) onShowToast(`Link copied for "${track?.name || 'track'}"`)
+            setTimeout(() => setCopied(false), 2000)
+          }}
+          sx={{
+            p: 0.6,
+            borderRadius: 1.5,
+            opacity: copied || hovered ? 1 : 0.65,
+            color: copied ? 'success.main' : 'inherit',
+            transition: 'transform 0.18s ease, opacity 0.18s ease',
+            '&:hover': {
+              transform: 'scale(1.18)',
+              opacity: 1,
+              bgcolor: 'rgba(255,255,255,0.12)',
+              color: copied ? 'success.main' : 'primary.main',
+            },
+          }}
+        >
+          {copied ? <CheckRoundedIcon sx={{ fontSize: 20 }} /> : <ShareRoundedIcon sx={{ fontSize: 19 }} />}
+        </IconButton>
       </Stack>
     </Box>
   )

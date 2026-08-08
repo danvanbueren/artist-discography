@@ -5,9 +5,12 @@ import TrackRow from './TrackRow'
 import SubduedText from './SubduedText'
 
 export default function TrackList({
+  project,
   tracks = [],
   projectArtist = '',
   onPlayTrack,
+  onAddToQueue,
+  onShowToast,
   playingTrack,
   highlightedTrackSlug,
   onSelectTrack,
@@ -40,8 +43,11 @@ export default function TrackList({
             key={idx}
             track={track}
             index={idx}
+            project={project}
             projectArtist={projectArtist}
             onPlayTrack={onPlayTrack}
+            onAddToQueue={onAddToQueue}
+            onShowToast={onShowToast}
             isPlayingThisTrack={isPlayingThisTrack}
             isHighlighted={isHighlighted}
             onSelectTrack={onSelectTrack}

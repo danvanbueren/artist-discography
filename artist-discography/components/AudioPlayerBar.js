@@ -9,11 +9,13 @@ import {
   IconButton,
   Slider,
   Stack,
+  Badge,
   useTheme,
   Collapse,
 } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
+import SkipNextRoundedIcon from '@mui/icons-material/SkipNextRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 
@@ -22,6 +24,8 @@ export default function AudioPlayerBar({
   isPlaying,
   onTogglePlay,
   onClosePlayer,
+  queueCount = 0,
+  onSkipNext,
 }) {
   const theme = useTheme()
   const [progress, setProgress] = useState(0)
@@ -30,7 +34,15 @@ export default function AudioPlayerBar({
   useEffect(() => {
     if (isPlaying) {
       timerRef.current = setInterval(() => {
-        setProgress(prev => (prev >= 100 ? 0 : prev + 1))
+        setProgress(prev => {
+          if (prev >= 100) {
+            if (onSkipNext && queueCount > 0) {
+              onSkipNext()
+            }
+            return 0
+          }
+          return prev + 1
+        })
       }, 300)
     } else {
       if (timerRef.current) clearInterval(timerRef.current)
@@ -38,7 +50,7 @@ export default function AudioPlayerBar({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [isPlaying])
+  }, [isPlaying, onSkipNext, queueCount])
 
   if (!playingTrack) return null
 
@@ -133,6 +145,18 @@ export default function AudioPlayerBar({
                     <PlayArrowRoundedIcon fontSize="small" />
                   )}
                 </IconButton>
+
+                {queueCount > 0 && (
+                  <IconButton
+                    size="small"
+                    onClick={onSkipNext}
+                    sx={{ color: 'primary.main' }}
+                  >
+                    <Badge badgeContent={queueCount} color="primary">
+                      <SkipNextRoundedIcon fontSize="small" />
+                    </Badge>
+                  </IconButton>
+                )}
 
                 <IconButton
                   size="small"

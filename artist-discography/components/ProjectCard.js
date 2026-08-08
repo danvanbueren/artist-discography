@@ -11,6 +11,8 @@ export default function ProjectCard({
   onBackToAll,
   isSingleView = false,
   onPlayTrack,
+  onAddToQueue,
+  onShowToast,
   playingTrack,
   highlightedTrackSlug,
   onSelectTrack,
@@ -44,9 +46,12 @@ export default function ProjectCard({
       />
 
       <TrackList
+        project={project}
         tracks={project?.tracks ?? []}
         projectArtist={project?.artist || artistName}
         onPlayTrack={onPlayTrack}
+        onAddToQueue={onAddToQueue}
+        onShowToast={onShowToast}
         playingTrack={playingTrack}
         highlightedTrackSlug={highlightedTrackSlug}
         onSelectTrack={onSelectTrack}
