@@ -1,17 +1,18 @@
 'use client'
 
 import { Box, useTheme } from '@mui/material'
-import { useLogoAnalysis, shouldApplyLogoGradient } from '../lib/useLogoAnalysis'
+import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
 
 export default function HeaderLogo({ onClick }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
   const analysis = useLogoAnalysis('/api/logo')
-  const applyGradient = shouldApplyLogoGradient(analysis, isDarkMode)
 
-  const heroGradient = isDarkMode
-    ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
-    : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)'
+  const baseShadow = isDarkMode
+    ? 'drop-shadow(0px 6px 16px rgba(0,0,0,0.35))'
+    : 'drop-shadow(0px 6px 16px rgba(0,0,0,0.15))'
+
+  const logoFilter = getLogoFilter(analysis, isDarkMode, baseShadow)
 
   return (
     <Box
@@ -23,55 +24,25 @@ export default function HeaderLogo({ onClick }) {
       }}
     >
       <Box
+        component="img"
+        src="/api/logo"
+        alt="Artist Logo"
         onClick={onClick}
         sx={{
-          width: '100%',
+          maxHeight: { xs: 90, sm: 120, md: 150 },
           maxWidth: { xs: 200, sm: 280, md: 340 },
-          height: { xs: 80, sm: 110, md: 140 },
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          objectFit: 'contain',
           cursor: onClick ? 'pointer' : 'default',
           transition: 'transform 0.25s ease-in-out, filter 0.25s ease-in-out',
-          filter: 'drop-shadow(0px 6px 16px rgba(0,0,0,0.25))',
+          filter: logoFilter,
           '&:hover': onClick
             ? {
                 transform: 'scale(1.04)',
-                filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.35))',
+                filter: `${logoFilter} brightness(1.1)`,
               }
             : {},
         }}
-      >
-        {applyGradient ? (
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              WebkitMaskImage: 'url("/api/logo")',
-              maskImage: 'url("/api/logo")',
-              WebkitMaskSize: 'contain',
-              maskSize: 'contain',
-              WebkitMaskRepeat: 'no-repeat',
-              maskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              maskPosition: 'center',
-              background: heroGradient,
-            }}
-          />
-        ) : (
-          <Box
-            component="img"
-            src="/api/logo"
-            alt="Artist Logo"
-            sx={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              filter: isDarkMode ? 'none' : 'brightness(0.2)',
-            }}
-          />
-        )}
-      </Box>
+      />
     </Box>
   )
 }

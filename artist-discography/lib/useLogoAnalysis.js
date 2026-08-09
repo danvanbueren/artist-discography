@@ -120,19 +120,25 @@ export function shouldApplyLogoGradient(analysis, isDarkMode) {
  * Helper to compute CSS filter based on logo analysis and current theme mode
  */
 export function getLogoFilter(analysis, isDarkMode, baseFilter = 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))') {
-  if (!analysis || !analysis.isMonochrome) {
-    return baseFilter
+  const cleanBase = baseFilter === 'none' ? '' : baseFilter
+
+  if (!analysis || !analysis.loaded) {
+    return !isDarkMode ? `invert(1) ${cleanBase}`.trim() : (cleanBase || 'none')
+  }
+
+  if (!analysis.isMonochrome) {
+    return cleanBase || 'none'
   }
 
   // White/light monochrome logo in light mode -> Invert to black
   if (analysis.isLight && !isDarkMode) {
-    return `invert(1) ${baseFilter}`
+    return `invert(1) ${cleanBase}`.trim()
   }
 
   // Black/dark monochrome logo in dark mode -> Invert to white
   if (analysis.isDark && isDarkMode) {
-    return `invert(1) ${baseFilter}`
+    return `invert(1) ${cleanBase}`.trim()
   }
 
-  return baseFilter
+  return cleanBase || 'none'
 }
