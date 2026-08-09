@@ -544,7 +544,20 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             setIsPlaying(false)
           }}
           queueCount={audioQueue.length}
+          audioQueue={audioQueue}
+          onRemoveFromQueue={(index) => {
+            setAudioQueue(prev => prev.filter((_, i) => i !== index))
+          }}
+          onPlayQueuedTrack={(item, index) => {
+            setAudioQueue(prev => prev.filter((_, i) => i !== index))
+            setPlayingTrack(item.track)
+            setIsPlaying(true)
+          }}
           onSkipNext={handleSkipNext}
+          onSkipPrev={() => {
+            showToast('Restarted playback')
+          }}
+          onShowToast={showToast}
         />
 
         {/* Feedback Snackbar / Toast */}
