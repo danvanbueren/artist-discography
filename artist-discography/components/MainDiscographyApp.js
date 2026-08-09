@@ -510,6 +510,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                           maxWidth: '100%',
                           maxHeight: '100%',
                           objectFit: 'contain',
+                          filter: darkMode ? 'none' : 'brightness(0.2)',
                         }}
                       />
                     )}

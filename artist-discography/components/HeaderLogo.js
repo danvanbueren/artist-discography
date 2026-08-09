@@ -67,6 +67,7 @@ export default function HeaderLogo({ onClick }) {
               maxWidth: '100%',
               maxHeight: '100%',
               objectFit: 'contain',
+              filter: isDarkMode ? 'none' : 'brightness(0.2)',
             }}
           />
         )}
