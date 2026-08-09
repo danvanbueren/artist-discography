@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Box,
   Container,
@@ -111,147 +111,67 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     setToastOpen(true)
   }, [])
 
-  // All Playable Discography Tracks for Autoplay
-  const allDiscographyTracks = useMemo(() => {
-    const list = []
-    for (const proj of (projects || [])) {
-      for (const track of (proj.tracks || [])) {
-        if (track.hasAudio && track.audioUrl) {
-          list.push({
-            track: {
-              ...track,
-              project: proj.name || '',
-              projectCover: track.cover || proj.cover || '',
-            },
-            project: proj,
-          })
+  // Ref for the projects container — used by the scroll-aware mask effect below
+  const projectsContainerRef = useRef(null)
+
+  // Dynamically apply a CSS mask-image to the projects container that fades
+  // project cards only where they actually overlap with the sticky nav or fixed player.
+  // Uses direct DOM style mutation (not React state) to avoid re-renders on every scroll tick.
+  useEffect(() => {
+    // Approximate bar heights in px. Nav is only present on the main discography view.
+    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : 88
+    const PLAYER_H = playingTrack ? 92 : 0
+    const FADE = 52  // px: length of the fade gradient transition
+
+    const applyMask = () => {
+      const el = projectsContainerRef.current
+      if (!el) return
+
+      const rect = el.getBoundingClientRect()
+      const vh = window.innerHeight
+
+      // Is any content currently overlapping the nav at the top?
+      const showTop = rect.top < NAV_H && rect.bottom > NAV_H
+      // Is any content currently overlapping the player at the bottom?
+      const showBottom = rect.bottom > vh - PLAYER_H && rect.top < vh - PLAYER_H
+
+      let mask = 'none'
+
+      if (showTop || showBottom) {
+        // Convert viewport intersection points to container-relative px coordinates
+        const topFadeStart = showTop ? Math.max(0, NAV_H - rect.top) : 0
+        const topFadeEnd = showTop ? topFadeStart + FADE : 0
+
+        const bottomFadeEnd = showBottom ? (vh - PLAYER_H) - rect.top : rect.height
+        const bottomFadeStart = showBottom
+          ? Math.max(topFadeEnd, bottomFadeEnd - FADE)
+          : rect.height
+
+        if (showTop && showBottom) {
+          mask = `linear-gradient(to bottom, transparent ${topFadeStart}px, black ${topFadeEnd}px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px)`
+        } else if (showTop) {
+          mask = `linear-gradient(to bottom, transparent ${topFadeStart}px, black ${topFadeEnd}px)`
+        } else {
+          mask = `linear-gradient(to bottom, black 0, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px)`
         }
       }
-    }
-    return list
-  }, [projects])
 
-  const [customAutoplayQueue, setCustomAutoplayQueue] = useState(null)
-
-  // Default autoplay list based on current playing track
-  const defaultAutoplayTracks = useMemo(() => {
-    if (!allDiscographyTracks || allDiscographyTracks.length === 0) return []
-    if (!playingTrack) return allDiscographyTracks
-    const currIndex = allDiscographyTracks.findIndex(
-      item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
-    )
-    if (currIndex === -1) return allDiscographyTracks
-    return [
-      ...allDiscographyTracks.slice(currIndex + 1),
-      ...allDiscographyTracks.slice(0, currIndex),
-    ]
-  }, [allDiscographyTracks, playingTrack])
-
-  // Active autoplay tracks: custom override if modified, else default
-  const autoplayTracks = useMemo(() => {
-    return customAutoplayQueue !== null ? customAutoplayQueue : defaultAutoplayTracks
-  }, [customAutoplayQueue, defaultAutoplayTracks])
-
-  // Reset customAutoplayQueue when playingTrack changes to a new track
-  useEffect(() => {
-    setCustomAutoplayQueue(null)
-  }, [playingTrack?.name])
-
-  const handleAddToQueue = useCallback((track, proj) => {
-    if (!track || !track.hasAudio || !track.audioUrl) {
-      showToast(`No audio available for "${track?.name || 'this track'}"`)
-      return
-    }
-    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
-    const trackWithProject = {
-      ...track,
-      project: parentProj?.name || track.project || '',
-      projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
-    }
-    setManualQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
-    showToast(`Added "${track?.name || 'track'}" to queue`)
-  }, [selectedProject, projects, showToast])
-
-  const handleSkipNext = useCallback(() => {
-    if (manualQueue.length > 0) {
-      const [nextItem, ...restQueue] = manualQueue
-      setManualQueue(restQueue)
-      setPlayingTrack(nextItem.track)
-      setIsPlaying(true)
-      return
+      el.style.maskImage = mask
+      el.style.webkitMaskImage = mask
     }
 
-    if (autoplayTracks.length > 0) {
-      const [nextItem, ...restAutoplay] = autoplayTracks
-      setCustomAutoplayQueue(restAutoplay)
-      setPlayingTrack(nextItem.track)
-      setIsPlaying(true)
-    } else if (allDiscographyTracks.length > 0) {
-      const nextItem = allDiscographyTracks[0]
-      setPlayingTrack(nextItem.track)
-      setIsPlaying(true)
-    } else {
-      setIsPlaying(false)
+    window.addEventListener('scroll', applyMask, { passive: true })
+    window.addEventListener('resize', applyMask, { passive: true })
+    applyMask()
+
+    return () => {
+      window.removeEventListener('scroll', applyMask)
+      window.removeEventListener('resize', applyMask)
     }
-  }, [manualQueue, autoplayTracks, allDiscographyTracks])
+  }, [currentView, playingTrack])
 
-  const handleSkipPrev = useCallback(() => {
-    if (allDiscographyTracks.length > 0) {
-      let currIndex = -1
-      if (playingTrack) {
-        currIndex = allDiscographyTracks.findIndex(
-          item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
-        )
-      }
-      const prevIndex = currIndex > 0 ? currIndex - 1 : allDiscographyTracks.length - 1
-      const prevItem = allDiscographyTracks[prevIndex]
-      setPlayingTrack(prevItem.track)
-      setIsPlaying(true)
-    }
-  }, [playingTrack, allDiscographyTracks])
-
-  const handleQueueDragDrop = useCallback(({ fromList, fromIndex, toList, toIndex }) => {
-    let currentQueue = [...manualQueue]
-    let currentAutoplay = [...autoplayTracks]
-
-    if (fromList === 'queue' && toList === 'queue') {
-      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
-      const [moved] = currentQueue.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentQueue.length)
-      currentQueue.splice(targetIdx, 0, moved)
-      setManualQueue(currentQueue)
-    } else if (fromList === 'autoplay' && toList === 'autoplay') {
-      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
-      const [moved] = currentAutoplay.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentAutoplay.length)
-      currentAutoplay.splice(targetIdx, 0, moved)
-      setCustomAutoplayQueue(currentAutoplay)
-    } else if (fromList === 'autoplay' && toList === 'queue') {
-      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
-      const [moved] = currentAutoplay.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentQueue.length)
-      currentQueue.splice(targetIdx, 0, moved)
-      setManualQueue(currentQueue)
-      setCustomAutoplayQueue(currentAutoplay)
-    } else if (fromList === 'queue' && toList === 'autoplay') {
-      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
-      const [moved] = currentQueue.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentAutoplay.length)
-      currentAutoplay.splice(targetIdx, 0, moved)
-      setManualQueue(currentQueue)
-      setCustomAutoplayQueue(currentAutoplay)
-    }
-  }, [manualQueue, autoplayTracks])
-
-  const handleRemoveFromAutoplay = useCallback((index) => {
-    setCustomAutoplayQueue(prev => {
-      const current = prev !== null ? [...prev] : [...autoplayTracks]
-      if (index >= 0 && index < current.length) {
-        current.splice(index, 1)
-      }
-      return current
-    })
-  }, [autoplayTracks])
+  // handleSkipNext, handleSkipPrev, handleQueueDragDrop, handleRemoveFromAutoplay
+  // are declared below filteredProjects/displayedDiscographyTracks/autoplayTracks
 
   // Multi-Select Type Filters & Sorting State
   const [activeTypes, setActiveTypes] = useState([]) // e.g. ['LP', 'EP']
@@ -477,6 +397,163 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     return result
   }, [projects, activeTypes, searchQuery, sortOrder])
 
+  // All Playable Tracks in Currently Presented Top-to-Bottom Order (factors in single project view, filters, search, & sorting)
+  const displayedDiscographyTracks = useMemo(() => {
+    const activeProjects = currentView === 'SINGLE_PROJECT' && selectedProject
+      ? [selectedProject]
+      : filteredProjects
+
+    const list = []
+    for (const proj of (activeProjects || [])) {
+      for (const track of (proj.tracks || [])) {
+        if (track.hasAudio && track.audioUrl) {
+          list.push({
+            track: {
+              ...track,
+              project: proj.name || '',
+              projectCover: track.cover || proj.cover || '',
+            },
+            project: proj,
+          })
+        }
+      }
+    }
+    return list
+  }, [currentView, selectedProject, filteredProjects])
+
+  const [customAutoplayQueue, setCustomAutoplayQueue] = useState(null)
+
+  // Default autoplay list: strictly tracks that appear AFTER playingTrack in top-to-bottom order (no wrapping around)
+  const defaultAutoplayTracks = useMemo(() => {
+    if (!displayedDiscographyTracks || displayedDiscographyTracks.length === 0) return []
+    if (!playingTrack) return displayedDiscographyTracks
+    const currIndex = displayedDiscographyTracks.findIndex(
+      item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
+    )
+    if (currIndex === -1) return displayedDiscographyTracks
+    return displayedDiscographyTracks.slice(currIndex + 1)
+  }, [displayedDiscographyTracks, playingTrack])
+
+  // Active autoplay tracks: custom override if modified by drag/drop or deletion, else default
+  const autoplayTracks = useMemo(() => {
+    return customAutoplayQueue !== null ? customAutoplayQueue : defaultAutoplayTracks
+  }, [customAutoplayQueue, defaultAutoplayTracks])
+
+  // Reset customAutoplayQueue when playingTrack changes to a new track
+  useEffect(() => {
+    setCustomAutoplayQueue(null)
+  }, [playingTrack?.name])
+
+  // Compute the most contextually relevant cover art to use as the full-page ambient background
+  const ambientImage = useMemo(() => {
+    // Priority 1: currently playing track's cover
+    if (playingTrack?.projectCover) return playingTrack.projectCover
+    if (playingTrack?.cover) return playingTrack.cover
+    // Priority 2: single project view
+    if (currentView === 'SINGLE_PROJECT' && selectedProject) {
+      return selectedProject.cover || selectedProject.image || ''
+    }
+    // Priority 3: first visible project in the current filtered list
+    for (const proj of (filteredProjects || [])) {
+      const img = proj.cover || proj.image || ''
+      if (img) return img
+    }
+    return ''
+  }, [playingTrack, currentView, selectedProject, filteredProjects])
+
+  const handleAddToQueue = useCallback((track, proj) => {
+    if (!track || !track.hasAudio || !track.audioUrl) {
+      showToast(`No audio available for "${track?.name || 'this track'}"`)
+      return
+    }
+    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
+    const trackWithProject = {
+      ...track,
+      project: parentProj?.name || track.project || '',
+      projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
+    }
+    setManualQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
+    showToast(`Added "${track?.name || 'track'}" to queue`)
+  }, [selectedProject, projects, showToast])
+
+  const handleSkipNext = useCallback(() => {
+    if (manualQueue.length > 0) {
+      const [nextItem, ...restQueue] = manualQueue
+      setManualQueue(restQueue)
+      setPlayingTrack(nextItem.track)
+      setIsPlaying(true)
+      return
+    }
+
+    if (autoplayTracks.length > 0) {
+      const [nextItem, ...restAutoplay] = autoplayTracks
+      setCustomAutoplayQueue(restAutoplay)
+      setPlayingTrack(nextItem.track)
+      setIsPlaying(true)
+    } else {
+      setIsPlaying(false)
+    }
+  }, [manualQueue, autoplayTracks])
+
+  const handleSkipPrev = useCallback(() => {
+    if (displayedDiscographyTracks.length > 0) {
+      let currIndex = -1
+      if (playingTrack) {
+        currIndex = displayedDiscographyTracks.findIndex(
+          item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
+        )
+      }
+      if (currIndex > 0) {
+        const prevItem = displayedDiscographyTracks[currIndex - 1]
+        setPlayingTrack(prevItem.track)
+        setIsPlaying(true)
+      }
+    }
+  }, [playingTrack, displayedDiscographyTracks])
+
+  const handleQueueDragDrop = useCallback(({ fromList, fromIndex, toList, toIndex }) => {
+    let currentQueue = [...manualQueue]
+    let currentAutoplay = [...autoplayTracks]
+
+    if (fromList === 'queue' && toList === 'queue') {
+      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
+      const [moved] = currentQueue.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentQueue.length)
+      currentQueue.splice(targetIdx, 0, moved)
+      setManualQueue(currentQueue)
+    } else if (fromList === 'autoplay' && toList === 'autoplay') {
+      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
+      const [moved] = currentAutoplay.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentAutoplay.length)
+      currentAutoplay.splice(targetIdx, 0, moved)
+      setCustomAutoplayQueue(currentAutoplay)
+    } else if (fromList === 'autoplay' && toList === 'queue') {
+      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
+      const [moved] = currentAutoplay.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentQueue.length)
+      currentQueue.splice(targetIdx, 0, moved)
+      setManualQueue(currentQueue)
+      setCustomAutoplayQueue(currentAutoplay)
+    } else if (fromList === 'queue' && toList === 'autoplay') {
+      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
+      const [moved] = currentQueue.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentAutoplay.length)
+      currentAutoplay.splice(targetIdx, 0, moved)
+      setManualQueue(currentQueue)
+      setCustomAutoplayQueue(currentAutoplay)
+    }
+  }, [manualQueue, autoplayTracks])
+
+  const handleRemoveFromAutoplay = useCallback((index) => {
+    setCustomAutoplayQueue(prev => {
+      const current = prev !== null ? [...prev] : [...autoplayTracks]
+      if (index >= 0 && index < current.length) {
+        current.splice(index, 1)
+      }
+      return current
+    })
+  }, [autoplayTracks])
+
   if (!mounted) {
     return (
       <Box
@@ -546,18 +623,78 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             msUserSelect: 'text !important',
             pointerEvents: 'auto',
           },
+          // Modern custom scrollbars
+          '*::-webkit-scrollbar': {
+            width: '6px',
+            height: '6px',
+          },
+          '*::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '*::-webkit-scrollbar-thumb': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.18)',
+            borderRadius: '99px',
+            transition: 'background 0.2s ease',
+          },
+          '*::-webkit-scrollbar-thumb:hover': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.32)',
+          },
+          '*::-webkit-scrollbar-corner': {
+            background: 'transparent',
+          },
+          // Firefox scrollbar
+          '*': {
+            scrollbarWidth: 'thin',
+            scrollbarColor: darkMode
+              ? 'rgba(255,255,255,0.15) transparent'
+              : 'rgba(0,0,0,0.18) transparent',
+          },
         }}
       />
+
+      {/* Fixed full-viewport ambient background — blurred cover art */}
+      <Box
+        aria-hidden
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+          bgcolor: 'background.default',
+          transition: 'background-color 0.3s ease',
+        }}
+      >
+        {ambientImage && (
+          <Box
+            key={ambientImage}
+            sx={{
+              position: 'absolute',
+              inset: '-10%',
+              backgroundImage: `url(${ambientImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(80px) saturate(1.2)',
+              opacity: darkMode ? 0.18 : 0.12,
+              animation: 'ambientFadeIn 1.2s ease forwards',
+              '@keyframes ambientFadeIn': {
+                from: { opacity: 0 },
+                to: { opacity: darkMode ? 0.18 : 0.12 },
+              },
+            }}
+          />
+        )}
+      </Box>
 
       <Box
         sx={{
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          bgcolor: 'background.default',
+          position: 'relative',
+          zIndex: 1,
           color: 'text.primary',
           pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
-          transition: 'background-color 0.3s ease',
         }}
       >
         {/* Top Screen-Height Hero Section (Only on main discography view) */}
@@ -586,7 +723,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         )}
 
         {/* Main Content Projects Container */}
-        <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 3 }, flexGrow: 1 }}>
+        <Container
+          ref={projectsContainerRef}
+          maxWidth="md"
+          sx={{
+            px: { xs: 2, sm: 3 },
+            mt: { xs: 2, sm: 3 },
+            flexGrow: 1,
+          }}
+        >
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
             <Stack spacing={3}>
               {/* Single Project Page Header: Centered Horizontal Logo & Artist Name Button */}

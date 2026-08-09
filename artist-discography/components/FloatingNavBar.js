@@ -211,23 +211,6 @@ export default function FloatingNavBar({
         pointerEvents: 'none',
       }}
     >
-      {/* Single seamless backdrop mask: solid above & behind navbar, smoothly fading below */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: { xs: -48, sm: -64 },
-          background: {
-            xs: `linear-gradient(to bottom, ${bgDefault} 0%, ${bgDefault} calc(100% - 48px), ${bgTransparent} 100%)`,
-            sm: `linear-gradient(to bottom, ${bgDefault} 0%, ${bgDefault} calc(100% - 64px), ${bgTransparent} 100%)`,
-          },
-          zIndex: -1,
-          pointerEvents: 'none',
-          transition: 'background 0.3s ease',
-        }}
-      />
 
       <Container
         ref={navRef}

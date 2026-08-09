@@ -276,23 +276,6 @@ export default function AudioPlayerBar({
           pointerEvents: 'none',
         }}
       >
-        {/* Single seamless backdrop mask: solid below & behind audio player, smoothly fading above */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: { xs: -48, sm: -64 },
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: {
-              xs: `linear-gradient(to top, ${bgDefault} 0%, ${bgDefault} calc(100% - 48px), ${bgTransparent} 100%)`,
-              sm: `linear-gradient(to top, ${bgDefault} 0%, ${bgDefault} calc(100% - 64px), ${bgTransparent} 100%)`,
-            },
-            zIndex: -1,
-            pointerEvents: 'none',
-            transition: 'background 0.3s ease',
-          }}
-        />
 
         <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
           <Paper
