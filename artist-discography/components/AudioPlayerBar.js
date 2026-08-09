@@ -72,29 +72,18 @@ export default function AudioPlayerBar({
           pointerEvents: 'none',
         }}
       >
-        {/* Solid mask below and behind audio player bar to prevent any content from peeking out below */}
+        {/* Single seamless backdrop mask: solid below & behind audio player, smoothly fading above */}
         <Box
           sx={{
             position: 'absolute',
+            top: { xs: -48, sm: -64 },
+            left: 0,
+            right: 0,
             bottom: 0,
-            left: 0,
-            right: 0,
-            top: { xs: 1.5, sm: 2 },
-            bgcolor: bgDefault,
-            zIndex: -1,
-            transition: 'background-color 0.3s ease',
-          }}
-        />
-
-        {/* Smooth gradient opacity fade extending above audio player bar */}
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            right: 0,
-            height: { xs: 48, sm: 64 },
-            background: `linear-gradient(to top, ${bgDefault} 0%, ${bgTransparent} 100%)`,
+            background: {
+              xs: `linear-gradient(to top, ${bgDefault} 0%, ${bgDefault} calc(100% - 48px), ${bgTransparent} 100%)`,
+              sm: `linear-gradient(to top, ${bgDefault} 0%, ${bgDefault} calc(100% - 64px), ${bgTransparent} 100%)`,
+            },
             zIndex: -1,
             pointerEvents: 'none',
             transition: 'background 0.3s ease',

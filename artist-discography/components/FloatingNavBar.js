@@ -141,29 +141,18 @@ export default function FloatingNavBar({
         pointerEvents: 'none',
       }}
     >
-      {/* Solid mask above and behind navbar to prevent any content from peeking out above */}
+      {/* Single seamless backdrop mask: solid above & behind navbar, smoothly fading below */}
       <Box
         sx={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          bottom: { xs: 1.5, sm: 2 },
-          bgcolor: bgDefault,
-          zIndex: -1,
-          transition: 'background-color 0.3s ease',
-        }}
-      />
-
-      {/* Smooth gradient opacity fade extending below navbar */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          height: { xs: 48, sm: 64 },
-          background: `linear-gradient(to bottom, ${bgDefault} 0%, ${bgTransparent} 100%)`,
+          bottom: { xs: -48, sm: -64 },
+          background: {
+            xs: `linear-gradient(to bottom, ${bgDefault} 0%, ${bgDefault} calc(100% - 48px), ${bgTransparent} 100%)`,
+            sm: `linear-gradient(to bottom, ${bgDefault} 0%, ${bgDefault} calc(100% - 64px), ${bgTransparent} 100%)`,
+          },
           zIndex: -1,
           pointerEvents: 'none',
           transition: 'background 0.3s ease',
