@@ -118,9 +118,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }, [])
 
   const handleAddToQueue = useCallback((track, proj) => {
-    setAudioQueue(prev => [...prev, { track, project: proj }])
+    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
+    const trackWithProject = {
+      ...track,
+      project: parentProj?.name || track.project || '',
+      projectCover: parentProj?.cover || parentProj?.image || track.cover || track.image || '',
+    }
+    setAudioQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
     showToast(`Added "${track?.name || 'track'}" to queue`)
-  }, [showToast])
+  }, [selectedProject, projects, showToast])
 
   const handleSkipNext = useCallback(() => {
     if (audioQueue.length > 0) {
@@ -255,27 +261,33 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
 
   // Navigation handlers (client-side SPA, uninterrupted audio!)
   const navigateToProject = (project) => {
-    if (!project) return
-    const projSlug = slugify(project.name) || 'project'
-    window.history.pushState({}, '', `/${projSlug}`)
-    setSelectedProject(project)
-    setCurrentView('SINGLE_PROJECT')
-    setHighlightedTrackSlug(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (project) {
+      const projSlug = slugify(project.name)
+      if (projSlug) {
+        window.history.pushState({}, '', `/${projSlug}`)
+      }
+      setSelectedProject(project)
+      setHighlightedTrackSlug(null)
+      setCurrentView('SINGLE_PROJECT')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   const navigateToTrack = (project, track) => {
-    if (!project || !track) return
-    const projSlug = slugify(project.name) || 'project'
-    const trkSlug = slugify(track.name) || 'track'
-    window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
-    setSelectedProject(project)
-    setCurrentView('SINGLE_PROJECT')
-    setHighlightedTrackSlug(trkSlug)
-    handlePlayTrack(track)
+    if (project && track) {
+      const projSlug = slugify(project.name)
+      const trkSlug = slugify(track.name)
+      if (projSlug && trkSlug) {
+        window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
+      }
+      setSelectedProject(project)
+      setHighlightedTrackSlug(trkSlug)
+      setCurrentView('SINGLE_PROJECT')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
-  const navigateToHome = () => {
+  const navigateToAllProjects = () => {
     window.history.pushState({}, '', '/')
     setCurrentView('ALL_PROJECTS')
     setSelectedProject(null)
@@ -284,18 +296,24 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }
 
   // Audio Playback Handler
-  const handlePlayTrack = (track) => {
+  const handlePlayTrack = useCallback((track, proj) => {
     if (!track) return
+    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
+    const projName = parentProj?.name || track.project || ''
+    const projCover = parentProj?.cover || parentProj?.image || track.cover || track.image || ''
+
     if (playingTrack?.name === track.name && isPlaying) {
       setIsPlaying(false)
     } else {
       setPlayingTrack({
         ...track,
-        artist: track.artist || selectedProject?.artist || artist.name,
+        project: projName,
+        projectCover: projCover,
+        artist: track.artist || parentProj?.artist || artist.name,
       })
       setIsPlaying(true)
     }
-  }
+  }, [playingTrack, isPlaying, selectedProject, projects, artist.name])
 
   // Filter and sort projects
   const filteredProjects = useMemo(() => {
@@ -456,36 +474,46 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     },
                   }}
                 >
-                  {applySingleLogoGradient ? (
-                    <Box
-                      sx={{
-                        width: { xs: 36, sm: 48, md: 54 },
-                        height: { xs: 36, sm: 48, md: 54 },
-                        WebkitMaskImage: 'url("/api/logo")',
-                        maskImage: 'url("/api/logo")',
-                        WebkitMaskSize: 'contain',
-                        maskSize: 'contain',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskPosition: 'center',
-                        maskPosition: 'center',
-                        background: darkMode
-                          ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
-                          : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      component="img"
-                      src="/api/logo"
-                      alt="Artist Logo"
-                      sx={{
-                        height: { xs: 36, sm: 48, md: 54 },
-                        maxWidth: 150,
-                        objectFit: 'contain',
-                      }}
-                    />
-                  )}
+                  <Box
+                    sx={{
+                      width: { xs: 44, sm: 60, md: 72 },
+                      height: { xs: 36, sm: 48, md: 54 },
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {applySingleLogoGradient ? (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          WebkitMaskImage: 'url("/api/logo")',
+                          maskImage: 'url("/api/logo")',
+                          WebkitMaskSize: 'contain',
+                          maskSize: 'contain',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskRepeat: 'no-repeat',
+                          WebkitMaskPosition: 'center',
+                          maskPosition: 'center',
+                          background: darkMode
+                            ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
+                            : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        component="img"
+                        src="/api/logo"
+                        alt="Artist Logo"
+                        sx={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                        }}
+                      />
+                    )}
+                  </Box>
                   <Typography
                     variant="h6"
                     sx={{

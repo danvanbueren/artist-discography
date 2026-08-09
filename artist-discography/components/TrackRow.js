@@ -97,7 +97,7 @@ export default function TrackRow({
             color="primary"
             onClick={(e) => {
               e.stopPropagation()
-              if (onPlayTrack) onPlayTrack(track)
+              if (onPlayTrack) onPlayTrack(track, project)
             }}
           >
             <PauseRoundedIcon fontSize="small" />
@@ -107,7 +107,7 @@ export default function TrackRow({
             size="small"
             onClick={(e) => {
               e.stopPropagation()
-              if (onPlayTrack) onPlayTrack(track)
+              if (onPlayTrack) onPlayTrack(track, project)
             }}
           >
             <PlayArrowRoundedIcon fontSize="small" />
