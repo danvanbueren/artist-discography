@@ -59,9 +59,8 @@ export default function AudioPlayerBar({
   const [prevVolume, setPrevVolume] = useState(100)
   const [isMuted, setIsMuted] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
-  const [queueAnchorEl, setQueueAnchorEl] = useState(null)
-
-  const timerRef = useRef(null)
+  const audioRef = useRef(null)
+  const [realDuration, setRealDuration] = useState(0)
 
   // Load volume preference from cookie/localStorage on mount
   useEffect(() => {
@@ -82,40 +81,40 @@ export default function AudioPlayerBar({
   const bgDefault = theme.palette.background.default
   const bgTransparent = alpha(bgDefault, 0)
 
-  // Track duration in seconds (defaults to 215s / 3:35 if not supplied)
-  const duration = playingTrack?.durationSeconds || playingTrack?.duration || 215
+  // Track duration in seconds
+  const duration = realDuration || playingTrack?.durationSeconds || playingTrack?.duration || 215
 
   // Reset current time when track changes
   useEffect(() => {
     setCurrentTime(0)
-  }, [playingTrack?.name])
+    setRealDuration(0)
+  }, [playingTrack?.audioUrl, playingTrack?.name])
 
-  // Playback timer ticker
+  // Sync playback state with audio element
   useEffect(() => {
-    if (isPlaying) {
-      timerRef.current = setInterval(() => {
-        setCurrentTime(prev => {
-          if (prev >= duration) {
-            if (repeatMode === 'one') {
-              return 0
-            } else if (repeatMode === 'all' || queueCount > 0) {
-              if (onSkipNext) onSkipNext()
-              return 0
-            } else {
-              if (onTogglePlay) onTogglePlay()
-              return 0
-            }
-          }
-          return prev + 1
+    if (!audioRef.current) return
+    if (isPlaying && playingTrack?.audioUrl) {
+      const playPromise = audioRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Audio playback interrupted:', err)
+          if (onTogglePlay) onTogglePlay()
+          if (onShowToast) onShowToast('Audio stream unavailable')
         })
-      }, 1000)
+      }
     } else {
-      if (timerRef.current) clearInterval(timerRef.current)
+      audioRef.current.pause()
     }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+  }, [isPlaying, playingTrack?.audioUrl, onTogglePlay, onShowToast])
+
+  // Sync volume with audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      const volVal = isMuted ? 0 : volume
+      audioRef.current.volume = Math.min(1, Math.max(0, volVal / 100))
+      audioRef.current.muted = isMuted
     }
-  }, [isPlaying, duration, repeatMode, queueCount, onSkipNext, onTogglePlay])
+  }, [volume, isMuted])
 
   if (!playingTrack) return null
 
@@ -460,7 +459,12 @@ export default function AudioPlayerBar({
                     value={currentTime}
                     min={0}
                     max={duration}
-                    onChange={(_, val) => setCurrentTime(val)}
+                    onChange={(_, val) => {
+                      setCurrentTime(val)
+                      if (audioRef.current) {
+                        audioRef.current.currentTime = val
+                      }
+                    }}
                     sx={{
                       py: 0.75,
                       flexGrow: 1,
@@ -630,6 +634,38 @@ export default function AudioPlayerBar({
                 </Tooltip>
               </Stack>
             </Stack>
+
+            {/* Hidden HTML5 Audio Element */}
+            <audio
+              ref={audioRef}
+              src={playingTrack?.audioUrl || undefined}
+              preload="auto"
+              onLoadedMetadata={(e) => {
+                const d = e.currentTarget.duration
+                if (d && !isNaN(d)) setRealDuration(d)
+              }}
+              onTimeUpdate={(e) => {
+                setCurrentTime(e.currentTarget.currentTime)
+              }}
+              onEnded={() => {
+                if (repeatMode === 'one') {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = 0
+                    audioRef.current.play()
+                  }
+                } else if (repeatMode === 'all' || queueCount > 0) {
+                  if (onSkipNext) onSkipNext()
+                } else {
+                  if (onTogglePlay) onTogglePlay()
+                }
+              }}
+              onError={() => {
+                if (isPlaying && onShowToast) {
+                  onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
+                }
+                if (onTogglePlay) onTogglePlay()
+              }}
+            />
           </Paper>
         </Container>
       </Box>
