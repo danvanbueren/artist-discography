@@ -59,21 +59,21 @@ export default function AudioPlayerBar({
       <Box
         sx={{
           position: 'fixed',
-          bottom: 16,
+          bottom: { xs: 12, sm: 16 },
           left: 0,
           right: 0,
           zIndex: 1200,
-          px: { xs: 1.5, sm: 2 },
           pointerEvents: 'none',
         }}
       >
-        <Container maxWidth="md" disableGutters sx={{ pointerEvents: 'auto' }}>
+        <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
           <Paper
             elevation={6}
             sx={{
               borderRadius: 4,
               py: 1.25,
               px: { xs: 2, sm: 3 },
+              minHeight: 58,
               bgcolor: theme.palette.mode === 'dark'
                 ? 'rgba(24, 24, 34, 0.95)'
                 : 'rgba(255, 255, 255, 0.95)',
@@ -83,6 +83,8 @@ export default function AudioPlayerBar({
                 ? 'rgba(255, 255, 255, 0.12)'
                 : 'rgba(0, 0, 0, 0.12)',
               boxShadow: '0 12px 36px rgba(0,0,0,0.35)',
+              display: 'flex',
+              alignItems: 'center',
             }}
           >
             <Stack

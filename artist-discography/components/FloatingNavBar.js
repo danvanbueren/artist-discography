@@ -133,9 +133,9 @@ export default function FloatingNavBar({
       maxWidth="md"
       sx={{
         position: 'sticky',
-        top: 16,
+        top: { xs: 12, sm: 16 },
         zIndex: 1100,
-        px: { xs: 1.5, sm: 2 },
+        px: { xs: 2, sm: 3 },
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

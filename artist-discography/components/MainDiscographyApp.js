@@ -398,7 +398,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         )}
 
         {/* Main Content Projects Container */}
-        <Container maxWidth="md" sx={{ mt: { xs: 1, sm: 2 }, flexGrow: 1 }}>
+        <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 3 }, flexGrow: 1 }}>
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
             <Stack spacing={3}>
               {/* Single Project Page Header: Centered Horizontal Logo & Artist Name Button */}

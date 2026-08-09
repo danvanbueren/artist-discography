@@ -29,7 +29,7 @@ export default function TrackList({
   }
 
   return (
-    <Stack spacing={0.5} sx={{ px: { xs: 1, sm: 2 }, pb: 2 }}>
+    <Stack spacing={0.5} sx={{ px: { xs: 0.5, sm: 1 }, pb: 2 }}>
       <Divider sx={{ mb: 1, opacity: 0.15 }} />
       {tracks.map((track, idx) => {
         const trackSlug = track.name
