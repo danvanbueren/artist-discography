@@ -28,40 +28,34 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // Mounting & Hydration state
   const [mounted, setMounted] = useState(false)
 
-  // System Theme Preference Detection ('system' | 'dark' | 'light')
+  // System Theme Preference Detection
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
-  const [themePreference, setThemePreference] = useState('system')
   const [darkMode, setDarkMode] = useState(true)
   const logoAnalysis = useLogoAnalysis('/api/logo')
 
-  // Sync darkMode with themePreference & systemPrefersDark
+  // On mount: read saved theme cookie/localStorage; if none, default to system preference
   useEffect(() => {
-    if (themePreference === 'system') {
-      setDarkMode(systemPrefersDark)
-    } else if (themePreference === 'dark') {
+    const savedTheme = getCookie('theme_mode') || localStorage.getItem('themeMode')
+    if (savedTheme === 'dark') {
       setDarkMode(true)
-    } else if (themePreference === 'light') {
+    } else if (savedTheme === 'light') {
       setDarkMode(false)
+    } else {
+      setDarkMode(systemPrefersDark)
     }
-  }, [themePreference, systemPrefersDark])
+  }, [systemPrefersDark])
 
   const handleToggleTheme = useCallback(() => {
-    setThemePreference(prev => {
-      let nextPref = 'dark'
-      if (prev === 'system') {
-        nextPref = systemPrefersDark ? 'light' : 'dark'
-      } else if (prev === 'dark') {
-        nextPref = 'light'
-      } else if (prev === 'light') {
-        nextPref = 'system'
-      }
+    setDarkMode(prev => {
+      const nextMode = !prev
+      const nextThemeStr = nextMode ? 'dark' : 'light'
       try {
-        setCookie('theme_mode', nextPref)
-        localStorage.setItem('themeMode', nextPref)
+        setCookie('theme_mode', nextThemeStr)
+        localStorage.setItem('themeMode', nextThemeStr)
       } catch {}
-      return nextPref
+      return nextMode
     })
-  }, [systemPrefersDark])
+  }, [])
 
   const artist = data?.artist ?? {}
   const projects = useMemo(() => data?.projects ?? [], [data])
@@ -239,15 +233,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }, [projects])
 
-  // Sync theme and route on mount and browser back/forward popstate
+  // Sync route on mount and browser back/forward popstate
   useEffect(() => {
-    const savedTheme = getCookie('theme_mode') || localStorage.getItem('themeMode')
-    if (savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'system') {
-      setThemePreference(savedTheme)
-    } else {
-      setThemePreference('system')
-    }
-
     syncStateFromLocation()
     setMounted(true)
 
@@ -256,7 +243,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [systemPrefersDark, syncStateFromLocation])
+  }, [syncStateFromLocation])
 
   // Navigation handlers (client-side SPA, uninterrupted audio!)
   const navigateToProject = (project) => {

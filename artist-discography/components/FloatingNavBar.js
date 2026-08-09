@@ -55,7 +55,6 @@ export default function FloatingNavBar({
   searchQuery = '',
   onSearchChange,
   darkMode,
-  themePreference = 'system',
   onToggleTheme,
   selectedPlatform,
   onOpenPlatformModal,
@@ -547,9 +546,7 @@ export default function FloatingNavBar({
                 onToggleTheme()
               }}
               startIcon={
-                themePreference === 'system' ? (
-                  <SettingsBrightnessRoundedIcon color="info" />
-                ) : darkMode ? (
+                darkMode ? (
                   <LightModeRoundedIcon color="warning" />
                 ) : (
                   <DarkModeRoundedIcon color="primary" />
@@ -564,11 +561,7 @@ export default function FloatingNavBar({
                 px: 2,
               }}
             >
-              {themePreference === 'system'
-                ? 'System Theme'
-                : darkMode
-                ? 'Light Theme'
-                : 'Dark Theme'}
+              {darkMode ? 'Light Theme' : 'Dark Theme'}
             </Button>
           </Stack>
         )}
