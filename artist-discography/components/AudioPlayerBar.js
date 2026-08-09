@@ -36,6 +36,7 @@ import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import { slugify } from '../lib/slugs'
+import { getCookie, setCookie } from '../lib/cookies'
 
 export default function AudioPlayerBar({
   playingTrack,
@@ -54,13 +55,29 @@ export default function AudioPlayerBar({
   const [currentTime, setCurrentTime] = useState(0)
   const [isShuffle, setIsShuffle] = useState(false)
   const [repeatMode, setRepeatMode] = useState('off') // 'off' | 'all' | 'one'
-  const [volume, setVolume] = useState(85)
-  const [prevVolume, setPrevVolume] = useState(85)
+  const [volume, setVolume] = useState(100)
+  const [prevVolume, setPrevVolume] = useState(100)
   const [isMuted, setIsMuted] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
   const [queueAnchorEl, setQueueAnchorEl] = useState(null)
 
   const timerRef = useRef(null)
+
+  // Load volume preference from cookie/localStorage on mount
+  useEffect(() => {
+    try {
+      const savedVol = getCookie('audio_playback_volume') || localStorage.getItem('audio_playback_volume')
+      if (savedVol !== null && !isNaN(Number(savedVol))) {
+        const v = Math.min(100, Math.max(0, Number(savedVol)))
+        setVolume(v)
+        if (v > 0) setPrevVolume(v)
+      } else {
+        setVolume(100)
+        setCookie('audio_playback_volume', '100')
+        localStorage.setItem('audio_playback_volume', '100')
+      }
+    } catch {}
+  }, [])
 
   const bgDefault = theme.palette.background.default
   const bgTransparent = alpha(bgDefault, 0)
@@ -134,18 +151,30 @@ export default function AudioPlayerBar({
   const handleToggleMute = () => {
     if (isMuted || volume === 0) {
       setIsMuted(false)
-      const targetVol = prevVolume > 0 ? prevVolume : 85
+      const targetVol = prevVolume > 0 ? prevVolume : 100
       setVolume(targetVol)
+      try {
+        setCookie('audio_playback_volume', targetVol.toString())
+        localStorage.setItem('audio_playback_volume', targetVol.toString())
+      } catch {}
     } else {
       setPrevVolume(volume)
       setVolume(0)
       setIsMuted(true)
+      try {
+        setCookie('audio_playback_volume', '0')
+        localStorage.setItem('audio_playback_volume', '0')
+      } catch {}
     }
   }
 
   // Handle Volume Slider change
   const handleVolumeChange = (_, val) => {
     setVolume(val)
+    try {
+      setCookie('audio_playback_volume', val.toString())
+      localStorage.setItem('audio_playback_volume', val.toString())
+    } catch {}
     if (val > 0 && isMuted) {
       setIsMuted(false)
     } else if (val === 0 && !isMuted) {

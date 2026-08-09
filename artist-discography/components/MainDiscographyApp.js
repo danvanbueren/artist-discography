@@ -22,26 +22,47 @@ import DevHealthDrawer from './DevHealthDrawer'
 import SubduedText from './SubduedText'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
 import { useLogoAnalysis, shouldApplyLogoGradient } from '../lib/useLogoAnalysis'
+import { getCookie, setCookie } from '../lib/cookies'
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // Mounting & Hydration state
   const [mounted, setMounted] = useState(false)
 
-  // System Theme Preference Detection
+  // System Theme Preference Detection ('system' | 'dark' | 'light')
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
+  const [themePreference, setThemePreference] = useState('system')
   const [darkMode, setDarkMode] = useState(true)
   const logoAnalysis = useLogoAnalysis('/api/logo')
   const applySingleLogoGradient = shouldApplyLogoGradient(logoAnalysis, darkMode)
 
+  // Sync darkMode with themePreference & systemPrefersDark
+  useEffect(() => {
+    if (themePreference === 'system') {
+      setDarkMode(systemPrefersDark)
+    } else if (themePreference === 'dark') {
+      setDarkMode(true)
+    } else if (themePreference === 'light') {
+      setDarkMode(false)
+    }
+  }, [themePreference, systemPrefersDark])
+
   const handleToggleTheme = useCallback(() => {
-    setDarkMode(prev => {
-      const nextMode = !prev
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('themeMode', nextMode ? 'dark' : 'light')
+    setThemePreference(prev => {
+      let nextPref = 'dark'
+      if (prev === 'system') {
+        nextPref = systemPrefersDark ? 'light' : 'dark'
+      } else if (prev === 'dark') {
+        nextPref = 'light'
+      } else if (prev === 'light') {
+        nextPref = 'system'
       }
-      return nextMode
+      try {
+        setCookie('theme_mode', nextPref)
+        localStorage.setItem('themeMode', nextPref)
+      } catch {}
+      return nextPref
     })
-  }, [])
+  }, [systemPrefersDark])
 
   const artist = data?.artist ?? {}
   const projects = useMemo(() => data?.projects ?? [], [data])
@@ -70,11 +91,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         }
       }
     }
-    return {
-      view: 'ALL_PROJECTS',
-      project: null,
-      trackSlug: null,
-    }
+    return { view: 'ALL_PROJECTS', project: null, trackSlug: null }
   }, [initialSlug, projects])
 
   // SPA View & Route State initialized immediately to match URL
@@ -82,8 +99,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [selectedProject, setSelectedProject] = useState(() => initialResolved.project)
   const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(() => initialResolved.trackSlug)
 
-  // Preferred Platform State
-  const [selectedPlatform, setSelectedPlatform] = useState('')
+  // Preferred Platform State (Default to 'spotify')
+  const [selectedPlatform, setSelectedPlatform] = useState('spotify')
   const [platformModalOpen, setPlatformModalOpen] = useState(false)
 
   // Audio Player & Queue State
@@ -145,17 +162,24 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     [darkMode]
   )
 
-  // Load preferred platform from localStorage on mount
+  // Load preferred platform and theme from cookies on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('preferred_music_platform')
-      if (saved) setSelectedPlatform(saved)
+      const savedPlatform = getCookie('preferred_music_platform') || localStorage.getItem('preferred_music_platform')
+      if (savedPlatform) {
+        setSelectedPlatform(savedPlatform)
+      } else {
+        setSelectedPlatform('spotify')
+        setCookie('preferred_music_platform', 'spotify')
+        localStorage.setItem('preferred_music_platform', 'spotify')
+      }
     } catch {}
   }, [])
 
   const handleSelectPlatform = (platformId) => {
     setSelectedPlatform(platformId)
     try {
+      setCookie('preferred_music_platform', platformId)
       localStorage.setItem('preferred_music_platform', platformId)
     } catch {}
   }
@@ -210,15 +234,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }, [projects])
 
-  // Sync on mount and browser back/forward popstate
+  // Sync theme and route on mount and browser back/forward popstate
   useEffect(() => {
-    const savedTheme = localStorage.getItem('themeMode')
-    if (savedTheme === 'dark') {
-      setDarkMode(true)
-    } else if (savedTheme === 'light') {
-      setDarkMode(false)
+    const savedTheme = getCookie('theme_mode') || localStorage.getItem('themeMode')
+    if (savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'system') {
+      setThemePreference(savedTheme)
     } else {
-      setDarkMode(systemPrefersDark)
+      setThemePreference('system')
     }
 
     syncStateFromLocation()
@@ -391,6 +413,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             darkMode={darkMode}
+            themePreference={themePreference}
             onToggleTheme={handleToggleTheme}
             selectedPlatform={selectedPlatform}
             onOpenPlatformModal={() => setPlatformModalOpen(true)}

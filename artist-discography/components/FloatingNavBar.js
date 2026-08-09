@@ -26,6 +26,7 @@ import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded'
 import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded'
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded'
+import SettingsBrightnessRoundedIcon from '@mui/icons-material/SettingsBrightnessRounded'
 import HeadsetRoundedIcon from '@mui/icons-material/HeadsetRounded'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
@@ -35,8 +36,11 @@ export const FILTER_OPTIONS = [
   'LP',
   'EP',
   'Single',
-  'Feature',
   'Remix',
+  'Compilation',
+  'DJ Mix',
+  'Mixtape',
+  'Live',
   'Bootleg',
   'Flip',
   'Edit',
@@ -51,6 +55,7 @@ export default function FloatingNavBar({
   searchQuery = '',
   onSearchChange,
   darkMode,
+  themePreference = 'system',
   onToggleTheme,
   selectedPlatform,
   onOpenPlatformModal,
@@ -542,10 +547,12 @@ export default function FloatingNavBar({
                 onToggleTheme()
               }}
               startIcon={
-                darkMode ? (
+                themePreference === 'system' ? (
+                  <SettingsBrightnessRoundedIcon color="info" />
+                ) : darkMode ? (
                   <LightModeRoundedIcon color="warning" />
                 ) : (
-                  <DarkModeRoundedIcon />
+                  <DarkModeRoundedIcon color="primary" />
                 )
               }
               sx={{
@@ -557,7 +564,11 @@ export default function FloatingNavBar({
                 px: 2,
               }}
             >
-              {darkMode ? 'Light Theme' : 'Dark Theme'}
+              {themePreference === 'system'
+                ? 'System Theme'
+                : darkMode
+                ? 'Light Theme'
+                : 'Dark Theme'}
             </Button>
           </Stack>
         )}
