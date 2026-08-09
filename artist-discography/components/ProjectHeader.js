@@ -222,6 +222,8 @@ export default function ProjectHeader({
                       component="img"
                       src={icon}
                       alt={key}
+                      loading="eager"
+                      decoding="async"
                       sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}
                     />
                   ) : (

@@ -189,6 +189,8 @@ export default function TrackRow({
                   component="img"
                   src={icon}
                   alt={key}
+                  loading="eager"
+                  decoding="async"
                   sx={{ width: 22, height: 22, objectFit: 'contain', borderRadius: 1.5 }}
                 />
               ) : (

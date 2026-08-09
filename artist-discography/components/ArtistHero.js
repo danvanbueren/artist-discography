@@ -130,6 +130,8 @@ export default function ArtistHero({ artist, onLogoClick }) {
                   component="img"
                   src={icon}
                   alt={key}
+                  loading="eager"
+                  decoding="async"
                   sx={{
                     width: { xs: 54, sm: 64, md: 72 },
                     height: { xs: 54, sm: 64, md: 72 },
