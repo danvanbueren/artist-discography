@@ -539,8 +539,10 @@ export default function AudioPlayerBar({
                           <ListItemText
                             primary={item.track?.name || `Track ${idx + 1}`}
                             secondary={item.project?.name || item.track?.artist || 'Artist'}
-                            primaryTypographyProps={{ variant: 'body2', fontWeight: 600, noWrap: true }}
-                            secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                            slotProps={{
+                              primary: { variant: 'body2', fontWeight: 600, noWrap: true },
+                              secondary: { variant: 'caption', noWrap: true },
+                            }}
                             onClick={() => {
                               if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx)
                               setQueueAnchorEl(null)
