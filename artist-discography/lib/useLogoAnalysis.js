@@ -104,6 +104,19 @@ export function useLogoAnalysis(imageSrc) {
 }
 
 /**
+ * Helper to determine if the logo should be masked with the hero text gradient
+ */
+export function shouldApplyLogoGradient(analysis, isDarkMode) {
+  if (!analysis || !analysis.isMonochrome) {
+    return false
+  }
+  // Overlay gradient triggers when:
+  // - White/light logo in light mode
+  // - Black/dark logo in dark mode
+  return (analysis.isLight && !isDarkMode) || (analysis.isDark && isDarkMode)
+}
+
+/**
  * Helper to compute CSS filter based on logo analysis and current theme mode
  */
 export function getLogoFilter(analysis, isDarkMode, baseFilter = 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))') {

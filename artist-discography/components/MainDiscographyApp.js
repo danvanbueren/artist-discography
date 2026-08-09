@@ -20,14 +20,14 @@ import AudioPlayerBar from './AudioPlayerBar'
 import DevHealthDrawer from './DevHealthDrawer'
 import SubduedText from './SubduedText'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
-import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
+import { useLogoAnalysis, shouldApplyLogoGradient } from '../lib/useLogoAnalysis'
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // System Theme Preference Detection
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
   const [darkMode, setDarkMode] = useState(true)
   const logoAnalysis = useLogoAnalysis('/api/logo')
-  const singleLogoFilter = getLogoFilter(logoAnalysis, darkMode, 'none')
+  const applySingleLogoGradient = shouldApplyLogoGradient(logoAnalysis, darkMode)
 
   useEffect(() => {
     const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('themeMode') : null
@@ -360,17 +360,36 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     },
                   }}
                 >
-                  <Box
-                    component="img"
-                    src="/api/logo"
-                    alt="Artist Logo"
-                    sx={{
-                      height: { xs: 36, sm: 48, md: 54 },
-                      maxWidth: 150,
-                      objectFit: 'contain',
-                      filter: singleLogoFilter,
-                    }}
-                  />
+                  {applySingleLogoGradient ? (
+                    <Box
+                      sx={{
+                        width: { xs: 36, sm: 48, md: 54 },
+                        height: { xs: 36, sm: 48, md: 54 },
+                        WebkitMaskImage: 'url("/api/logo")',
+                        maskImage: 'url("/api/logo")',
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                        background: darkMode
+                          ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
+                          : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      component="img"
+                      src="/api/logo"
+                      alt="Artist Logo"
+                      sx={{
+                        height: { xs: 36, sm: 48, md: 54 },
+                        maxWidth: 150,
+                        objectFit: 'contain',
+                      }}
+                    />
+                  )}
                   <Typography
                     variant="h6"
                     sx={{
