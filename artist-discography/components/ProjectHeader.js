@@ -57,11 +57,11 @@ export default function ProjectHeader({
     <Box
       onClick={handleHeaderClick}
       sx={{
-        p: { xs: 2.5, sm: 3.5 },
+        p: { xs: 2, sm: 3 },
         display: 'flex',
         flexDirection: { xs: 'column', sm: 'row' },
         alignItems: { xs: 'flex-start', sm: 'center' },
-        gap: { xs: 2.5, sm: 3.5 },
+        gap: { xs: 2, sm: 3 },
         cursor: onSelectProject && !isSingleView ? 'pointer' : 'default',
         borderRadius: 3,
         transition: 'background-color 0.25s ease',

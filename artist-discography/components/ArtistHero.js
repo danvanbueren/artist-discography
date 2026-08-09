@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, useTheme } from '@mui/material'
+import { Box, Container, useTheme } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
 
@@ -42,10 +42,11 @@ export default function ArtistHero({ artist, onLogoClick }) {
   }
 
   return (
-    <Box
+    <Container
+      maxWidth="md"
       sx={{
         textAlign: 'center',
-        px: { xs: 2, sm: 4 },
+        px: { xs: 2, sm: 3 },
         py: { xs: 6, sm: 10, md: 14 },
         minHeight: { xs: '65vh', sm: '75vh' },
         display: 'flex',
@@ -91,11 +92,9 @@ export default function ArtistHero({ artist, onLogoClick }) {
       {activeLinks.length > 0 && (
         <Box
           sx={{
-            maxWidth: 'md',
             width: '100%',
             mx: 'auto',
             mt: { xs: 4, sm: 5 },
-            px: 2,
           }}
         >
           <Box
@@ -146,6 +145,6 @@ export default function ArtistHero({ artist, onLogoClick }) {
           </Box>
         </Box>
       )}
-    </Box>
+    </Container>
   )
 }

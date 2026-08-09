@@ -38,6 +38,7 @@ export default function DevArtistDiscographyView({ data, health }) {
     <Container
       maxWidth="md"
       sx={{
+        px: { xs: 2, sm: 3 },
         py: 5,
       }}
     >

@@ -2,8 +2,22 @@ import { loadArtistData } from '../../lib/artistData'
 import MainDiscographyApp from '../../components/MainDiscographyApp'
 
 export default async function Page({ params }) {
-  const resolvedParams = await params
-  const { data, health } = loadArtistData()
+  let resolvedParams = {}
+  try {
+    resolvedParams = (await params) ?? {}
+  } catch (err) {
+    console.error('Failed to resolve page params:', err)
+  }
+
+  let dataResult = null
+  try {
+    dataResult = loadArtistData()
+  } catch (err) {
+    console.error('Error loading artist data in Page:', err)
+  }
+
+  const data = dataResult?.data ?? {}
+  const health = dataResult?.health ?? { isHealthy: false, createdNewFile: false, issues: ['Failed to load data'] }
 
   return (
     <MainDiscographyApp

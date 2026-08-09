@@ -13,45 +13,67 @@ const IMAGE_MIME_TYPES = {
 }
 
 export async function GET() {
-  const dataDir = path.join(process.cwd(), 'data')
+  try {
+    const dataDir = path.join(process.cwd(), 'data')
 
-  if (fs.existsSync(dataDir)) {
+    let dataDirExists = false
     try {
-      const files = fs.readdirSync(dataDir)
-      const logoFile = files.find(file => {
-        const lower = file.toLowerCase()
-        const ext = path.extname(lower)
-        return lower.startsWith('logo.') && Object.keys(IMAGE_MIME_TYPES).includes(ext)
-      })
+      dataDirExists = fs.existsSync(dataDir)
+    } catch (err) {
+      console.error('Error checking data directory existence:', err)
+    }
 
-      if (logoFile) {
-        const logoPath = path.join(dataDir, logoFile)
-        const ext = path.extname(logoFile).toLowerCase()
-        const mimeType = IMAGE_MIME_TYPES[ext] || 'application/octet-stream'
-        const fileBuffer = fs.readFileSync(logoPath)
+    if (dataDirExists) {
+      try {
+        const files = fs.readdirSync(dataDir)
+        const logoFile = files.find(file => {
+          const lower = file.toLowerCase()
+          const ext = path.extname(lower)
+          return lower.startsWith('logo.') && Object.keys(IMAGE_MIME_TYPES).includes(ext)
+        })
 
+        if (logoFile) {
+          const logoPath = path.join(dataDir, logoFile)
+          const ext = path.extname(logoFile).toLowerCase()
+          const mimeType = IMAGE_MIME_TYPES[ext] || 'application/octet-stream'
+          const fileBuffer = fs.readFileSync(logoPath)
+
+          return new NextResponse(fileBuffer, {
+            headers: {
+              'Content-Type': mimeType,
+              'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+            },
+          })
+        }
+      } catch (err) {
+        console.error('Error reading logo from data directory:', err)
+      }
+    }
+
+    // Fallback to public/logo.png
+    const fallbackPath = path.join(process.cwd(), 'public', 'logo.png')
+    let fallbackExists = false
+    try {
+      fallbackExists = fs.existsSync(fallbackPath)
+    } catch (err) {
+      console.error('Error checking fallback logo existence:', err)
+    }
+
+    if (fallbackExists) {
+      try {
+        const fileBuffer = fs.readFileSync(fallbackPath)
         return new NextResponse(fileBuffer, {
           headers: {
-            'Content-Type': mimeType,
+            'Content-Type': 'image/png',
             'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
           },
         })
+      } catch (err) {
+        console.error('Error reading fallback logo file:', err)
       }
-    } catch (err) {
-      console.error('Error reading logo from data directory:', err)
     }
-  }
-
-  // Fallback to public/logo.png
-  const fallbackPath = path.join(process.cwd(), 'public', 'logo.png')
-  if (fs.existsSync(fallbackPath)) {
-    const fileBuffer = fs.readFileSync(fallbackPath)
-    return new NextResponse(fileBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
-      },
-    })
+  } catch (err) {
+    console.error('Unexpected error in logo API route:', err)
   }
 
   return new NextResponse('Logo not found', { status: 404 })

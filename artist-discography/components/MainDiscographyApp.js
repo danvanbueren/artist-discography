@@ -21,7 +21,8 @@ import AudioPlayerBar from './AudioPlayerBar'
 import DevHealthDrawer from './DevHealthDrawer'
 import SubduedText from './SubduedText'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
-import { useLogoAnalysis, shouldApplyLogoGradient } from '../lib/useLogoAnalysis'
+import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
+import { getCookie, setCookie } from '../lib/cookies'
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // Mounting & Hydration state
@@ -31,14 +32,27 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
   const [darkMode, setDarkMode] = useState(true)
   const logoAnalysis = useLogoAnalysis('/api/logo')
-  const applySingleLogoGradient = shouldApplyLogoGradient(logoAnalysis, darkMode)
+
+  // On mount: read saved theme cookie/localStorage; if none, default to system preference
+  useEffect(() => {
+    const savedTheme = getCookie('theme_mode') || localStorage.getItem('themeMode')
+    if (savedTheme === 'dark') {
+      setDarkMode(true)
+    } else if (savedTheme === 'light') {
+      setDarkMode(false)
+    } else {
+      setDarkMode(systemPrefersDark)
+    }
+  }, [systemPrefersDark])
 
   const handleToggleTheme = useCallback(() => {
     setDarkMode(prev => {
       const nextMode = !prev
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('themeMode', nextMode ? 'dark' : 'light')
-      }
+      const nextThemeStr = nextMode ? 'dark' : 'light'
+      try {
+        setCookie('theme_mode', nextThemeStr)
+        localStorage.setItem('themeMode', nextThemeStr)
+      } catch {}
       return nextMode
     })
   }, [])
@@ -70,11 +84,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         }
       }
     }
-    return {
-      view: 'ALL_PROJECTS',
-      project: null,
-      trackSlug: null,
-    }
+    return { view: 'ALL_PROJECTS', project: null, trackSlug: null }
   }, [initialSlug, projects])
 
   // SPA View & Route State initialized immediately to match URL
@@ -82,8 +92,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [selectedProject, setSelectedProject] = useState(() => initialResolved.project)
   const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(() => initialResolved.trackSlug)
 
-  // Preferred Platform State
-  const [selectedPlatform, setSelectedPlatform] = useState('')
+  // Preferred Platform State (Default to 'spotify')
+  const [selectedPlatform, setSelectedPlatform] = useState('spotify')
   const [platformModalOpen, setPlatformModalOpen] = useState(false)
 
   // Audio Player & Queue State
@@ -101,9 +111,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }, [])
 
   const handleAddToQueue = useCallback((track, proj) => {
-    setAudioQueue(prev => [...prev, { track, project: proj }])
+    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
+    const trackWithProject = {
+      ...track,
+      project: parentProj?.name || track.project || '',
+      projectCover: parentProj?.cover || parentProj?.image || track.cover || track.image || '',
+    }
+    setAudioQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
     showToast(`Added "${track?.name || 'track'}" to queue`)
-  }, [showToast])
+  }, [selectedProject, projects, showToast])
 
   const handleSkipNext = useCallback(() => {
     if (audioQueue.length > 0) {
@@ -145,17 +161,24 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     [darkMode]
   )
 
-  // Load preferred platform from localStorage on mount
+  // Load preferred platform and theme from cookies on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('preferred_music_platform')
-      if (saved) setSelectedPlatform(saved)
+      const savedPlatform = getCookie('preferred_music_platform') || localStorage.getItem('preferred_music_platform')
+      if (savedPlatform) {
+        setSelectedPlatform(savedPlatform)
+      } else {
+        setSelectedPlatform('spotify')
+        setCookie('preferred_music_platform', 'spotify')
+        localStorage.setItem('preferred_music_platform', 'spotify')
+      }
     } catch {}
   }, [])
 
   const handleSelectPlatform = (platformId) => {
     setSelectedPlatform(platformId)
     try {
+      setCookie('preferred_music_platform', platformId)
       localStorage.setItem('preferred_music_platform', platformId)
     } catch {}
   }
@@ -210,17 +233,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }, [projects])
 
-  // Sync on mount and browser back/forward popstate
+  // Sync route on mount and browser back/forward popstate
   useEffect(() => {
-    const savedTheme = localStorage.getItem('themeMode')
-    if (savedTheme === 'dark') {
-      setDarkMode(true)
-    } else if (savedTheme === 'light') {
-      setDarkMode(false)
-    } else {
-      setDarkMode(systemPrefersDark)
-    }
-
     syncStateFromLocation()
     setMounted(true)
 
@@ -229,31 +243,37 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [systemPrefersDark, syncStateFromLocation])
+  }, [syncStateFromLocation])
 
   // Navigation handlers (client-side SPA, uninterrupted audio!)
   const navigateToProject = (project) => {
-    if (!project) return
-    const projSlug = slugify(project.name) || 'project'
-    window.history.pushState({}, '', `/${projSlug}`)
-    setSelectedProject(project)
-    setCurrentView('SINGLE_PROJECT')
-    setHighlightedTrackSlug(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (project) {
+      const projSlug = slugify(project.name)
+      if (projSlug) {
+        window.history.pushState({}, '', `/${projSlug}`)
+      }
+      setSelectedProject(project)
+      setHighlightedTrackSlug(null)
+      setCurrentView('SINGLE_PROJECT')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   const navigateToTrack = (project, track) => {
-    if (!project || !track) return
-    const projSlug = slugify(project.name) || 'project'
-    const trkSlug = slugify(track.name) || 'track'
-    window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
-    setSelectedProject(project)
-    setCurrentView('SINGLE_PROJECT')
-    setHighlightedTrackSlug(trkSlug)
-    handlePlayTrack(track)
+    if (project && track) {
+      const projSlug = slugify(project.name)
+      const trkSlug = slugify(track.name)
+      if (projSlug && trkSlug) {
+        window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
+      }
+      setSelectedProject(project)
+      setHighlightedTrackSlug(trkSlug)
+      setCurrentView('SINGLE_PROJECT')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
-  const navigateToHome = () => {
+  const navigateToAllProjects = () => {
     window.history.pushState({}, '', '/')
     setCurrentView('ALL_PROJECTS')
     setSelectedProject(null)
@@ -262,18 +282,24 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }
 
   // Audio Playback Handler
-  const handlePlayTrack = (track) => {
+  const handlePlayTrack = useCallback((track, proj) => {
     if (!track) return
+    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
+    const projName = parentProj?.name || track.project || ''
+    const projCover = parentProj?.cover || parentProj?.image || track.cover || track.image || ''
+
     if (playingTrack?.name === track.name && isPlaying) {
       setIsPlaying(false)
     } else {
       setPlayingTrack({
         ...track,
-        artist: track.artist || selectedProject?.artist || artist.name,
+        project: projName,
+        projectCover: projCover,
+        artist: track.artist || parentProj?.artist || artist.name,
       })
       setIsPlaying(true)
     }
-  }
+  }, [playingTrack, isPlaying, selectedProject, projects, artist.name])
 
   // Filter and sort projects
   const filteredProjects = useMemo(() => {
@@ -398,7 +424,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         )}
 
         {/* Main Content Projects Container */}
-        <Container maxWidth="md" sx={{ mt: { xs: 1, sm: 2 }, flexGrow: 1 }}>
+        <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, mt: { xs: 2, sm: 3 }, flexGrow: 1 }}>
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
             <Stack spacing={3}>
               {/* Single Project Page Header: Centered Horizontal Logo & Artist Name Button */}
@@ -413,7 +439,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 <Stack
                   direction="row"
                   spacing={2}
-                  onClick={navigateToHome}
+                  onClick={navigateToAllProjects}
                   sx={{
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -433,36 +459,17 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     },
                   }}
                 >
-                  {applySingleLogoGradient ? (
-                    <Box
-                      sx={{
-                        width: { xs: 36, sm: 48, md: 54 },
-                        height: { xs: 36, sm: 48, md: 54 },
-                        WebkitMaskImage: 'url("/api/logo")',
-                        maskImage: 'url("/api/logo")',
-                        WebkitMaskSize: 'contain',
-                        maskSize: 'contain',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskRepeat: 'no-repeat',
-                        WebkitMaskPosition: 'center',
-                        maskPosition: 'center',
-                        background: darkMode
-                          ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
-                          : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      component="img"
-                      src="/api/logo"
-                      alt="Artist Logo"
-                      sx={{
-                        height: { xs: 36, sm: 48, md: 54 },
-                        maxWidth: 150,
-                        objectFit: 'contain',
-                      }}
-                    />
-                  )}
+                  <Box
+                    component="img"
+                    src="/api/logo"
+                    alt="Artist Logo"
+                    sx={{
+                      height: { xs: 36, sm: 48, md: 54 },
+                      maxWidth: { xs: 80, sm: 120, md: 150 },
+                      objectFit: 'contain',
+                      filter: getLogoFilter(logoAnalysis, darkMode, 'none'),
+                    }}
+                  />
                   <Typography
                     variant="h6"
                     sx={{
@@ -544,7 +551,20 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             setIsPlaying(false)
           }}
           queueCount={audioQueue.length}
+          audioQueue={audioQueue}
+          onRemoveFromQueue={(index) => {
+            setAudioQueue(prev => prev.filter((_, i) => i !== index))
+          }}
+          onPlayQueuedTrack={(item, index) => {
+            setAudioQueue(prev => prev.filter((_, i) => i !== index))
+            setPlayingTrack(item.track)
+            setIsPlaying(true)
+          }}
           onSkipNext={handleSkipNext}
+          onSkipPrev={() => {
+            showToast('Restarted playback')
+          }}
+          onShowToast={showToast}
         />
 
         {/* Feedback Snackbar / Toast */}
