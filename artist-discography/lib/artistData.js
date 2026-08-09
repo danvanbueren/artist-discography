@@ -65,79 +65,107 @@ export class ArtistDataManager {
   }
 
   static loadData() {
-    const filePath = this.getFilePath()
     const issues = []
     let createdNewFile = false
 
-    if (!fs.existsSync(filePath)) {
-      const dirPath = path.dirname(filePath)
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true })
-      }
-      fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
-      createdNewFile = true
-      issues.push('JSON file did not exist. Created new scaffold at data/artist-data.json.')
-      return {
-        data: DEFAULT_DATA_SCAFFOLD,
-        health: {
-          isHealthy: true,
-          createdNewFile,
-          issues,
-        },
-      }
-    }
-
-    let rawContent = ''
     try {
-      rawContent = fs.readFileSync(filePath, 'utf8')
-    } catch (err) {
-      issues.push(`Failed to read JSON file: ${err.message}`)
-      return {
-        data: DEFAULT_DATA_SCAFFOLD,
-        health: {
-          isHealthy: false,
-          createdNewFile: false,
-          issues,
-        },
-      }
-    }
+      const filePath = this.getFilePath()
 
-    let parsedData = null
-    try {
-      parsedData = JSON.parse(rawContent)
-    } catch (err) {
-      issues.push(`Invalid JSON syntax in file: ${err.message}. Overwritten with default scaffold.`)
-      fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
-      return {
-        data: DEFAULT_DATA_SCAFFOLD,
-        health: {
-          isHealthy: false,
-          createdNewFile: false,
-          issues,
-        },
-      }
-    }
-
-    const { data: repairedData, repaired } = this.validateAndRepair(parsedData, issues)
-
-    if (repaired) {
+      let fileExists = false
       try {
-        fs.writeFileSync(filePath, JSON.stringify(repairedData, null, 2), 'utf8')
-        issues.push('Structural issues detected and auto-repaired in artist-data.json.')
+        fileExists = fs.existsSync(filePath)
       } catch (err) {
-        issues.push(`Failed to auto-save repaired JSON structure: ${err.message}`)
+        issues.push(`Error checking existence of data file: ${err.message}`)
       }
-    }
 
-    const sanitizedData = JSON.parse(JSON.stringify(repairedData))
+      if (!fileExists) {
+        const dirPath = path.dirname(filePath)
+        try {
+          if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true })
+          }
+          fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
+          createdNewFile = true
+          issues.push('JSON file did not exist. Created new scaffold at data/artist-data.json.')
+        } catch (err) {
+          issues.push(`data/ folder or artist-data.json file did not exist and could not be created automatically: ${err.message}`)
+        }
+        return {
+          data: DEFAULT_DATA_SCAFFOLD,
+          health: {
+            isHealthy: createdNewFile,
+            createdNewFile,
+            issues,
+          },
+        }
+      }
 
-    return {
-      data: sanitizedData,
-      health: {
-        isHealthy: issues.length === 0,
-        createdNewFile,
-        issues: [...issues],
-      },
+      let rawContent = ''
+      try {
+        rawContent = fs.readFileSync(filePath, 'utf8')
+      } catch (err) {
+        issues.push(`Failed to read JSON file: ${err.message}`)
+        return {
+          data: DEFAULT_DATA_SCAFFOLD,
+          health: {
+            isHealthy: false,
+            createdNewFile: false,
+            issues,
+          },
+        }
+      }
+
+      let parsedData = null
+      try {
+        parsedData = JSON.parse(rawContent)
+      } catch (err) {
+        issues.push(`Invalid JSON syntax in file: ${err.message}.`)
+        try {
+          fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
+          issues.push('Overwritten corrupt JSON file with default scaffold.')
+        } catch (writeErr) {
+          issues.push(`Failed to overwrite corrupt JSON file with default scaffold: ${writeErr.message}`)
+        }
+        return {
+          data: DEFAULT_DATA_SCAFFOLD,
+          health: {
+            isHealthy: false,
+            createdNewFile: false,
+            issues,
+          },
+        }
+      }
+
+      const { data: repairedData, repaired } = this.validateAndRepair(parsedData, issues)
+
+      if (repaired) {
+        try {
+          fs.writeFileSync(filePath, JSON.stringify(repairedData, null, 2), 'utf8')
+          issues.push('Structural issues detected and auto-repaired in artist-data.json.')
+        } catch (err) {
+          issues.push(`Failed to auto-save repaired JSON structure: ${err.message}`)
+        }
+      }
+
+      const sanitizedData = JSON.parse(JSON.stringify(repairedData))
+
+      return {
+        data: sanitizedData,
+        health: {
+          isHealthy: issues.length === 0,
+          createdNewFile,
+          issues: [...issues],
+        },
+      }
+    } catch (err) {
+      return {
+        data: DEFAULT_DATA_SCAFFOLD,
+        health: {
+          isHealthy: false,
+          createdNewFile: false,
+          issues: [`Unexpected error loading artist data: ${err.message}`],
+        },
+      }
     }
   }
 
@@ -285,5 +313,16 @@ export class ArtistDataManager {
 }
 
 export function loadArtistData() {
-  return ArtistDataManager.loadData()
+  try {
+    return ArtistDataManager.loadData()
+  } catch (err) {
+    return {
+      data: DEFAULT_DATA_SCAFFOLD,
+      health: {
+        isHealthy: false,
+        createdNewFile: false,
+        issues: [`Failed to load artist data: ${err.message}`],
+      },
+    }
+  }
 }

@@ -56,37 +56,80 @@ export default function FloatingNavBar({
 }) {
   const theme = useTheme()
   const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
+  const navRef = useRef(null)
   const inactivityTimerRef = useRef(null)
+  const [isHovering, setIsHovering] = useState(false)
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
 
-  // Reset 5-second inactivity timeout timer (disabled in search mode)
-  const resetInactivityTimer = useCallback(() => {
+  // Clear timer helper
+  const clearInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current)
+      inactivityTimerRef.current = null
     }
-    if (navMode !== 'main' && navMode !== 'search') {
+  }, [])
+
+  // Start 5-second inactivity timer (only when in child nav, not hovering, and search not focused)
+  const startInactivityTimer = useCallback(() => {
+    clearInactivityTimer()
+    if (navMode !== 'main' && !isHovering && !isSearchFocused) {
       inactivityTimerRef.current = setTimeout(() => {
         setNavMode('main')
       }, 5000)
     }
+  }, [clearInactivityTimer, navMode, isHovering, isSearchFocused])
+
+  // Manage timer lifecycle based on navMode, hover, and focus
+  useEffect(() => {
+    if (navMode === 'main') {
+      clearInactivityTimer()
+    } else if (!isHovering && !isSearchFocused) {
+      startInactivityTimer()
+    } else {
+      clearInactivityTimer()
+    }
+
+    return () => clearInactivityTimer()
+  }, [navMode, isHovering, isSearchFocused, startInactivityTimer, clearInactivityTimer])
+
+  // Immediately jump back to parent menu on Escape key
+  useEffect(() => {
+    if (navMode === 'main') return
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setNavMode('main')
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [navMode])
 
+  // Immediately jump back to parent menu when clicking outside nav bar component
   useEffect(() => {
-    resetInactivityTimer()
-    return () => {
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
-    }
-  }, [navMode, resetInactivityTimer])
+    if (navMode === 'main') return
 
-  // Track any user interaction inside navbar to keep sub-menu open
-  const handleUserInteraction = () => {
-    resetInactivityTimer()
-  }
+    const handlePointerDown = (event) => {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setNavMode('main')
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [navMode])
 
   const isSearchActive = Boolean(searchQuery && searchQuery.trim() !== '')
   const isFilterActive = activeTypes.length > 0
 
   return (
     <Container
+      ref={navRef}
       maxWidth="md"
       sx={{
         position: 'sticky',
@@ -94,7 +137,8 @@ export default function FloatingNavBar({
         zIndex: 1100,
         px: { xs: 1.5, sm: 2 },
       }}
-      onClick={handleUserInteraction}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
     >
       <Paper
         elevation={4}
@@ -235,7 +279,7 @@ export default function FloatingNavBar({
           </Stack>
         )}
 
-        {/* --- SEARCH MODE (Full-width text input expand, no timeout, immediate onBlur return, Enter submit) --- */}
+        {/* --- SEARCH MODE (Full-width text input expand, stays active while focused, immediate return on blur/Esc) --- */}
         {navMode === 'search' && (
           <Box sx={{ flexGrow: 1 }}>
             <TextField
@@ -243,7 +287,11 @@ export default function FloatingNavBar({
               onChange={(e) => {
                 onSearchChange(e.target.value)
               }}
+              onFocus={() => {
+                setIsSearchFocused(true)
+              }}
               onBlur={() => {
+                setIsSearchFocused(false)
                 setNavMode('main')
               }}
               onKeyDown={(e) => {
@@ -302,7 +350,6 @@ export default function FloatingNavBar({
                   clickable
                   onClick={() => {
                     onToggleType(type)
-                    resetInactivityTimer()
                   }}
                   color={isSelected ? 'primary' : 'default'}
                   variant={isSelected ? 'filled' : 'outlined'}
@@ -315,7 +362,7 @@ export default function FloatingNavBar({
                     transition: 'all 0.2s ease',
                   }}
                 />
-              );
+              )
             })}
           </Box>
         )}
@@ -339,7 +386,6 @@ export default function FloatingNavBar({
               clickable
               onClick={() => {
                 onSortChange('newest')
-                resetInactivityTimer()
               }}
               color={sortOrder === 'newest' ? 'primary' : 'default'}
               variant={sortOrder === 'newest' ? 'filled' : 'outlined'}
@@ -351,7 +397,6 @@ export default function FloatingNavBar({
               clickable
               onClick={() => {
                 onSortChange('oldest')
-                resetInactivityTimer()
               }}
               color={sortOrder === 'oldest' ? 'primary' : 'default'}
               variant={sortOrder === 'oldest' ? 'filled' : 'outlined'}
@@ -363,7 +408,6 @@ export default function FloatingNavBar({
               clickable
               onClick={() => {
                 onSortChange('title-asc')
-                resetInactivityTimer()
               }}
               color={sortOrder === 'title-asc' ? 'primary' : 'default'}
               variant={sortOrder === 'title-asc' ? 'filled' : 'outlined'}
@@ -375,7 +419,6 @@ export default function FloatingNavBar({
               clickable
               onClick={() => {
                 onSortChange('title-desc')
-                resetInactivityTimer()
               }}
               color={sortOrder === 'title-desc' ? 'primary' : 'default'}
               variant={sortOrder === 'title-desc' ? 'filled' : 'outlined'}
@@ -400,7 +443,6 @@ export default function FloatingNavBar({
               variant="outlined"
               onClick={() => {
                 onOpenPlatformModal()
-                resetInactivityTimer()
               }}
               startIcon={<HeadsetRoundedIcon fontSize="small" />}
               sx={{
@@ -418,7 +460,6 @@ export default function FloatingNavBar({
               variant="outlined"
               onClick={() => {
                 onToggleTheme()
-                resetInactivityTimer()
               }}
               startIcon={
                 darkMode ? (
