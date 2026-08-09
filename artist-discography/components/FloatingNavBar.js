@@ -178,29 +178,38 @@ export default function FloatingNavBar({
         {navMode === 'main' && (
           <Stack
             direction="row"
-            spacing={1.5}
+            spacing={{ xs: 0.5, sm: 1.5 }}
             sx={{
               width: '100%',
               justifyContent: 'space-around',
               alignItems: 'center',
             }}
           >
-            {/* 1. SEARCH ICON & RESET */}
+            {/* 1. SEARCH BUTTON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-              <IconButton
+              <Button
                 size="small"
                 onClick={() => setNavMode('search')}
+                startIcon={<SearchRoundedIcon fontSize="small" />}
                 sx={{
-                  p: 1,
-                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: isSearchActive ? 700 : 600,
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  borderRadius: 3,
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.75,
+                  minWidth: 0,
                   border: isSearchActive ? '2px solid' : '1px solid transparent',
                   borderColor: isSearchActive ? 'primary.main' : 'transparent',
                   bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                  color: isSearchActive ? 'primary.main' : 'inherit',
+                  color: isSearchActive ? 'primary.main' : 'text.primary',
+                  '&:hover': {
+                    bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.25)' : 'action.hover',
+                  },
                 }}
               >
-                <SearchRoundedIcon />
-              </IconButton>
+                Search
+              </Button>
 
               {isSearchActive && (
                 <IconButton
@@ -210,7 +219,7 @@ export default function FloatingNavBar({
                     onSearchChange('')
                   }}
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
                     borderRadius: 2,
                     border: '2px solid',
                     borderColor: 'primary.main',
@@ -222,22 +231,31 @@ export default function FloatingNavBar({
               )}
             </Stack>
 
-            {/* 2. FILTER ICON & RESET */}
+            {/* 2. FILTER BUTTON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-              <IconButton
+              <Button
                 size="small"
                 onClick={() => setNavMode('filter')}
+                startIcon={<TuneRoundedIcon fontSize="small" />}
                 sx={{
-                  p: 1,
-                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: isFilterActive ? 700 : 600,
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  borderRadius: 3,
+                  px: { xs: 1, sm: 1.5 },
+                  py: 0.75,
+                  minWidth: 0,
                   border: isFilterActive ? '2px solid' : '1px solid transparent',
                   borderColor: isFilterActive ? 'primary.main' : 'transparent',
                   bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                  color: isFilterActive ? 'primary.main' : 'inherit',
+                  color: isFilterActive ? 'primary.main' : 'text.primary',
+                  '&:hover': {
+                    bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.25)' : 'action.hover',
+                  },
                 }}
               >
-                <TuneRoundedIcon />
-              </IconButton>
+                Filter
+              </Button>
 
               {isFilterActive && (
                 <IconButton
@@ -247,7 +265,7 @@ export default function FloatingNavBar({
                     onResetTypes()
                   }}
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
                     borderRadius: 2,
                     border: '2px solid',
                     borderColor: 'primary.main',
@@ -259,23 +277,49 @@ export default function FloatingNavBar({
               )}
             </Stack>
 
-            {/* 3. SORT ICON */}
-            <IconButton
+            {/* 3. SORT BUTTON */}
+            <Button
               size="small"
               onClick={() => setNavMode('sort')}
-              sx={{ p: 1, borderRadius: 2 }}
+              startIcon={<SortRoundedIcon fontSize="small" />}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                borderRadius: 3,
+                px: { xs: 1, sm: 1.5 },
+                py: 0.75,
+                minWidth: 0,
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
             >
-              <SortRoundedIcon />
-            </IconButton>
+              Sort
+            </Button>
 
-            {/* 4. SETTINGS ICON */}
-            <IconButton
+            {/* 4. SETTINGS BUTTON */}
+            <Button
               size="small"
               onClick={() => setNavMode('settings')}
-              sx={{ p: 1, borderRadius: 2 }}
+              startIcon={<SettingsRoundedIcon fontSize="small" />}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                borderRadius: 3,
+                px: { xs: 1, sm: 1.5 },
+                py: 0.75,
+                minWidth: 0,
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
             >
-              <SettingsRoundedIcon />
-            </IconButton>
+              Settings
+            </Button>
           </Stack>
         )}
 
