@@ -440,7 +440,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 <Stack
                   direction="row"
                   spacing={2}
-                  onClick={navigateToHome}
+                  onClick={navigateToAllProjects}
                   sx={{
                     alignItems: 'center',
                     justifyContent: 'center',
