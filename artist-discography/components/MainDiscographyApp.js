@@ -10,6 +10,7 @@ import {
   CssBaseline,
   Typography,
   Snackbar,
+  CircularProgress,
 } from '@mui/material'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero from './ArtistHero'
@@ -23,22 +24,14 @@ import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
 import { useLogoAnalysis, shouldApplyLogoGradient } from '../lib/useLogoAnalysis'
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
+  // Mounting & Hydration state
+  const [mounted, setMounted] = useState(false)
+
   // System Theme Preference Detection
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
   const [darkMode, setDarkMode] = useState(true)
   const logoAnalysis = useLogoAnalysis('/api/logo')
   const applySingleLogoGradient = shouldApplyLogoGradient(logoAnalysis, darkMode)
-
-  useEffect(() => {
-    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('themeMode') : null
-    if (savedTheme === 'dark') {
-      setDarkMode(true)
-    } else if (savedTheme === 'light') {
-      setDarkMode(false)
-    } else {
-      setDarkMode(systemPrefersDark)
-    }
-  }, [systemPrefersDark])
 
   const handleToggleTheme = useCallback(() => {
     setDarkMode(prev => {
@@ -50,10 +43,44 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     })
   }, [])
 
-  // SPA View & Route State
-  const [currentView, setCurrentView] = useState('ALL_PROJECTS')
-  const [selectedProject, setSelectedProject] = useState(null)
-  const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(null)
+  const artist = data?.artist ?? {}
+  const projects = useMemo(() => data?.projects ?? [], [data])
+
+  // Resolve initial project & track from initialSlug or window.location
+  const initialResolved = useMemo(() => {
+    let slugArr = initialSlug
+    if (typeof window !== 'undefined' && (!slugArr || slugArr.length === 0)) {
+      const pathSegments = window.location.pathname.split('/').filter(Boolean)
+      slugArr = pathSegments
+    }
+    if (slugArr && slugArr.length > 0) {
+      const matchedProject = findProjectBySlug(projects, slugArr[0])
+      if (matchedProject) {
+        let matchedTrackSlug = null
+        if (slugArr.length > 1) {
+          const matchedTrack = findTrackBySlug(matchedProject.tracks ?? [], slugArr[1])
+          if (matchedTrack) {
+            matchedTrackSlug = slugify(matchedTrack.name)
+          }
+        }
+        return {
+          view: 'SINGLE_PROJECT',
+          project: matchedProject,
+          trackSlug: matchedTrackSlug,
+        }
+      }
+    }
+    return {
+      view: 'ALL_PROJECTS',
+      project: null,
+      trackSlug: null,
+    }
+  }, [initialSlug, projects])
+
+  // SPA View & Route State initialized immediately to match URL
+  const [currentView, setCurrentView] = useState(() => initialResolved.view)
+  const [selectedProject, setSelectedProject] = useState(() => initialResolved.project)
+  const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(() => initialResolved.trackSlug)
 
   // Preferred Platform State
   const [selectedPlatform, setSelectedPlatform] = useState('')
@@ -117,9 +144,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       }),
     [darkMode]
   )
-
-  const artist = data?.artist ?? {}
-  const projects = data?.projects ?? []
 
   // Load preferred platform from localStorage on mount
   useEffect(() => {
@@ -188,14 +212,24 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
 
   // Sync on mount and browser back/forward popstate
   useEffect(() => {
+    const savedTheme = localStorage.getItem('themeMode')
+    if (savedTheme === 'dark') {
+      setDarkMode(true)
+    } else if (savedTheme === 'light') {
+      setDarkMode(false)
+    } else {
+      setDarkMode(systemPrefersDark)
+    }
+
     syncStateFromLocation()
+    setMounted(true)
 
     const handlePopState = () => {
       syncStateFromLocation()
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [syncStateFromLocation])
+  }, [systemPrefersDark, syncStateFromLocation])
 
   // Navigation handlers (client-side SPA, uninterrupted audio!)
   const navigateToProject = (project) => {
@@ -283,6 +317,45 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
 
     return result
   }, [projects, activeTypes, searchQuery, sortOrder])
+
+  if (!mounted) {
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          bgcolor: '#0a0a0f',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          zIndex: 9999,
+        }}
+      >
+        <Box
+          component="img"
+          src="/api/logo"
+          alt="Loading"
+          sx={{
+            maxHeight: 90,
+            maxWidth: 180,
+            objectFit: 'contain',
+            opacity: 0.8,
+            animation: 'pulse 1.8s infinite ease-in-out',
+            '@keyframes pulse': {
+              '0%, 100%': { opacity: 0.35, transform: 'scale(0.97)' },
+              '50%': { opacity: 0.95, transform: 'scale(1.03)' },
+            },
+          }}
+        />
+        <CircularProgress size={36} thickness={4} sx={{ color: '#90caf9' }} />
+      </Box>
+    )
+  }
 
   return (
     <ThemeProvider theme={theme}>
