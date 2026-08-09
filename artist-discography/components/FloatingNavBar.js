@@ -127,6 +127,8 @@ export default function FloatingNavBar({
 
   const bgDefault = theme.palette.background.default
   const bgTransparent = alpha(bgDefault, 0)
+  const isSearchActive = Boolean(searchQuery && searchQuery.trim() !== '')
+  const isFilterActive = Boolean(activeTypes && activeTypes.length > 0)
 
   return (
     <Box
