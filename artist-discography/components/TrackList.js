@@ -37,6 +37,7 @@ export default function TrackList({
           : `track-${idx + 1}`
         const isHighlighted = highlightedTrackSlug === trackSlug
         const isPlayingThisTrack = playingTrack?.name === track.name
+        const isPlayerActive = Boolean(playingTrack)
 
         return (
           <TrackRow
@@ -49,6 +50,7 @@ export default function TrackList({
             onAddToQueue={onAddToQueue}
             onShowToast={onShowToast}
             isPlayingThisTrack={isPlayingThisTrack}
+            isPlayerActive={isPlayerActive}
             isHighlighted={isHighlighted}
             onSelectTrack={onSelectTrack}
             selectedPlatform={selectedPlatform}

@@ -80,6 +80,7 @@ export default function TrackRow({
   onAddToQueue,
   onShowToast,
   isPlayingThisTrack,
+  isPlayerActive = false,
   isHighlighted,
   onSelectTrack,
   selectedPlatform,
@@ -186,8 +187,8 @@ export default function TrackRow({
           )}
         </Box>
 
-        {/* Add to Queue Button (Only rendered if track has audio) */}
-        {track?.hasAudio && (
+        {/* Add to Queue Button (Only rendered if track has audio AND audio player is active) */}
+        {track?.hasAudio && isPlayerActive && (
           <IconButton
             size="small"
             onClick={(e) => {
