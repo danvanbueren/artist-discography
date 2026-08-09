@@ -13,6 +13,7 @@ import {
   useTheme,
   Collapse,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
 import SkipNextRoundedIcon from '@mui/icons-material/SkipNextRounded'
@@ -30,6 +31,9 @@ export default function AudioPlayerBar({
   const theme = useTheme()
   const [progress, setProgress] = useState(0)
   const timerRef = useRef(null)
+
+  const bgDefault = theme.palette.background.default
+  const bgTransparent = alpha(bgDefault, 0)
 
   useEffect(() => {
     if (isPlaying) {
@@ -59,13 +63,44 @@ export default function AudioPlayerBar({
       <Box
         sx={{
           position: 'fixed',
-          bottom: { xs: 12, sm: 16 },
+          bottom: 0,
           left: 0,
           right: 0,
           zIndex: 1200,
+          pb: { xs: 1.5, sm: 2 },
+          pt: { xs: 1.5, sm: 2 },
           pointerEvents: 'none',
         }}
       >
+        {/* Solid mask below and behind audio player bar to prevent any content from peeking out below */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            top: { xs: 1.5, sm: 2 },
+            bgcolor: bgDefault,
+            zIndex: -1,
+            transition: 'background-color 0.3s ease',
+          }}
+        />
+
+        {/* Smooth gradient opacity fade extending above audio player bar */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: '100%',
+            left: 0,
+            right: 0,
+            height: { xs: 48, sm: 64 },
+            background: `linear-gradient(to top, ${bgDefault} 0%, ${bgTransparent} 100%)`,
+            zIndex: -1,
+            pointerEvents: 'none',
+            transition: 'background 0.3s ease',
+          }}
+        />
+
         <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
           <Paper
             elevation={6}

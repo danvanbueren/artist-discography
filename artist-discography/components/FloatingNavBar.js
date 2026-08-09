@@ -16,6 +16,7 @@ import {
   Collapse,
   Fade,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import SortRoundedIcon from '@mui/icons-material/SortRounded'
@@ -124,22 +125,59 @@ export default function FloatingNavBar({
     }
   }, [navMode])
 
-  const isSearchActive = Boolean(searchQuery && searchQuery.trim() !== '')
-  const isFilterActive = activeTypes.length > 0
+  const bgDefault = theme.palette.background.default
+  const bgTransparent = alpha(bgDefault, 0)
 
   return (
-    <Container
-      ref={navRef}
-      maxWidth="md"
+    <Box
       sx={{
         position: 'sticky',
-        top: { xs: 12, sm: 16 },
+        top: 0,
         zIndex: 1100,
-        px: { xs: 2, sm: 3 },
+        pt: { xs: 1.5, sm: 2 },
+        pb: { xs: 1.5, sm: 2 },
+        pointerEvents: 'none',
       }}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
+      {/* Solid mask above and behind navbar to prevent any content from peeking out above */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: { xs: 1.5, sm: 2 },
+          bgcolor: bgDefault,
+          zIndex: -1,
+          transition: 'background-color 0.3s ease',
+        }}
+      />
+
+      {/* Smooth gradient opacity fade extending below navbar */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          height: { xs: 48, sm: 64 },
+          background: `linear-gradient(to bottom, ${bgDefault} 0%, ${bgTransparent} 100%)`,
+          zIndex: -1,
+          pointerEvents: 'none',
+          transition: 'background 0.3s ease',
+        }}
+      />
+
+      <Container
+        ref={navRef}
+        maxWidth="md"
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pointerEvents: 'auto',
+        }}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
       <Paper
         elevation={4}
         sx={{
@@ -534,5 +572,6 @@ export default function FloatingNavBar({
         )}
       </Paper>
     </Container>
+  </Box>
   )
 }
