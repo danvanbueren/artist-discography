@@ -14,6 +14,7 @@ export default function ProjectCard({
   onAddToQueue,
   onShowToast,
   playingTrack,
+  isPlaying = false,
   highlightedTrackSlug,
   onSelectTrack,
   selectedPlatform,
@@ -53,6 +54,7 @@ export default function ProjectCard({
         onAddToQueue={onAddToQueue}
         onShowToast={onShowToast}
         playingTrack={playingTrack}
+        isPlaying={isPlaying}
         highlightedTrackSlug={highlightedTrackSlug}
         onSelectTrack={onSelectTrack}
         selectedPlatform={selectedPlatform}

@@ -80,6 +80,7 @@ export default function TrackRow({
   onAddToQueue,
   onShowToast,
   isPlayingThisTrack,
+  isPlaying = false,
   isPlayerActive = false,
   isHighlighted,
   onSelectTrack,
@@ -102,6 +103,8 @@ export default function TrackRow({
       onSelectTrack(track)
     }
   }
+
+  const isActivelyPlaying = isPlaying && isPlayingThisTrack
 
   return (
     <Box
@@ -131,7 +134,7 @@ export default function TrackRow({
       {/* Col 1: Track Number / Play Indicator & Queue Button */}
       <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center' }}>
         <Box sx={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {track?.hasAudio && isPlayingThisTrack ? (
+          {track?.hasAudio && isActivelyPlaying ? (
             <IconButton
               size="small"
               color="primary"
@@ -152,9 +155,10 @@ export default function TrackRow({
             >
               <PauseRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
-          ) : track?.hasAudio && hovered ? (
+          ) : track?.hasAudio && (hovered || isPlayingThisTrack) ? (
             <IconButton
               size="small"
+              color={isPlayingThisTrack ? "primary" : "default"}
               onClick={(e) => {
                 e.stopPropagation()
                 if (onPlayTrack) onPlayTrack(track, project)
@@ -278,6 +282,7 @@ export default function TrackRow({
                 component="img"
                 src={resolvedLink.icon}
                 alt={resolvedLink.key}
+                draggable={false}
                 loading="eager"
                 decoding="async"
                 sx={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 1 }}

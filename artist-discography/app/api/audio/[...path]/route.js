@@ -25,14 +25,17 @@ export async function GET(request, { params }) {
     const requestedPath = pathSegments.join('/')
     
     // Prevent directory traversal attacks
+    const fullProjectsPath = path.resolve(path.join(dataDir, 'projects', requestedPath))
     const fullAudioPath = path.resolve(path.join(dataDir, 'audio', requestedPath))
     const fallbackPath = path.resolve(path.join(dataDir, requestedPath))
 
     let targetFilePath = null
-    if (fullAudioPath.startsWith(dataDir) && fs.existsSync(fullAudioPath) && fs.statSync(fullAudioPath).isFile()) {
-      targetFilePath = fullAudioPath
-    } else if (fallbackPath.startsWith(dataDir) && fs.existsSync(fallbackPath) && fs.statSync(fallbackPath).isFile()) {
+    if (fallbackPath.startsWith(dataDir) && fs.existsSync(fallbackPath) && fs.statSync(fallbackPath).isFile()) {
       targetFilePath = fallbackPath
+    } else if (fullProjectsPath.startsWith(dataDir) && fs.existsSync(fullProjectsPath) && fs.statSync(fullProjectsPath).isFile()) {
+      targetFilePath = fullProjectsPath
+    } else if (fullAudioPath.startsWith(dataDir) && fs.existsSync(fullAudioPath) && fs.statSync(fullAudioPath).isFile()) {
+      targetFilePath = fullAudioPath
     }
 
     if (!targetFilePath) {

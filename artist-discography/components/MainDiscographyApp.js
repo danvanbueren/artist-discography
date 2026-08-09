@@ -8,6 +8,7 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
+  GlobalStyles,
   Typography,
   Snackbar,
   CircularProgress,
@@ -99,7 +100,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // Audio Player & Queue State
   const [playingTrack, setPlayingTrack] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [audioQueue, setAudioQueue] = useState([])
+  const [manualQueue, setManualQueue] = useState([])
 
   // Toast / Notification State
   const [toastMessage, setToastMessage] = useState('')
@@ -109,6 +110,52 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     setToastMessage(msg)
     setToastOpen(true)
   }, [])
+
+  // All Playable Discography Tracks for Autoplay
+  const allDiscographyTracks = useMemo(() => {
+    const list = []
+    for (const proj of (projects || [])) {
+      for (const track of (proj.tracks || [])) {
+        if (track.hasAudio && track.audioUrl) {
+          list.push({
+            track: {
+              ...track,
+              project: proj.name || '',
+              projectCover: track.cover || proj.cover || '',
+            },
+            project: proj,
+          })
+        }
+      }
+    }
+    return list
+  }, [projects])
+
+  const [customAutoplayQueue, setCustomAutoplayQueue] = useState(null)
+
+  // Default autoplay list based on current playing track
+  const defaultAutoplayTracks = useMemo(() => {
+    if (!allDiscographyTracks || allDiscographyTracks.length === 0) return []
+    if (!playingTrack) return allDiscographyTracks
+    const currIndex = allDiscographyTracks.findIndex(
+      item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
+    )
+    if (currIndex === -1) return allDiscographyTracks
+    return [
+      ...allDiscographyTracks.slice(currIndex + 1),
+      ...allDiscographyTracks.slice(0, currIndex),
+    ]
+  }, [allDiscographyTracks, playingTrack])
+
+  // Active autoplay tracks: custom override if modified, else default
+  const autoplayTracks = useMemo(() => {
+    return customAutoplayQueue !== null ? customAutoplayQueue : defaultAutoplayTracks
+  }, [customAutoplayQueue, defaultAutoplayTracks])
+
+  // Reset customAutoplayQueue when playingTrack changes to a new track
+  useEffect(() => {
+    setCustomAutoplayQueue(null)
+  }, [playingTrack?.name])
 
   const handleAddToQueue = useCallback((track, proj) => {
     if (!track || !track.hasAudio || !track.audioUrl) {
@@ -121,21 +168,90 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       project: parentProj?.name || track.project || '',
       projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
     }
-    setAudioQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
+    setManualQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
     showToast(`Added "${track?.name || 'track'}" to queue`)
   }, [selectedProject, projects, showToast])
 
   const handleSkipNext = useCallback(() => {
-    if (audioQueue.length > 0) {
-      const [nextItem, ...restQueue] = audioQueue
-      setAudioQueue(restQueue)
+    if (manualQueue.length > 0) {
+      const [nextItem, ...restQueue] = manualQueue
+      setManualQueue(restQueue)
       setPlayingTrack(nextItem.track)
       setIsPlaying(true)
-      showToast(`Now playing "${nextItem.track?.name || 'track'}"`)
+      return
+    }
+
+    if (autoplayTracks.length > 0) {
+      const [nextItem, ...restAutoplay] = autoplayTracks
+      setCustomAutoplayQueue(restAutoplay)
+      setPlayingTrack(nextItem.track)
+      setIsPlaying(true)
+    } else if (allDiscographyTracks.length > 0) {
+      const nextItem = allDiscographyTracks[0]
+      setPlayingTrack(nextItem.track)
+      setIsPlaying(true)
     } else {
       setIsPlaying(false)
     }
-  }, [audioQueue, showToast])
+  }, [manualQueue, autoplayTracks, allDiscographyTracks])
+
+  const handleSkipPrev = useCallback(() => {
+    if (allDiscographyTracks.length > 0) {
+      let currIndex = -1
+      if (playingTrack) {
+        currIndex = allDiscographyTracks.findIndex(
+          item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
+        )
+      }
+      const prevIndex = currIndex > 0 ? currIndex - 1 : allDiscographyTracks.length - 1
+      const prevItem = allDiscographyTracks[prevIndex]
+      setPlayingTrack(prevItem.track)
+      setIsPlaying(true)
+    }
+  }, [playingTrack, allDiscographyTracks])
+
+  const handleQueueDragDrop = useCallback(({ fromList, fromIndex, toList, toIndex }) => {
+    let currentQueue = [...manualQueue]
+    let currentAutoplay = [...autoplayTracks]
+
+    if (fromList === 'queue' && toList === 'queue') {
+      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
+      const [moved] = currentQueue.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentQueue.length)
+      currentQueue.splice(targetIdx, 0, moved)
+      setManualQueue(currentQueue)
+    } else if (fromList === 'autoplay' && toList === 'autoplay') {
+      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
+      const [moved] = currentAutoplay.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentAutoplay.length)
+      currentAutoplay.splice(targetIdx, 0, moved)
+      setCustomAutoplayQueue(currentAutoplay)
+    } else if (fromList === 'autoplay' && toList === 'queue') {
+      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
+      const [moved] = currentAutoplay.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentQueue.length)
+      currentQueue.splice(targetIdx, 0, moved)
+      setManualQueue(currentQueue)
+      setCustomAutoplayQueue(currentAutoplay)
+    } else if (fromList === 'queue' && toList === 'autoplay') {
+      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
+      const [moved] = currentQueue.splice(fromIndex, 1)
+      const targetIdx = Math.min(toIndex, currentAutoplay.length)
+      currentAutoplay.splice(targetIdx, 0, moved)
+      setManualQueue(currentQueue)
+      setCustomAutoplayQueue(currentAutoplay)
+    }
+  }, [manualQueue, autoplayTracks])
+
+  const handleRemoveFromAutoplay = useCallback((index) => {
+    setCustomAutoplayQueue(prev => {
+      const current = prev !== null ? [...prev] : [...autoplayTracks]
+      if (index >= 0 && index < current.length) {
+        current.splice(index, 1)
+      }
+      return current
+    })
+  }, [autoplayTracks])
 
   // Multi-Select Type Filters & Sorting State
   const [activeTypes, setActiveTypes] = useState([]) // e.g. ['LP', 'EP']
@@ -285,6 +401,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const handleNavigateToCurrentTrack = useCallback(() => {
+    if (!playingTrack) return
+    const parentProj = projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase())) || projects.find(p => (p.name || '').toLowerCase() === (playingTrack.project || '').toLowerCase())
+    if (parentProj) {
+      const matchedTrack = (parentProj.tracks || []).find(t => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()) || playingTrack
+      navigateToTrack(parentProj, matchedTrack)
+    }
+  }, [playingTrack, projects, navigateToTrack])
+
   // Audio Playback Handler
   const handlePlayTrack = useCallback((track, proj) => {
     if (!track) return
@@ -374,6 +499,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           component="img"
           src="/api/logo"
           alt="Loading"
+          draggable={false}
           sx={{
             maxHeight: 90,
             maxWidth: 180,
@@ -394,6 +520,34 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <GlobalStyles
+        styles={{
+          '*': {
+            userSelect: 'none !important',
+            WebkitUserSelect: 'none !important',
+            MozUserSelect: 'none !important',
+            msUserSelect: 'none !important',
+          },
+          '[draggable="true"], [draggable="true"] *': {
+            WebkitUserDrag: 'element !important',
+            userSelect: 'none !important',
+            WebkitUserSelect: 'none !important',
+          },
+          'img, picture, video, canvas': {
+            userSelect: 'none !important',
+            WebkitUserSelect: 'none !important',
+            WebkitUserDrag: 'none !important',
+            pointerEvents: 'none',
+          },
+          'input, textarea, [contenteditable="true"]': {
+            userSelect: 'text !important',
+            WebkitUserSelect: 'text !important',
+            MozUserSelect: 'text !important',
+            msUserSelect: 'text !important',
+            pointerEvents: 'auto',
+          },
+        }}
+      />
 
       <Box
         sx={{
@@ -471,6 +625,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     component="img"
                     src="/api/logo"
                     alt="Artist Logo"
+                    draggable={false}
                     sx={{
                       height: { xs: 36, sm: 48, md: 54 },
                       maxWidth: { xs: 80, sm: 120, md: 150 },
@@ -504,6 +659,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 onAddToQueue={handleAddToQueue}
                 onShowToast={showToast}
                 playingTrack={playingTrack}
+                isPlaying={isPlaying}
                 highlightedTrackSlug={highlightedTrackSlug}
                 onSelectTrack={(track) => navigateToTrack(selectedProject, track)}
                 selectedPlatform={selectedPlatform}
@@ -531,6 +687,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     onAddToQueue={handleAddToQueue}
                     onShowToast={showToast}
                     playingTrack={playingTrack}
+                    isPlaying={isPlaying}
                     highlightedTrackSlug={null}
                     onSelectTrack={(track) => navigateToTrack(proj, track)}
                     selectedPlatform={selectedPlatform}
@@ -558,21 +715,27 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             setPlayingTrack(null)
             setIsPlaying(false)
           }}
-          queueCount={audioQueue.length}
-          audioQueue={audioQueue}
-          onRemoveFromQueue={(index) => {
-            setAudioQueue(prev => prev.filter((_, i) => i !== index))
+          queueCount={manualQueue.length}
+          manualQueue={manualQueue}
+          autoplayTracks={autoplayTracks}
+          onQueueDragDrop={handleQueueDragDrop}
+          onRemoveFromManualQueue={(index) => {
+            setManualQueue(prev => prev.filter((_, i) => i !== index))
           }}
-          onPlayQueuedTrack={(item, index) => {
-            setAudioQueue(prev => prev.filter((_, i) => i !== index))
+          onRemoveFromAutoplay={handleRemoveFromAutoplay}
+          onPlayQueuedTrack={(item, index, isManual = true) => {
+            if (isManual) {
+              setManualQueue(prev => prev.filter((_, i) => i !== index))
+            } else {
+              handleRemoveFromAutoplay(index)
+            }
             setPlayingTrack(item.track)
             setIsPlaying(true)
           }}
           onSkipNext={handleSkipNext}
-          onSkipPrev={() => {
-            showToast('Restarted playback')
-          }}
+          onSkipPrev={handleSkipPrev}
           onShowToast={showToast}
+          onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
         />
 
         {/* Feedback Snackbar / Toast */}

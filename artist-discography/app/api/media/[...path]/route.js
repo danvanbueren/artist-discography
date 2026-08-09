@@ -25,14 +25,17 @@ export async function GET(request, { params }) {
     const requestedPath = pathSegments.join('/')
 
     // Prevent directory traversal attacks
+    const fullProjectsPath = path.resolve(path.join(dataDir, 'projects', requestedPath))
     const fullCoversPath = path.resolve(path.join(dataDir, 'covers', requestedPath))
     const fallbackDataPath = path.resolve(path.join(dataDir, requestedPath))
 
     let targetFilePath = null
-    if (fullCoversPath.startsWith(dataDir) && fs.existsSync(fullCoversPath) && fs.statSync(fullCoversPath).isFile()) {
-      targetFilePath = fullCoversPath
-    } else if (fallbackDataPath.startsWith(dataDir) && fs.existsSync(fallbackDataPath) && fs.statSync(fallbackDataPath).isFile()) {
+    if (fallbackDataPath.startsWith(dataDir) && fs.existsSync(fallbackDataPath) && fs.statSync(fallbackDataPath).isFile()) {
       targetFilePath = fallbackDataPath
+    } else if (fullProjectsPath.startsWith(dataDir) && fs.existsSync(fullProjectsPath) && fs.statSync(fullProjectsPath).isFile()) {
+      targetFilePath = fullProjectsPath
+    } else if (fullCoversPath.startsWith(dataDir) && fs.existsSync(fullCoversPath) && fs.statSync(fullCoversPath).isFile()) {
+      targetFilePath = fullCoversPath
     }
 
     if (!targetFilePath) {

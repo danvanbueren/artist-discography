@@ -12,6 +12,7 @@ export default function TrackList({
   onAddToQueue,
   onShowToast,
   playingTrack,
+  isPlaying = false,
   highlightedTrackSlug,
   onSelectTrack,
   selectedPlatform,
@@ -29,8 +30,8 @@ export default function TrackList({
   }
 
   return (
-    <Stack spacing={0.5} sx={{ px: { xs: 0.5, sm: 1 }, pb: 2 }}>
-      <Divider sx={{ mb: 1, opacity: 0.15 }} />
+    <Stack spacing={0.5} sx={{ px: { xs: 0.5, sm: 1 }, pt: { xs: 1.5, sm: 2 }, pb: 2 }}>
+      <Divider sx={{ mt: 0.5, mb: 2, opacity: 0.15 }} />
       {tracks.map((track, idx) => {
         const trackSlug = track.name
           ? track.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
@@ -50,6 +51,7 @@ export default function TrackList({
             onAddToQueue={onAddToQueue}
             onShowToast={onShowToast}
             isPlayingThisTrack={isPlayingThisTrack}
+            isPlaying={isPlaying}
             isPlayerActive={isPlayerActive}
             isHighlighted={isHighlighted}
             onSelectTrack={onSelectTrack}

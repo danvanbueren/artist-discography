@@ -11,6 +11,10 @@ import {
   Stack,
   Badge,
   Popover,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Divider,
   List,
   ListItem,
   ListItemText,
@@ -35,6 +39,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
+import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded'
 import { slugify } from '../lib/slugs'
 import { getCookie, setCookie } from '../lib/cookies'
 
@@ -44,12 +49,16 @@ export default function AudioPlayerBar({
   onTogglePlay,
   onClosePlayer,
   queueCount = 0,
-  audioQueue = [],
-  onRemoveFromQueue,
+  manualQueue = [],
+  autoplayTracks = [],
+  onQueueDragDrop,
+  onRemoveFromManualQueue,
+  onRemoveFromAutoplay,
   onPlayQueuedTrack,
   onSkipNext,
   onSkipPrev,
   onShowToast,
+  onNavigateToCurrentTrack,
 }) {
   const theme = useTheme()
   const [currentTime, setCurrentTime] = useState(0)
@@ -59,8 +68,57 @@ export default function AudioPlayerBar({
   const [prevVolume, setPrevVolume] = useState(100)
   const [isMuted, setIsMuted] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
+  const [queueOpen, setQueueOpen] = useState(false)
+  const [draggedItem, setDraggedItem] = useState(null) // { listType: 'queue' | 'autoplay', index: number }
+  const [dragOverItem, setDragOverItem] = useState(null) // { listType: 'queue' | 'autoplay', index: number }
   const audioRef = useRef(null)
   const [realDuration, setRealDuration] = useState(0)
+
+  const handleDragStart = (e, listType, index) => {
+    e.stopPropagation()
+    setDraggedItem({ listType, index })
+    e.dataTransfer.effectAllowed = 'move'
+    try {
+      e.dataTransfer.setData('text/plain', JSON.stringify({ listType, index }))
+    } catch {}
+  }
+
+  const handleDragOver = (e, listType, index) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    if (!dragOverItem || dragOverItem.listType !== listType || dragOverItem.index !== index) {
+      setDragOverItem({ listType, index })
+    }
+  }
+
+  const handleDragLeave = (e, listType, index) => {
+    e.stopPropagation()
+    if (dragOverItem && dragOverItem.listType === listType && dragOverItem.index === index) {
+      setDragOverItem(null)
+    }
+  }
+
+  const handleDrop = (e, targetListType, targetIndex) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (draggedItem && onQueueDragDrop) {
+      onQueueDragDrop({
+        fromList: draggedItem.listType,
+        fromIndex: draggedItem.index,
+        toList: targetListType,
+        toIndex: targetIndex,
+      })
+    }
+    setDraggedItem(null)
+    setDragOverItem(null)
+  }
+
+  const handleDragEnd = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation()
+    setDraggedItem(null)
+    setDragOverItem(null)
+  }
 
   // Load volume preference from cookie/localStorage on mount
   useEffect(() => {
@@ -88,6 +146,9 @@ export default function AudioPlayerBar({
   useEffect(() => {
     setCurrentTime(0)
     setRealDuration(0)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+    }
   }, [playingTrack?.audioUrl, playingTrack?.name])
 
   // Sync playback state with audio element
@@ -267,13 +328,15 @@ export default function AudioPlayerBar({
                 sx={{
                   alignItems: 'center',
                   minWidth: 0,
-                  width: { xs: '100%', sm: 230, md: 270 },
-                  justifyContent: 'space-between',
+                  width: { xs: '100%', sm: 'auto' },
+                  maxWidth: { sm: 260, md: 300 },
+                  flexShrink: 0,
                 }}
               >
-                <Stack direction="row" spacing={1.5} sx={{ minWidth: 0, alignItems: 'center', flexGrow: 1 }}>
-                  {/* Col 1: Album Art */}
+                {/* Col 1: Album Art */}
+                <Tooltip title="Go to track page" arrow>
                   <Box
+                    onClick={onNavigateToCurrentTrack}
                     sx={{
                       width: { xs: 40, sm: 46 },
                       height: { xs: 40, sm: 46 },
@@ -286,6 +349,9 @@ export default function AudioPlayerBar({
                       flexShrink: 0,
                       overflow: 'hidden',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease',
+                      '&:hover': { transform: 'scale(1.06)' },
                     }}
                   >
                     {coverArt ? (
@@ -293,20 +359,32 @@ export default function AudioPlayerBar({
                         component="img"
                         src={coverArt}
                         alt={playingTrack.name || 'Cover'}
+                        draggable={false}
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
                       <MusicNoteRoundedIcon fontSize="small" />
                     )}
                   </Box>
+                </Tooltip>
 
-                  {/* Col 2: Track Name & Track Artist */}
-                  <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                {/* Col 2: Track Name & Track Artist */}
+                <Tooltip title="Go to track page" arrow>
+                  <Box
+                    onClick={onNavigateToCurrentTrack}
+                    sx={{
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      '&:hover .track-title-text': { color: 'primary.main', textDecoration: 'underline' },
+                    }}
+                  >
                     <Typography
+                      className="track-title-text"
                       variant="body2"
                       fontWeight={700}
                       noWrap
-                      sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' } }}
+                      sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' }, transition: 'color 0.15s ease' }}
                     >
                       {playingTrack.name || 'Untitled Track'}
                     </Typography>
@@ -319,7 +397,7 @@ export default function AudioPlayerBar({
                       {playingTrack.artist || 'Artist'}
                     </Typography>
                   </Box>
-                </Stack>
+                </Tooltip>
 
                 {/* Col 3: Share Button */}
                 <Tooltip title="Share track link" arrow>
@@ -330,6 +408,8 @@ export default function AudioPlayerBar({
                       color: copiedShare ? 'success.main' : 'text.secondary',
                       transition: 'color 0.2s ease',
                       flexShrink: 0,
+                      p: 0.5,
+                      ml: 0.5,
                     }}
                   >
                     {copiedShare ? <CheckRoundedIcon fontSize="small" /> : <ShareRoundedIcon fontSize="small" />}
@@ -345,13 +425,12 @@ export default function AudioPlayerBar({
                 sx={{
                   flexGrow: 1,
                   minWidth: 0,
-                  width: { xs: '100%', sm: 'auto' },
-                  maxWidth: { sm: 360, md: 420 },
-                  alignItems: 'center',
+                  width: '100%',
+                  px: { xs: 0, sm: 1.5, md: 2.5 },
                 }}
               >
                 {/* Row 1: Controls */}
-                <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} sx={{ alignItems: 'center' }}>
+                <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                   {/* Shuffle */}
                   <Tooltip title={isShuffle ? 'Shuffle On' : 'Shuffle Off'} arrow>
                     <IconButton
@@ -371,12 +450,13 @@ export default function AudioPlayerBar({
                     <IconButton
                       size="small"
                       onClick={() => {
-                        if (currentTime > 3) {
-                          setCurrentTime(0)
-                        } else if (onSkipPrev) {
+                        const activeTime = audioRef.current ? audioRef.current.currentTime : currentTime
+                        if (audioRef.current) {
+                          audioRef.current.currentTime = 0
+                        }
+                        setCurrentTime(0)
+                        if (activeTime <= 3 && onSkipPrev) {
                           onSkipPrev()
-                        } else {
-                          setCurrentTime(0)
                         }
                       }}
                       sx={{ color: 'text.primary' }}
@@ -409,7 +489,15 @@ export default function AudioPlayerBar({
                   <Tooltip title="Next" arrow>
                     <IconButton
                       size="small"
-                      onClick={onSkipNext}
+                      onClick={() => {
+                        if (audioRef.current) {
+                          audioRef.current.currentTime = 0
+                        }
+                        setCurrentTime(0)
+                        if (onSkipNext) {
+                          onSkipNext()
+                        }
+                      }}
                       sx={{ color: 'text.primary' }}
                     >
                       <SkipNextRoundedIcon fontSize="small" />
@@ -449,7 +537,7 @@ export default function AudioPlayerBar({
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 32, textAlign: 'right' }}
+                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 36, textAlign: 'right', px: 0.75 }}
                   >
                     {formatTime(currentTime)}
                   </Typography>
@@ -488,7 +576,7 @@ export default function AudioPlayerBar({
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 32 }}
+                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 36, px: 0.75 }}
                   >
                     {formatTime(duration)}
                   </Typography>
@@ -502,91 +590,256 @@ export default function AudioPlayerBar({
                 spacing={0.5}
                 sx={{
                   alignItems: 'center',
-                  width: { xs: '100%', sm: 220, md: 260 },
+                  width: { xs: '100%', sm: 'auto' },
                   justifyContent: 'flex-end',
+                  flexShrink: 0,
                 }}
               >
                 {/* Col 1: View Queue */}
-                <Tooltip title="View Queue" arrow>
+                <Tooltip title={manualQueue.length > 0 ? `Queue (${manualQueue.length} manual)` : 'View Queue (Autoplay active)'} arrow>
                   <IconButton
                     size="small"
-                    onClick={(e) => setQueueAnchorEl(e.currentTarget)}
-                    sx={{ color: queueAnchorEl ? 'primary.main' : 'text.secondary' }}
+                    onClick={() => setQueueOpen(true)}
+                    sx={{ color: queueOpen ? 'primary.main' : 'text.secondary' }}
                   >
-                    <Badge badgeContent={queueCount} color="primary">
+                    <Badge badgeContent={manualQueue.length > 0 ? manualQueue.length : null} color="primary">
                       <QueueMusicRoundedIcon fontSize="small" />
                     </Badge>
                   </IconButton>
                 </Tooltip>
 
-                {/* Queue Popover */}
-                <Popover
-                  open={Boolean(queueAnchorEl)}
-                  anchorEl={queueAnchorEl}
-                  onClose={() => setQueueAnchorEl(null)}
-                  anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                  transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                {/* Queue Centered Modal */}
+                <Dialog
+                  open={queueOpen}
+                  onClose={() => setQueueOpen(false)}
+                  maxWidth="sm"
+                  fullWidth
                   slotProps={{
                     paper: {
                       sx: {
-                        width: 280,
-                        maxHeight: 320,
-                        p: 1.5,
-                        borderRadius: 3,
+                        borderRadius: 4,
+                        p: 1,
                         bgcolor: 'background.paper',
-                        boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+                        backgroundImage: 'none',
+                        boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4)',
+                        border: '1px solid',
+                        borderColor: 'divider',
                       },
                     },
                   }}
                 >
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ px: 1, pb: 1 }}>
-                    Up Next ({audioQueue.length})
-                  </Typography>
-                  {audioQueue.length === 0 ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ px: 1, display: 'block' }}>
-                      Queue is empty. Click "+ Queue" on any track to add it here.
-                    </Typography>
-                  ) : (
-                    <List size="small" disablePadding sx={{ maxHeight: 240, overflowY: 'auto' }}>
-                      {audioQueue.map((item, idx) => (
-                        <ListItem
-                          key={idx}
+                  <DialogTitle
+                    sx={{
+                      m: 0,
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                      <QueueMusicRoundedIcon color="primary" />
+                      <Typography variant="h6" fontWeight={800}>
+                        Playback Queue
+                      </Typography>
+                    </Stack>
+                    <IconButton
+                      aria-label="close"
+                      onClick={() => setQueueOpen(false)}
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      <CloseRoundedIcon />
+                    </IconButton>
+                  </DialogTitle>
+
+                  <DialogContent dividers sx={{ p: 2, maxHeight: '60vh' }}>
+                    {/* SECTION 1: QUEUE */}
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1 }}>
+                        Queue ({manualQueue.length})
+                      </Typography>
+
+                      {manualQueue.length === 0 ? (
+                        <Paper
+                          variant="outlined"
+                          onDragOver={(e) => { e.preventDefault(); setDragOverItem({ listType: 'queue', index: 0 }); }}
+                          onDrop={(e) => handleDrop(e, 'queue', 0)}
                           sx={{
-                            borderRadius: 1.5,
-                            mb: 0.5,
-                            py: 0.5,
-                            px: 1,
-                            '&:hover': { bgcolor: 'action.hover' },
+                            p: 3,
+                            textAlign: 'center',
+                            borderRadius: 2,
+                            bgcolor: 'action.hover',
+                            borderStyle: dragOverItem?.listType === 'queue' ? 'dashed' : 'solid',
+                            borderColor: dragOverItem?.listType === 'queue' ? 'primary.main' : 'divider',
                           }}
-                          secondaryAction={
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                if (onRemoveFromQueue) onRemoveFromQueue(idx)
-                              }}
-                            >
-                              <DeleteOutlineRoundedIcon fontSize="small" />
-                            </IconButton>
-                          }
                         >
-                          <ListItemText
-                            primary={item.track?.name || `Track ${idx + 1}`}
-                            secondary={item.project?.name || item.track?.artist || 'Artist'}
-                            slotProps={{
-                              primary: { variant: 'body2', fontWeight: 600, noWrap: true },
-                              secondary: { variant: 'caption', noWrap: true },
-                            }}
-                            onClick={() => {
-                              if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx)
-                              setQueueAnchorEl(null)
-                            }}
-                            sx={{ cursor: 'pointer' }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </Popover>
+                          <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                            No tracks in queue. Click "+ Queue" on any track or drag a track here.
+                          </Typography>
+                        </Paper>
+                      ) : (
+                        <List disablePadding sx={{ maxHeight: 220, overflowY: 'auto' }}>
+                          {manualQueue.map((item, idx) => (
+                            <ListItem
+                              key={idx}
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, 'queue', idx)}
+                              onDragOver={(e) => handleDragOver(e, 'queue', idx)}
+                              onDragLeave={(e) => handleDragLeave(e, 'queue', idx)}
+                              onDrop={(e) => handleDrop(e, 'queue', idx)}
+                              onDragEnd={handleDragEnd}
+                              sx={{
+                                borderRadius: 2,
+                                mb: 1,
+                                py: 1,
+                                px: 1.5,
+                                cursor: 'grab',
+                                WebkitUserDrag: 'element',
+                                userSelect: 'none',
+                                transition: 'all 0.15s ease',
+                                opacity: draggedItem?.listType === 'queue' && draggedItem?.index === idx ? 0.4 : 1,
+                                bgcolor: dragOverItem?.listType === 'queue' && dragOverItem?.index === idx ? alpha(theme.palette.primary.main, 0.15) : 'action.hover',
+                                border: dragOverItem?.listType === 'queue' && dragOverItem?.index === idx ? `1px dashed ${theme.palette.primary.main}` : '1px solid transparent',
+                                '&:hover': { bgcolor: 'action.selected' },
+                                '&:active': { cursor: 'grabbing' },
+                              }}
+                              secondaryAction={
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    if (onRemoveFromManualQueue) onRemoveFromManualQueue(idx)
+                                  }}
+                                >
+                                  <DeleteOutlineRoundedIcon fontSize="small" />
+                                </IconButton>
+                              }
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  mr: 1.5,
+                                  color: 'text.secondary',
+                                  cursor: 'grab',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <DragIndicatorRoundedIcon />
+                              </Box>
+                              <ListItemText
+                                primary={item.track?.name || `Track ${idx + 1}`}
+                                secondary={item.project?.name || item.track?.artist || 'Artist'}
+                                slotProps={{
+                                  primary: { variant: 'body1', fontWeight: 600, noWrap: true },
+                                  secondary: { variant: 'caption', noWrap: true },
+                                }}
+                                onClick={() => {
+                                  if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
+                                  setQueueOpen(false)
+                                }}
+                                sx={{ cursor: 'pointer' }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* SECTION 2: AUTOPLAY */}
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={700} color="text.secondary" sx={{ mb: 1 }}>
+                        Autoplay
+                      </Typography>
+
+                      {autoplayTracks.length === 0 ? (
+                        <Paper
+                          variant="outlined"
+                          onDragOver={(e) => { e.preventDefault(); setDragOverItem({ listType: 'autoplay', index: 0 }); }}
+                          onDrop={(e) => handleDrop(e, 'autoplay', 0)}
+                          sx={{
+                            p: 2,
+                            textAlign: 'center',
+                            borderRadius: 2,
+                            bgcolor: 'action.hover',
+                            borderStyle: dragOverItem?.listType === 'autoplay' ? 'dashed' : 'solid',
+                            borderColor: dragOverItem?.listType === 'autoplay' ? 'primary.main' : 'divider',
+                          }}
+                        >
+                          <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                            No upcoming autoplay tracks. Drag a track here.
+                          </Typography>
+                        </Paper>
+                      ) : (
+                        <List disablePadding sx={{ maxHeight: 220, overflowY: 'auto' }}>
+                          {autoplayTracks.map((item, idx) => (
+                            <ListItem
+                              key={idx}
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, 'autoplay', idx)}
+                              onDragOver={(e) => handleDragOver(e, 'autoplay', idx)}
+                              onDragLeave={(e) => handleDragLeave(e, 'autoplay', idx)}
+                              onDrop={(e) => handleDrop(e, 'autoplay', idx)}
+                              onDragEnd={handleDragEnd}
+                              sx={{
+                                borderRadius: 2,
+                                mb: 0.75,
+                                py: 0.75,
+                                px: 1.5,
+                                cursor: 'grab',
+                                WebkitUserDrag: 'element',
+                                userSelect: 'none',
+                                transition: 'all 0.15s ease',
+                                opacity: draggedItem?.listType === 'autoplay' && draggedItem?.index === idx ? 0.4 : 1,
+                                bgcolor: dragOverItem?.listType === 'autoplay' && dragOverItem?.index === idx ? alpha(theme.palette.primary.main, 0.15) : 'action.hover',
+                                border: dragOverItem?.listType === 'autoplay' && dragOverItem?.index === idx ? `1px dashed ${theme.palette.primary.main}` : '1px solid transparent',
+                                '&:hover': { bgcolor: 'action.selected' },
+                                '&:active': { cursor: 'grabbing' },
+                              }}
+                              secondaryAction={
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    if (onRemoveFromAutoplay) onRemoveFromAutoplay(idx)
+                                  }}
+                                >
+                                  <DeleteOutlineRoundedIcon fontSize="small" />
+                                </IconButton>
+                              }
+                            >
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  mr: 1.5,
+                                  color: 'text.secondary',
+                                  cursor: 'grab',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <DragIndicatorRoundedIcon />
+                              </Box>
+                              <ListItemText
+                                primary={item.track?.name || `Track ${idx + 1}`}
+                                secondary={item.project?.name || item.track?.artist || 'Artist'}
+                                slotProps={{
+                                  primary: { variant: 'body1', fontWeight: 600, noWrap: true },
+                                  secondary: { variant: 'caption', noWrap: true },
+                                }}
+                                onClick={() => {
+                                  if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
+                                  setQueueOpen(false)
+                                }}
+                                sx={{ cursor: 'pointer' }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                    </Box>
+                  </DialogContent>
+                </Dialog>
 
                 {/* Col 2: Dynamic Volume Icon */}
                 <Tooltip title={isMuted ? 'Unmute' : 'Mute'} arrow>
@@ -656,6 +909,10 @@ export default function AudioPlayerBar({
                 } else if (repeatMode === 'all' || queueCount > 0) {
                   if (onSkipNext) onSkipNext()
                 } else {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = 0
+                  }
+                  setCurrentTime(0)
                   if (onTogglePlay) onTogglePlay()
                 }
               }}
