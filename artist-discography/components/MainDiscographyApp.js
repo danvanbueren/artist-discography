@@ -417,7 +417,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             darkMode={darkMode}
-            themePreference={themePreference}
             onToggleTheme={handleToggleTheme}
             selectedPlatform={selectedPlatform}
             onOpenPlatformModal={() => setPlatformModalOpen(true)}

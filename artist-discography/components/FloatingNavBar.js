@@ -24,10 +24,10 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded'
 import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
-import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded'
-import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
+import LightModeIcon from '@mui/icons-material/LightMode'
 import SettingsBrightnessRoundedIcon from '@mui/icons-material/SettingsBrightnessRounded'
-import HeadsetRoundedIcon from '@mui/icons-material/HeadsetRounded'
+import LinkIcon from '@mui/icons-material/Link'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
@@ -45,6 +45,69 @@ export const FILTER_OPTIONS = [
   'Flip',
   'Edit',
 ]
+
+function useDragScroll() {
+  const ref = useRef(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const startXRef = useRef(0)
+  const scrollLeftRef = useRef(0)
+  const hasDraggedRef = useRef(false)
+
+  const onMouseDown = useCallback((e) => {
+    if (!ref.current) return
+    setIsDragging(true)
+    hasDraggedRef.current = false
+    startXRef.current = e.pageX - ref.current.offsetLeft
+    scrollLeftRef.current = ref.current.scrollLeft
+  }, [])
+
+  const onMouseLeave = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  const onMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  const onMouseMove = useCallback((e) => {
+    if (!isDragging || !ref.current) return
+    const x = e.pageX - ref.current.offsetLeft
+    const walk = (x - startXRef.current) * 1.5
+    if (Math.abs(walk) > 4) {
+      hasDraggedRef.current = true
+    }
+    ref.current.scrollLeft = scrollLeftRef.current - walk
+  }, [isDragging])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const handleWheel = (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault()
+        el.scrollLeft += e.deltaY * 1.2
+      }
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', handleWheel)
+    }
+  }, [])
+
+  return {
+    ref,
+    isDragging,
+    hasDraggedRef,
+    bind: {
+      onMouseDown,
+      onMouseLeave,
+      onMouseUp,
+      onMouseMove,
+    },
+  }
+}
 
 export default function FloatingNavBar({
   activeTypes = [],
@@ -65,6 +128,9 @@ export default function FloatingNavBar({
   const inactivityTimerRef = useRef(null)
   const [isHovering, setIsHovering] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
+
+  const filterDrag = useDragScroll()
+  const sortDrag = useDragScroll()
 
   // Clear timer helper
   const clearInactivityTimer = useCallback(() => {
@@ -408,14 +474,21 @@ export default function FloatingNavBar({
         {/* --- FILTER MODE (Multi-select: LP, EP, Single, Feature, Remix, Bootleg, Flip, Edit) --- */}
         {navMode === 'filter' && (
           <Box
+            ref={filterDrag.ref}
+            {...filterDrag.bind}
             sx={{
               display: 'flex',
               gap: 1,
               overflowX: 'auto',
               py: 0.5,
+              px: 0.5,
+              minWidth: 0,
+              flexGrow: 1,
+              alignItems: 'center',
+              cursor: filterDrag.isDragging ? 'grabbing' : 'grab',
+              userSelect: 'none',
               scrollbarWidth: 'none',
               '&::-webkit-scrollbar': { display: 'none' },
-              flexGrow: 1,
             }}
           >
             {FILTER_OPTIONS.map((type) => {
@@ -426,18 +499,21 @@ export default function FloatingNavBar({
                   label={type}
                   clickable
                   onClick={() => {
+                    if (filterDrag.hasDraggedRef.current) return
                     onToggleType(type)
                   }}
                   color={isSelected ? 'primary' : 'default'}
                   variant={isSelected ? 'filled' : 'outlined'}
                   size="medium"
                   sx={{
+                    flexShrink: 0,
                     fontWeight: isSelected ? 700 : 500,
                     fontSize: '0.875rem',
                     borderRadius: 2.5,
                     px: 1,
                     height: 38,
                     transition: 'all 0.2s ease',
+                    userSelect: 'none',
                   }}
                 />
               )
@@ -447,15 +523,22 @@ export default function FloatingNavBar({
 
         {/* --- SORT MODE --- */}
         {navMode === 'sort' && (
-          <Stack
-            direction="row"
-            spacing={1.25}
+          <Box
+            ref={sortDrag.ref}
+            {...sortDrag.bind}
             sx={{
+              display: 'flex',
+              gap: 1.25,
               overflowX: 'auto',
-              scrollbarWidth: 'none',
-              '&::-webkit-scrollbar': { display: 'none' },
+              py: 0.5,
+              px: 0.5,
+              minWidth: 0,
               flexGrow: 1,
               alignItems: 'center',
+              cursor: sortDrag.isDragging ? 'grabbing' : 'grab',
+              userSelect: 'none',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
             }}
           >
             <Chip
@@ -463,60 +546,64 @@ export default function FloatingNavBar({
               label="Newest First"
               clickable
               onClick={() => {
+                if (sortDrag.hasDraggedRef.current) return
                 onSortChange('newest')
               }}
               color={sortOrder === 'newest' ? 'primary' : 'default'}
               variant={sortOrder === 'newest' ? 'filled' : 'outlined'}
               size="medium"
-              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
+              sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
             />
             <Chip
               icon={<ArrowUpwardRoundedIcon />}
               label="Oldest First"
               clickable
               onClick={() => {
+                if (sortDrag.hasDraggedRef.current) return
                 onSortChange('oldest')
               }}
               color={sortOrder === 'oldest' ? 'primary' : 'default'}
               variant={sortOrder === 'oldest' ? 'filled' : 'outlined'}
               size="medium"
-              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
+              sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
             />
             <Chip
               icon={<SortByAlphaRoundedIcon />}
               label="Title A-Z"
               clickable
               onClick={() => {
+                if (sortDrag.hasDraggedRef.current) return
                 onSortChange('title-asc')
               }}
               color={sortOrder === 'title-asc' ? 'primary' : 'default'}
               variant={sortOrder === 'title-asc' ? 'filled' : 'outlined'}
               size="medium"
-              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
+              sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
             />
             <Chip
               icon={<SortByAlphaRoundedIcon />}
               label="Title Z-A"
               clickable
               onClick={() => {
+                if (sortDrag.hasDraggedRef.current) return
                 onSortChange('title-desc')
               }}
               color={sortOrder === 'title-desc' ? 'primary' : 'default'}
               variant={sortOrder === 'title-desc' ? 'filled' : 'outlined'}
               size="medium"
-              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
+              sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
             />
-          </Stack>
+          </Box>
         )}
 
         {/* --- SETTINGS MODE (Theme toggle & Platform selector) --- */}
         {navMode === 'settings' && (
           <Stack
             direction="row"
-            spacing={2}
+            spacing={1.5}
             sx={{
               flexGrow: 1,
-              justifyContent: 'space-around',
+              justifyContent: 'flex-start',
               alignItems: 'center',
             }}
           >
@@ -526,7 +613,7 @@ export default function FloatingNavBar({
               onClick={() => {
                 onOpenPlatformModal()
               }}
-              startIcon={<HeadsetRoundedIcon />}
+              startIcon={<LinkIcon />}
               sx={{
                 borderRadius: 3,
                 textTransform: 'none',
@@ -536,7 +623,7 @@ export default function FloatingNavBar({
                 px: 2,
               }}
             >
-              {selectedPlatform ? selectedPlatform.toUpperCase() : 'Preferred Platform'}
+              Platform
             </Button>
 
             <Button
@@ -547,9 +634,9 @@ export default function FloatingNavBar({
               }}
               startIcon={
                 darkMode ? (
-                  <LightModeRoundedIcon color="warning" />
+                  <LightModeIcon />
                 ) : (
-                  <DarkModeRoundedIcon color="primary" />
+                  <DarkModeIcon />
                 )
               }
               sx={{
