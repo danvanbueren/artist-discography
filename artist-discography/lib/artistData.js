@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { slugify } from './slugs'
 
 export const DEFAULT_DATA_SCAFFOLD = {
   artist: {
@@ -34,9 +35,12 @@ export const DEFAULT_DATA_SCAFFOLD = {
       type: '',
       artist: '',
       date: '',
+      cover: '',
       tracks: [
         {
           name: '',
+          audio: '',
+          cover: '',
           links: {
             amazon: '',
             apple: '',
@@ -57,6 +61,19 @@ export const DEFAULT_DATA_SCAFFOLD = {
 
 export function getArtistDataFilePath() {
   return path.join(process.cwd(), 'data', 'artist-data.json')
+}
+
+const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
+const SUPPORTED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif']
+
+function resolveLocalPath(baseDir, relativePath) {
+  try {
+    const fullPath = path.resolve(path.join(baseDir, relativePath))
+    if (fullPath.startsWith(baseDir) && fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+      return fullPath
+    }
+  } catch {}
+  return null
 }
 
 export class ArtistDataManager {
@@ -235,6 +252,12 @@ export class ArtistDataManager {
       data.artist.links.socials = sObj
     }
 
+    const dataDir = path.join(process.cwd(), 'data')
+    let totalTracksCount = 0
+    let tracksWithAudioCount = 0
+    let totalProjectsCount = 0
+    let projectsWithCoverCount = 0
+
     if (!Array.isArray(data.projects)) {
       data.projects = [...DEFAULT_DATA_SCAFFOLD.projects]
       repaired = true
@@ -246,6 +269,7 @@ export class ArtistDataManager {
           issues.push(`Project at index ${projIndex} was invalid and reset to default scaffold.`)
           return { ...DEFAULT_DATA_SCAFFOLD.projects[0] }
         }
+        totalProjectsCount++
         const updatedProj = { ...proj }
         if (typeof updatedProj.name !== 'string') {
           updatedProj.name = ''
@@ -268,12 +292,50 @@ export class ArtistDataManager {
           issues.push(`Project at index ${projIndex} missing "date".`)
         }
 
+        const projectSlug = slugify(updatedProj.name) || `project-${projIndex + 1}`
+
+        // Resolve Project Cover Artwork in data/covers/
+        let resolvedCover = null
+        let hasCover = false
+        if (typeof updatedProj.cover === 'string' && updatedProj.cover.trim() !== '') {
+          const trimCover = updatedProj.cover.trim()
+          if (/^https?:\/\//i.test(trimCover)) {
+            resolvedCover = trimCover
+            hasCover = true
+          } else {
+            const matchPath = resolveLocalPath(dataDir, path.join('covers', trimCover)) || resolveLocalPath(dataDir, trimCover)
+            if (matchPath) {
+              const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+              resolvedCover = `/api/media/${relPath}`
+              hasCover = true
+            }
+          }
+        }
+
+        if (!hasCover && projectSlug) {
+          for (const ext of SUPPORTED_IMAGE_EXTS) {
+            const candidateRel = path.join('covers', `${projectSlug}${ext}`)
+            const matchPath = resolveLocalPath(dataDir, candidateRel)
+            if (matchPath) {
+              const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+              resolvedCover = `/api/media/${relPath}`
+              hasCover = true
+              break
+            }
+          }
+        }
+
+        updatedProj.cover = resolvedCover
+        updatedProj.hasCover = hasCover
+        if (hasCover) projectsWithCoverCount++
+
         if (!Array.isArray(updatedProj.tracks)) {
           updatedProj.tracks = []
           repaired = true
           issues.push(`Project at index ${projIndex} missing "tracks" array.`)
         } else {
           updatedProj.tracks = updatedProj.tracks.map((track, trackIndex) => {
+            totalTracksCount++
             if (typeof track !== 'object' || track === null) {
               repaired = true
               issues.push(`Track at index ${trackIndex} in project ${projIndex} was invalid.`)
@@ -301,11 +363,88 @@ export class ArtistDataManager {
               }
               updatedTrack.links = tLinksObj
             }
+
+            const trackSlug = slugify(updatedTrack.name) || `track-${trackIndex + 1}`
+
+            // Resolve Track Audio in data/audio/
+            let resolvedAudioUrl = null
+            let hasAudio = false
+
+            if (typeof updatedTrack.audio === 'string' && updatedTrack.audio.trim() !== '') {
+              const trimAudio = updatedTrack.audio.trim()
+              if (/^https?:\/\//i.test(trimAudio)) {
+                resolvedAudioUrl = trimAudio
+                hasAudio = true
+              } else {
+                const matchPath = resolveLocalPath(dataDir, path.join('audio', trimAudio)) || resolveLocalPath(dataDir, trimAudio)
+                if (matchPath) {
+                  const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+                  resolvedAudioUrl = `/api/audio/${relPath}`
+                  hasAudio = true
+                }
+              }
+            }
+
+            if (!hasAudio && trackSlug) {
+              // Try data/audio/<projectSlug>/<trackSlug>.<ext>
+              for (const ext of SUPPORTED_AUDIO_EXTS) {
+                const candidateRel = path.join('audio', projectSlug, `${trackSlug}${ext}`)
+                const matchPath = resolveLocalPath(dataDir, candidateRel)
+                if (matchPath) {
+                  const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+                  resolvedAudioUrl = `/api/audio/${relPath}`
+                  hasAudio = true
+                  break
+                }
+              }
+
+              // Try flat data/audio/<trackSlug>.<ext>
+              if (!hasAudio) {
+                for (const ext of SUPPORTED_AUDIO_EXTS) {
+                  const candidateRel = path.join('audio', `${trackSlug}${ext}`)
+                  const matchPath = resolveLocalPath(dataDir, candidateRel)
+                  if (matchPath) {
+                    const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+                    resolvedAudioUrl = `/api/audio/${relPath}`
+                    hasAudio = true
+                    break
+                  }
+                }
+              }
+            }
+
+            updatedTrack.audioUrl = resolvedAudioUrl
+            updatedTrack.hasAudio = hasAudio
+            if (hasAudio) tracksWithAudioCount++
+
+            // Track cover (or fallback to project cover)
+            let resolvedTrackCover = resolvedCover
+            if (typeof updatedTrack.cover === 'string' && updatedTrack.cover.trim() !== '') {
+              const trimTCover = updatedTrack.cover.trim()
+              if (/^https?:\/\//i.test(trimTCover)) {
+                resolvedTrackCover = trimTCover
+              } else {
+                const matchPath = resolveLocalPath(dataDir, path.join('covers', trimTCover)) || resolveLocalPath(dataDir, trimTCover)
+                if (matchPath) {
+                  const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+                  resolvedTrackCover = `/api/media/${relPath}`
+                }
+              }
+            }
+            updatedTrack.cover = resolvedTrackCover
+
             return updatedTrack
           })
         }
         return updatedProj
       })
+    }
+
+    if (totalTracksCount > 0 && tracksWithAudioCount < totalTracksCount) {
+      issues.push(`Audio Coverage: ${tracksWithAudioCount} of ${totalTracksCount} tracks have audio files in data/audio/.`)
+    }
+    if (totalProjectsCount > 0 && projectsWithCoverCount < totalProjectsCount) {
+      issues.push(`Album Art Coverage: ${projectsWithCoverCount} of ${totalProjectsCount} projects have cover art in data/covers/.`)
     }
 
     return { data, repaired }

@@ -80,6 +80,7 @@ export default function TrackRow({
   onAddToQueue,
   onShowToast,
   isPlayingThisTrack,
+  isPlayerActive = false,
   isHighlighted,
   onSelectTrack,
   selectedPlatform,
@@ -130,7 +131,7 @@ export default function TrackRow({
       {/* Col 1: Track Number / Play Indicator & Queue Button */}
       <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center' }}>
         <Box sx={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {isPlayingThisTrack ? (
+          {track?.hasAudio && isPlayingThisTrack ? (
             <IconButton
               size="small"
               color="primary"
@@ -151,7 +152,7 @@ export default function TrackRow({
             >
               <PauseRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
-          ) : hovered ? (
+          ) : track?.hasAudio && hovered ? (
             <IconButton
               size="small"
               onClick={(e) => {
@@ -178,6 +179,7 @@ export default function TrackRow({
                 fontWeight: isHighlighted ? 700 : 500,
                 color: isHighlighted ? 'primary.main' : 'text.secondary',
                 fontSize: '0.9rem',
+                opacity: track?.hasAudio ? 1 : 0.6,
               }}
             >
               {index + 1}
@@ -185,28 +187,30 @@ export default function TrackRow({
           )}
         </Box>
 
-        {/* Add to Queue Button */}
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onAddToQueue) onAddToQueue(track, project)
-          }}
-          sx={{
-            p: 0.6,
-            borderRadius: 1.5,
-            opacity: hovered ? 1 : 0.65,
-            transition: 'transform 0.18s ease, opacity 0.18s ease',
-            '&:hover': {
-              transform: 'scale(1.18)',
-              opacity: 1,
-              bgcolor: 'rgba(255,255,255,0.12)',
-              color: 'primary.main',
-            },
-          }}
-        >
-          <QueueMusicRoundedIcon sx={{ fontSize: 20 }} />
-        </IconButton>
+        {/* Add to Queue Button (Only rendered if track has audio AND audio player is active) */}
+        {track?.hasAudio && isPlayerActive && (
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onAddToQueue) onAddToQueue(track, project)
+            }}
+            sx={{
+              p: 0.6,
+              borderRadius: 1.5,
+              opacity: hovered ? 1 : 0.65,
+              transition: 'transform 0.18s ease, opacity 0.18s ease',
+              '&:hover': {
+                transform: 'scale(1.18)',
+                opacity: 1,
+                bgcolor: 'rgba(255,255,255,0.12)',
+                color: 'primary.main',
+              },
+            }}
+          >
+            <QueueMusicRoundedIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        )}
       </Stack>
 
       {/* Col 2: Track Name & Artist Stack */}

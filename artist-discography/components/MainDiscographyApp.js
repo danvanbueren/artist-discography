@@ -111,11 +111,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }, [])
 
   const handleAddToQueue = useCallback((track, proj) => {
+    if (!track || !track.hasAudio || !track.audioUrl) {
+      showToast(`No audio available for "${track?.name || 'this track'}"`)
+      return
+    }
     const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
     const trackWithProject = {
       ...track,
       project: parentProj?.name || track.project || '',
-      projectCover: parentProj?.cover || parentProj?.image || track.cover || track.image || '',
+      projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
     }
     setAudioQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
     showToast(`Added "${track?.name || 'track'}" to queue`)
@@ -284,9 +288,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // Audio Playback Handler
   const handlePlayTrack = useCallback((track, proj) => {
     if (!track) return
+    if (!track.hasAudio || !track.audioUrl) {
+      showToast(`No audio available for "${track.name || 'this track'}"`)
+      return
+    }
     const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
     const projName = parentProj?.name || track.project || ''
-    const projCover = parentProj?.cover || parentProj?.image || track.cover || track.image || ''
+    const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
 
     if (playingTrack?.name === track.name && isPlaying) {
       setIsPlaying(false)
@@ -299,7 +307,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       })
       setIsPlaying(true)
     }
-  }, [playingTrack, isPlaying, selectedProject, projects, artist.name])
+  }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast])
 
   // Filter and sort projects
   const filteredProjects = useMemo(() => {

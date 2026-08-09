@@ -50,31 +50,10 @@ export async function GET() {
       }
     }
 
-    // Fallback to public/logo.png
-    const fallbackPath = path.join(process.cwd(), 'public', 'logo.png')
-    let fallbackExists = false
-    try {
-      fallbackExists = fs.existsSync(fallbackPath)
-    } catch (err) {
-      console.error('Error checking fallback logo existence:', err)
-    }
-
-    if (fallbackExists) {
-      try {
-        const fileBuffer = fs.readFileSync(fallbackPath)
-        return new NextResponse(fileBuffer, {
-          headers: {
-            'Content-Type': 'image/png',
-            'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
-          },
-        })
-      } catch (err) {
-        console.error('Error reading fallback logo file:', err)
-      }
-    }
   } catch (err) {
     console.error('Unexpected error in logo API route:', err)
   }
 
   return new NextResponse('Logo not found', { status: 404 })
 }
+
