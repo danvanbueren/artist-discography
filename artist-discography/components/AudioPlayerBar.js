@@ -71,9 +71,9 @@ export default function AudioPlayerBar({
             elevation={6}
             sx={{
               borderRadius: 4,
-              py: 1.25,
+              py: 1.5,
               px: { xs: 2, sm: 3 },
-              minHeight: 58,
+              minHeight: 64,
               bgcolor: theme.palette.mode === 'dark'
                 ? 'rgba(24, 24, 34, 0.95)'
                 : 'rgba(255, 255, 255, 0.95)',

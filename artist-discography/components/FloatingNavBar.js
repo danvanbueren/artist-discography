@@ -144,7 +144,7 @@ export default function FloatingNavBar({
         elevation={4}
         sx={{
           borderRadius: 4,
-          py: 1.25,
+          py: 1.5,
           px: { xs: 2, sm: 3 },
           backdropFilter: 'blur(16px)',
           bgcolor: theme.palette.mode === 'dark'
@@ -158,18 +158,18 @@ export default function FloatingNavBar({
           transition: 'all 0.3s ease',
           display: 'flex',
           alignItems: 'center',
-          minHeight: 58,
+          minHeight: 64,
         }}
       >
         {/* Back Button when inside a sub-menu */}
         {navMode !== 'main' && (
           <Fade in={navMode !== 'main'}>
             <IconButton
-              size="small"
+              size="medium"
               onClick={() => setNavMode('main')}
-              sx={{ mr: 1.5, color: 'text.secondary' }}
+              sx={{ mr: 1.5, p: 1, color: 'text.secondary' }}
             >
-              <ArrowBackRoundedIcon fontSize="small" />
+              <ArrowBackRoundedIcon />
             </IconButton>
           </Fade>
         )}
@@ -188,16 +188,16 @@ export default function FloatingNavBar({
             {/* 1. SEARCH BUTTON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
               <Button
-                size="small"
+                size="medium"
                 onClick={() => setNavMode('search')}
-                startIcon={<SearchRoundedIcon fontSize="small" />}
+                startIcon={<SearchRoundedIcon />}
                 sx={{
                   textTransform: 'none',
                   fontWeight: isSearchActive ? 700 : 600,
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
                   borderRadius: 3,
-                  px: { xs: 1, sm: 1.5 },
-                  py: 0.75,
+                  px: { xs: 1.25, sm: 2 },
+                  py: 1,
                   minWidth: 0,
                   border: isSearchActive ? '2px solid' : '1px solid transparent',
                   borderColor: isSearchActive ? 'primary.main' : 'transparent',
@@ -219,7 +219,7 @@ export default function FloatingNavBar({
                     onSearchChange('')
                   }}
                   sx={{
-                    p: 0.5,
+                    p: 0.75,
                     borderRadius: 2,
                     border: '2px solid',
                     borderColor: 'primary.main',
@@ -234,16 +234,16 @@ export default function FloatingNavBar({
             {/* 2. FILTER BUTTON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
               <Button
-                size="small"
+                size="medium"
                 onClick={() => setNavMode('filter')}
-                startIcon={<TuneRoundedIcon fontSize="small" />}
+                startIcon={<TuneRoundedIcon />}
                 sx={{
                   textTransform: 'none',
                   fontWeight: isFilterActive ? 700 : 600,
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
                   borderRadius: 3,
-                  px: { xs: 1, sm: 1.5 },
-                  py: 0.75,
+                  px: { xs: 1.25, sm: 2 },
+                  py: 1,
                   minWidth: 0,
                   border: isFilterActive ? '2px solid' : '1px solid transparent',
                   borderColor: isFilterActive ? 'primary.main' : 'transparent',
@@ -265,7 +265,7 @@ export default function FloatingNavBar({
                     onResetTypes()
                   }}
                   sx={{
-                    p: 0.5,
+                    p: 0.75,
                     borderRadius: 2,
                     border: '2px solid',
                     borderColor: 'primary.main',
@@ -279,16 +279,16 @@ export default function FloatingNavBar({
 
             {/* 3. SORT BUTTON */}
             <Button
-              size="small"
+              size="medium"
               onClick={() => setNavMode('sort')}
-              startIcon={<SortRoundedIcon fontSize="small" />}
+              startIcon={<SortRoundedIcon />}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                fontSize: { xs: '0.85rem', sm: '0.95rem' },
                 borderRadius: 3,
-                px: { xs: 1, sm: 1.5 },
-                py: 0.75,
+                px: { xs: 1.25, sm: 2 },
+                py: 1,
                 minWidth: 0,
                 color: 'text.primary',
                 '&:hover': {
@@ -301,16 +301,16 @@ export default function FloatingNavBar({
 
             {/* 4. SETTINGS BUTTON */}
             <Button
-              size="small"
+              size="medium"
               onClick={() => setNavMode('settings')}
-              startIcon={<SettingsRoundedIcon fontSize="small" />}
+              startIcon={<SettingsRoundedIcon />}
               sx={{
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                fontSize: { xs: '0.85rem', sm: '0.95rem' },
                 borderRadius: 3,
-                px: { xs: 1, sm: 1.5 },
-                py: 0.75,
+                px: { xs: 1.25, sm: 2 },
+                py: 1,
                 minWidth: 0,
                 color: 'text.primary',
                 '&:hover': {
@@ -345,24 +345,24 @@ export default function FloatingNavBar({
                 }
               }}
               placeholder="Search by title, artist, or track..."
-              size="small"
+              size="medium"
               fullWidth
               autoFocus
               slotProps={{
                 htmlInput: {
-                  sx: { py: 0.75, fontSize: '0.95rem' },
+                  sx: { py: 1, fontSize: '1rem' },
                 },
                 input: {
                   endAdornment: searchQuery ? (
                     <InputAdornment position="end">
                       <IconButton
-                        size="small"
+                        size="medium"
                         onMouseDown={(e) => {
                           e.preventDefault()
                           onSearchChange('')
                         }}
                       >
-                        <ClearRoundedIcon fontSize="small" />
+                        <ClearRoundedIcon />
                       </IconButton>
                     </InputAdornment>
                   ) : null,
@@ -377,7 +377,7 @@ export default function FloatingNavBar({
           <Box
             sx={{
               display: 'flex',
-              gap: 0.75,
+              gap: 1,
               overflowX: 'auto',
               py: 0.5,
               scrollbarWidth: 'none',
@@ -397,12 +397,13 @@ export default function FloatingNavBar({
                   }}
                   color={isSelected ? 'primary' : 'default'}
                   variant={isSelected ? 'filled' : 'outlined'}
-                  size="small"
+                  size="medium"
                   sx={{
                     fontWeight: isSelected ? 700 : 500,
-                    fontSize: '0.825rem',
-                    borderRadius: 2,
-                    px: 0.5,
+                    fontSize: '0.875rem',
+                    borderRadius: 2.5,
+                    px: 1,
+                    height: 38,
                     transition: 'all 0.2s ease',
                   }}
                 />
@@ -415,7 +416,7 @@ export default function FloatingNavBar({
         {navMode === 'sort' && (
           <Stack
             direction="row"
-            spacing={1}
+            spacing={1.25}
             sx={{
               overflowX: 'auto',
               scrollbarWidth: 'none',
@@ -425,7 +426,7 @@ export default function FloatingNavBar({
             }}
           >
             <Chip
-              icon={<ArrowDownwardRoundedIcon fontSize="small" />}
+              icon={<ArrowDownwardRoundedIcon />}
               label="Newest First"
               clickable
               onClick={() => {
@@ -433,10 +434,11 @@ export default function FloatingNavBar({
               }}
               color={sortOrder === 'newest' ? 'primary' : 'default'}
               variant={sortOrder === 'newest' ? 'filled' : 'outlined'}
-              size="small"
+              size="medium"
+              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
             />
             <Chip
-              icon={<ArrowUpwardRoundedIcon fontSize="small" />}
+              icon={<ArrowUpwardRoundedIcon />}
               label="Oldest First"
               clickable
               onClick={() => {
@@ -444,10 +446,11 @@ export default function FloatingNavBar({
               }}
               color={sortOrder === 'oldest' ? 'primary' : 'default'}
               variant={sortOrder === 'oldest' ? 'filled' : 'outlined'}
-              size="small"
+              size="medium"
+              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
             />
             <Chip
-              icon={<SortByAlphaRoundedIcon fontSize="small" />}
+              icon={<SortByAlphaRoundedIcon />}
               label="Title A-Z"
               clickable
               onClick={() => {
@@ -455,10 +458,11 @@ export default function FloatingNavBar({
               }}
               color={sortOrder === 'title-asc' ? 'primary' : 'default'}
               variant={sortOrder === 'title-asc' ? 'filled' : 'outlined'}
-              size="small"
+              size="medium"
+              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
             />
             <Chip
-              icon={<SortByAlphaRoundedIcon fontSize="small" />}
+              icon={<SortByAlphaRoundedIcon />}
               label="Title Z-A"
               clickable
               onClick={() => {
@@ -466,7 +470,8 @@ export default function FloatingNavBar({
               }}
               color={sortOrder === 'title-desc' ? 'primary' : 'default'}
               variant={sortOrder === 'title-desc' ? 'filled' : 'outlined'}
-              size="small"
+              size="medium"
+              sx={{ height: 38, px: 1, fontSize: '0.875rem' }}
             />
           </Stack>
         )}
@@ -475,7 +480,7 @@ export default function FloatingNavBar({
         {navMode === 'settings' && (
           <Stack
             direction="row"
-            spacing={1.5}
+            spacing={2}
             sx={{
               flexGrow: 1,
               justifyContent: 'space-around',
@@ -483,40 +488,44 @@ export default function FloatingNavBar({
             }}
           >
             <Button
-              size="small"
+              size="medium"
               variant="outlined"
               onClick={() => {
                 onOpenPlatformModal()
               }}
-              startIcon={<HeadsetRoundedIcon fontSize="small" />}
+              startIcon={<HeadsetRoundedIcon />}
               sx={{
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: '0.85rem',
+                fontSize: '0.9rem',
+                py: 1,
+                px: 2,
               }}
             >
               {selectedPlatform ? selectedPlatform.toUpperCase() : 'Preferred Platform'}
             </Button>
 
             <Button
-              size="small"
+              size="medium"
               variant="outlined"
               onClick={() => {
                 onToggleTheme()
               }}
               startIcon={
                 darkMode ? (
-                  <LightModeRoundedIcon fontSize="small" color="warning" />
+                  <LightModeRoundedIcon color="warning" />
                 ) : (
-                  <DarkModeRoundedIcon fontSize="small" />
+                  <DarkModeRoundedIcon />
                 )
               }
               sx={{
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 600,
-                fontSize: '0.85rem',
+                fontSize: '0.9rem',
+                py: 1,
+                px: 2,
               }}
             >
               {darkMode ? 'Light Theme' : 'Dark Theme'}
