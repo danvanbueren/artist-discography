@@ -21,6 +21,7 @@ import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded'
+import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 
 export default function PlaybackQueueDialog({
   open,
@@ -284,9 +285,54 @@ export default function PlaybackQueueDialog({
                     >
                       <DragIndicatorRoundedIcon />
                     </Box>
+                    {(() => {
+                      const coverUrl = item.track?.cover || item.track?.projectCover || item.project?.cover || item.project?.image || ''
+                      return (
+                        <Box
+                          onClick={() => {
+                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
+                            onClose()
+                          }}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 1.5,
+                            bgcolor: 'action.hover',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1.5,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {coverUrl ? (
+                            <Box
+                              component="img"
+                              src={coverUrl}
+                              alt={item.track?.name || 'Cover'}
+                              draggable={false}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <MusicNoteRoundedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
+                          )}
+                        </Box>
+                      )
+                    })()}
                     <ListItemText
                       primary={item.track?.name || `Track ${idx + 1}`}
-                      secondary={item.project?.name || item.track?.artist || 'Artist'}
+                      secondary={
+                        (() => {
+                          const projName = item.project?.name || item.track?.project || ''
+                          const artistName = item.track?.artist || item.project?.artist || ''
+                          if (projName && artistName) return `${projName} • ${artistName}`
+                          return projName || artistName || 'Artist'
+                        })()
+                      }
                       slotProps={{
                         primary: { variant: 'body1', fontWeight: 600, noWrap: true },
                         secondary: { variant: 'caption', noWrap: true },
@@ -399,9 +445,54 @@ export default function PlaybackQueueDialog({
                     >
                       <DragIndicatorRoundedIcon />
                     </Box>
+                    {(() => {
+                      const coverUrl = item.track?.cover || item.track?.projectCover || item.project?.cover || item.project?.image || ''
+                      return (
+                        <Box
+                          onClick={() => {
+                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
+                            onClose()
+                          }}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 1.5,
+                            bgcolor: 'action.hover',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1.5,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                          }}
+                        >
+                          {coverUrl ? (
+                            <Box
+                              component="img"
+                              src={coverUrl}
+                              alt={item.track?.name || 'Cover'}
+                              draggable={false}
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <MusicNoteRoundedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
+                          )}
+                        </Box>
+                      )
+                    })()}
                     <ListItemText
                       primary={item.track?.name || `Track ${idx + 1}`}
-                      secondary={item.project?.name || item.track?.artist || 'Artist'}
+                      secondary={
+                        (() => {
+                          const projName = item.project?.name || item.track?.project || ''
+                          const artistName = item.track?.artist || item.project?.artist || ''
+                          if (projName && artistName) return `${projName} • ${artistName}`
+                          return projName || artistName || 'Artist'
+                        })()
+                      }
                       slotProps={{
                         primary: { variant: 'body1', fontWeight: 600, noWrap: true },
                         secondary: { variant: 'caption', noWrap: true },

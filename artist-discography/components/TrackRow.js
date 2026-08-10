@@ -12,23 +12,23 @@ import SubduedText from './SubduedText'
 import { slugify } from '../lib/slugs'
 
 const TRACK_PLATFORM_ICONS = {
-  spotify: '/spotify.webp',
-  apple: '/apple.webp',
-  youtube: '/youtube.webp',
-  soundcloud: '/soundcloud.webp',
-  bandcamp: '/bandcamp.webp',
-  deezer: '/deezer.webp',
-  tidal: '/tidal.webp',
-  pandora: '/pandora.webp',
-  amazon: '/amazon.webp',
-  itunes: '/itunes.webp',
+  spotify: '/platforms/spotify.webp',
+  apple: '/platforms/apple.webp',
+  youtube: '/platforms/youtube.webp',
+  soundcloud: '/platforms/soundcloud.webp',
+  bandcamp: '/platforms/bandcamp.webp',
+  deezer: '/platforms/deezer.webp',
+  tidal: '/platforms/tidal.webp',
+  pandora: '/platforms/pandora.webp',
+  amazon: '/platforms/amazon.webp',
+  itunes: '/platforms/itunes.webp',
 }
 
 const POPULAR_PLATFORM_FALLBACKS = [
-  'spotify',
-  'apple',
   'youtube',
   'soundcloud',
+  'spotify',
+  'apple',
   'bandcamp',
   'deezer',
   'tidal',

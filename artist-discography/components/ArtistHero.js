@@ -4,23 +4,66 @@ import { Box, Container, useTheme } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
 
-const SOCIAL_ICONS = {
-  spotify: '/spotify.webp',
-  apple: '/apple.webp',
-  youtube: '/youtube.webp',
-  soundcloud: '/soundcloud.webp',
-  instagram: '/instagram.webp',
-  facebook: '/facebook.webp',
-  x: '/x.webp',
-  tiktok: '/tiktok.webp',
-  discord: '/discord.webp',
-  snapchat: '/snapchat.webp',
-  bandcamp: '/bandcamp.webp',
-  deezer: '/deezer.webp',
-  tidal: '/tidal.webp',
-  pandora: '/pandora.webp',
-  amazon: '/amazon.webp',
-  itunes: '/itunes.webp',
+export const SOCIAL_ICONS = {
+  spotify: '/platforms/spotify.webp',
+  apple: '/platforms/apple.webp',
+  youtube: '/platforms/youtube.webp',
+  soundcloud: '/platforms/soundcloud.webp',
+  instagram: '/platforms/instagram.webp',
+  facebook: '/platforms/facebook.webp',
+  x: '/platforms/x.webp',
+  tiktok: '/platforms/tiktok.webp',
+  discord: '/platforms/discord.webp',
+  snapchat: '/platforms/snapchat.webp',
+  bandcamp: '/platforms/bandcamp.webp',
+  deezer: '/platforms/deezer.webp',
+  tidal: '/platforms/tidal.webp',
+  pandora: '/platforms/pandora.webp',
+  amazon: '/platforms/amazon.webp',
+  itunes: '/platforms/itunes.webp',
+}
+
+export const ARTIST_LINK_ORDER = [
+  // Platforms
+  'spotify',
+  'apple',
+  'bandcamp',
+  'tidal',
+  'youtube',
+  'soundcloud',
+  'pandora',
+  'amazon',
+  'deezer',
+  'itunes',
+  // Socials
+  'instagram',
+  'tiktok',
+  'discord',
+  'x',
+  'snapchat',
+  'facebook',
+]
+
+export function getSortedActiveLinks(artist) {
+  const platforms = artist?.links?.platforms ?? {}
+  const socials = artist?.links?.socials ?? {}
+  const combinedLinks = { ...platforms, ...socials }
+
+  const activeLinks = []
+  for (const key of ARTIST_LINK_ORDER) {
+    const url = combinedLinks[key]
+    if (url && typeof url === 'string' && url.trim() !== '') {
+      activeLinks.push({ key, url: url.trim(), icon: SOCIAL_ICONS[key] })
+    }
+  }
+
+  for (const [key, url] of Object.entries(combinedLinks)) {
+    if (url && typeof url === 'string' && url.trim() !== '' && !ARTIST_LINK_ORDER.includes(key)) {
+      activeLinks.push({ key, url: url.trim(), icon: SOCIAL_ICONS[key] })
+    }
+  }
+
+  return activeLinks
 }
 
 export default function ArtistHero({ artist, onLogoClick }) {
@@ -28,18 +71,9 @@ export default function ArtistHero({ artist, onLogoClick }) {
   const isDark = theme.palette.mode === 'dark'
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
-  const platforms = artist?.links?.platforms ?? {}
-  const socials = artist?.links?.socials ?? {}
 
-  // Collect non-empty social and platform links
-  const activeLinks = []
-  const combinedLinks = { ...platforms, ...socials }
-
-  for (const [key, url] of Object.entries(combinedLinks)) {
-    if (url && typeof url === 'string' && url.trim() !== '') {
-      activeLinks.push({ key, url, icon: SOCIAL_ICONS[key] })
-    }
-  }
+  // Collect non-empty social and platform links in explicit order
+  const activeLinks = getSortedActiveLinks(artist)
 
   return (
     <Container

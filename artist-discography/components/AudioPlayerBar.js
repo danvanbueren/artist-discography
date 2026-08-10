@@ -50,10 +50,11 @@ export default function AudioPlayerBar({
   onSkipPrev,
   onShowToast,
   onNavigateToCurrentTrack,
+  isShuffle = false,
+  onToggleShuffle,
 }) {
   const theme = useTheme()
   const [currentTime, setCurrentTime] = useState(0)
-  const [isShuffle, setIsShuffle] = useState(false)
   const [repeatMode, setRepeatMode] = useState('off') // 'off' | 'all' | 'one'
   const [volume, setVolume] = useState(100)
   const [prevVolume, setPrevVolume] = useState(100)
@@ -361,7 +362,7 @@ export default function AudioPlayerBar({
                   <Tooltip title={isShuffle ? 'Shuffle On' : 'Shuffle Off'} arrow>
                     <IconButton
                       size="small"
-                      onClick={() => setIsShuffle(prev => !prev)}
+                      onClick={onToggleShuffle}
                       sx={{
                         color: isShuffle ? 'primary.main' : 'text.primary',
                         opacity: 1,
@@ -610,7 +611,7 @@ export default function AudioPlayerBar({
                     audioRef.current.currentTime = 0
                     audioRef.current.play()
                   }
-                } else if (repeatMode === 'all' || queueCount > 0) {
+                } else if (repeatMode === 'all' || manualQueue.length > 0 || autoplayTracks.length > 0) {
                   if (onSkipNext) onSkipNext()
                 } else {
                   if (audioRef.current) {

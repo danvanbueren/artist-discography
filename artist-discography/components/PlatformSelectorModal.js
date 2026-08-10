@@ -15,16 +15,16 @@ import {
 import CloseIcon from '@mui/icons-material/Close'
 
 export const STREAMING_PLATFORMS = [
-  { id: 'spotify', name: 'Spotify', icon: '/spotify.webp' },
-  { id: 'apple', name: 'Apple Music', icon: '/apple.webp' },
-  { id: 'youtube', name: 'YouTube Music', icon: '/youtube.webp' },
-  { id: 'bandcamp', name: 'Bandcamp', icon: '/bandcamp.webp' },
-  { id: 'tidal', name: 'Tidal', icon: '/tidal.webp' },
-  { id: 'deezer', name: 'Deezer', icon: '/deezer.webp' },
-  { id: 'amazon', name: 'Amazon Music', icon: '/amazon.webp' },
-  { id: 'soundcloud', name: 'SoundCloud', icon: '/soundcloud.webp' },
-  { id: 'pandora', name: 'Pandora', icon: '/pandora.webp' },
-  { id: 'itunes', name: 'iTunes Store', icon: '/itunes.webp' },
+  { id: 'youtube', name: 'YouTube Music', icon: '/platforms/youtube.webp' },
+  { id: 'soundcloud', name: 'SoundCloud', icon: '/platforms/soundcloud.webp' },
+  { id: 'spotify', name: 'Spotify', icon: '/platforms/spotify.webp' },
+  { id: 'apple', name: 'Apple Music', icon: '/platforms/apple.webp' },
+  { id: 'bandcamp', name: 'Bandcamp', icon: '/platforms/bandcamp.webp' },
+  { id: 'tidal', name: 'Tidal', icon: '/platforms/tidal.webp' },
+  { id: 'deezer', name: 'Deezer', icon: '/platforms/deezer.webp' },
+  { id: 'amazon', name: 'Amazon Music', icon: '/platforms/amazon.webp' },
+  { id: 'pandora', name: 'Pandora', icon: '/platforms/pandora.webp' },
+  { id: 'itunes', name: 'iTunes Store', icon: '/platforms/itunes.webp' },
 ]
 
 export default function PlatformSelectorModal({

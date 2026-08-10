@@ -15,6 +15,7 @@ import {
 } from '@mui/material'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero from './ArtistHero'
+import CompactArtistHeader from './CompactArtistHeader'
 import FloatingNavBar from './FloatingNavBar'
 import PlatformSelectorModal from './PlatformSelectorModal'
 import ProjectCard from './ProjectCard'
@@ -24,6 +25,31 @@ import SubduedText from './SubduedText'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
 import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
 import { getCookie, setCookie } from '../lib/cookies'
+
+function shuffleArray(array) {
+  const arr = [...array]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+function sortTracksByDiscographyOrder(tracks, discographyList) {
+  return [...tracks].sort((a, b) => {
+    const nameA = (a.track?.name || a.name || '').toLowerCase()
+    const nameB = (b.track?.name || b.name || '').toLowerCase()
+    const indexA = discographyList.findIndex(
+      item => (item.track.name || '').toLowerCase() === nameA
+    )
+    const indexB = discographyList.findIndex(
+      item => (item.track.name || '').toLowerCase() === nameB
+    )
+    if (indexA === -1) return 1
+    if (indexB === -1) return -1
+    return indexA - indexB
+  })
+}
 
 export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // Mounting & Hydration state
@@ -93,8 +119,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [selectedProject, setSelectedProject] = useState(() => initialResolved.project)
   const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(() => initialResolved.trackSlug)
 
-  // Preferred Platform State (Default to 'spotify')
-  const [selectedPlatform, setSelectedPlatform] = useState('spotify')
+  // Preferred Platform State (Default to 'youtube')
+  const [selectedPlatform, setSelectedPlatform] = useState('youtube')
   const [platformModalOpen, setPlatformModalOpen] = useState(false)
 
   // Audio Player & Queue State
@@ -208,9 +234,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       if (savedPlatform) {
         setSelectedPlatform(savedPlatform)
       } else {
-        setSelectedPlatform('spotify')
-        setCookie('preferred_music_platform', 'spotify')
-        localStorage.setItem('preferred_music_platform', 'spotify')
+        setSelectedPlatform('youtube')
+        setCookie('preferred_music_platform', 'youtube')
+        localStorage.setItem('preferred_music_platform', 'youtube')
       }
     } catch {}
   }, [])
@@ -285,6 +311,38 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [syncStateFromLocation])
 
+  // Sync document.title dynamically (highest priority: playing track)
+  useEffect(() => {
+    if (!mounted) return
+
+    const rawArtistName = artist?.name?.trim()
+    const artistName = rawArtistName || 'Artist'
+
+    // Priority 1: Currently Playing Song (Highest Priority)
+    if (playingTrack?.name) {
+      document.title = `${artistName} | ${playingTrack.name}`
+      return
+    }
+
+    // Priority 2: Single Project / Track View
+    if (currentView === 'SINGLE_PROJECT' && selectedProject) {
+      if (highlightedTrackSlug) {
+        const matchedTrack = (selectedProject.tracks || []).find(t => slugify(t.name || '') === highlightedTrackSlug)
+        if (matchedTrack?.name) {
+          document.title = `${artistName} | ${matchedTrack.name}`
+          return
+        }
+      }
+      if (selectedProject.name) {
+        document.title = `${artistName} | ${selectedProject.name}`
+        return
+      }
+    }
+
+    // Priority 3: Default Home Base Title
+    document.title = `${artistName} | Discography`
+  }, [mounted, currentView, selectedProject, highlightedTrackSlug, artist, playingTrack])
+
   // Navigation handlers (client-side SPA, uninterrupted audio!)
   const navigateToProject = (project) => {
     if (project) {
@@ -343,30 +401,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       navigateToTrack(parentProj, matchedTrack)
     }
   }, [playingTrack, projects, navigateToTrack])
-
-  // Audio Playback Handler
-  const handlePlayTrack = useCallback((track, proj) => {
-    if (!track) return
-    if (!track.hasAudio || !track.audioUrl) {
-      showToast(`No audio available for "${track.name || 'this track'}"`)
-      return
-    }
-    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
-    const projName = parentProj?.name || track.project || ''
-    const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
-
-    if (playingTrack?.name === track.name && isPlaying) {
-      setIsPlaying(false)
-    } else {
-      setPlayingTrack({
-        ...track,
-        project: projName,
-        projectCover: projCover,
-        artist: track.artist || parentProj?.artist || artist.name,
-      })
-      setIsPlaying(true)
-    }
-  }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast])
 
   // Filter and sort projects
   const filteredProjects = useMemo(() => {
@@ -435,28 +469,60 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     return list
   }, [currentView, selectedProject, filteredProjects])
 
-  const [customAutoplayQueue, setCustomAutoplayQueue] = useState(null)
+  const [autoplayTracks, setAutoplayTracks] = useState([])
+  const [isShuffle, setIsShuffle] = useState(false)
 
-  // Default autoplay list: strictly tracks that appear AFTER playingTrack in top-to-bottom order (no wrapping around)
-  const defaultAutoplayTracks = useMemo(() => {
-    if (!displayedDiscographyTracks || displayedDiscographyTracks.length === 0) return []
-    if (!playingTrack) return displayedDiscographyTracks
-    const currIndex = displayedDiscographyTracks.findIndex(
-      item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
-    )
-    if (currIndex === -1) return displayedDiscographyTracks
-    return displayedDiscographyTracks.slice(currIndex + 1)
-  }, [displayedDiscographyTracks, playingTrack])
+  const handleToggleShuffle = useCallback(() => {
+    setIsShuffle(prev => {
+      const nextShuffle = !prev
+      if (nextShuffle) {
+        setAutoplayTracks(current => shuffleArray(current))
+        showToast('Shuffle ON')
+      } else {
+        setAutoplayTracks(current => sortTracksByDiscographyOrder(current, displayedDiscographyTracks))
+        showToast('Shuffle OFF')
+      }
+      return nextShuffle
+    })
+  }, [displayedDiscographyTracks, showToast])
 
-  // Active autoplay tracks: custom override if modified by drag/drop or deletion, else default
-  const autoplayTracks = useMemo(() => {
-    return customAutoplayQueue !== null ? customAutoplayQueue : defaultAutoplayTracks
-  }, [customAutoplayQueue, defaultAutoplayTracks])
+  // Audio Playback Handler (Invoked when user physically clicks PLAY on a track)
+  const handlePlayTrack = useCallback((track, proj) => {
+    if (!track) return
+    if (!track.hasAudio || !track.audioUrl) {
+      showToast(`No audio available for "${track.name || 'this track'}"`)
+      return
+    }
+    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
+    const projName = parentProj?.name || track.project || ''
+    const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
 
-  // Reset customAutoplayQueue when playingTrack changes to a new track
-  useEffect(() => {
-    setCustomAutoplayQueue(null)
-  }, [playingTrack?.name])
+    if (playingTrack?.name === track.name && isPlaying) {
+      setIsPlaying(false)
+    } else if (playingTrack?.name === track.name && !isPlaying) {
+      setIsPlaying(true)
+    } else {
+      const trackWithProject = {
+        ...track,
+        project: projName,
+        projectCover: projCover,
+        artist: track.artist || parentProj?.artist || artist.name,
+      }
+      setPlayingTrack(trackWithProject)
+      setIsPlaying(true)
+
+      // User physically clicked PLAY on a new track -> populate autoplay queue with tracks that follow it
+      const currIndex = (displayedDiscographyTracks || []).findIndex(
+        item => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase()
+      )
+      if (currIndex !== -1) {
+        const remaining = displayedDiscographyTracks.slice(currIndex + 1)
+        setAutoplayTracks(isShuffle ? shuffleArray(remaining) : remaining)
+      } else {
+        setAutoplayTracks([])
+      }
+    }
+  }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
 
   // Compute the most contextually relevant cover art to use as the full-page ambient background
   const ambientImage = useMemo(() => {
@@ -501,7 +567,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
 
     if (autoplayTracks.length > 0) {
       const [nextItem, ...restAutoplay] = autoplayTracks
-      setCustomAutoplayQueue(restAutoplay)
+      setAutoplayTracks(restAutoplay)
       setPlayingTrack(nextItem.track)
       setIsPlaying(true)
     } else {
@@ -542,33 +608,33 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
       const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentAutoplay.length))
       currentAutoplay.splice(targetIdx, 0, moved)
-      setCustomAutoplayQueue(currentAutoplay)
+      setAutoplayTracks(currentAutoplay)
     } else if (fromList === 'autoplay' && toList === 'queue') {
       if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
       const [moved] = currentAutoplay.splice(fromIndex, 1)
       const targetIdx = Math.max(0, Math.min(toIndex, currentQueue.length))
       currentQueue.splice(targetIdx, 0, moved)
       setManualQueue(currentQueue)
-      setCustomAutoplayQueue(currentAutoplay)
+      setAutoplayTracks(currentAutoplay)
     } else if (fromList === 'queue' && toList === 'autoplay') {
       if (fromIndex < 0 || fromIndex >= currentQueue.length) return
       const [moved] = currentQueue.splice(fromIndex, 1)
       const targetIdx = Math.max(0, Math.min(toIndex, currentAutoplay.length))
       currentAutoplay.splice(targetIdx, 0, moved)
       setManualQueue(currentQueue)
-      setCustomAutoplayQueue(currentAutoplay)
+      setAutoplayTracks(currentAutoplay)
     }
   }, [manualQueue, autoplayTracks])
 
   const handleRemoveFromAutoplay = useCallback((index) => {
-    setCustomAutoplayQueue(prev => {
-      const current = prev !== null ? [...prev] : [...autoplayTracks]
+    setAutoplayTracks(prev => {
+      const current = [...prev]
       if (index >= 0 && index < current.length) {
         current.splice(index, 1)
       }
       return current
     })
-  }, [autoplayTracks])
+  }, [])
 
   if (!mounted) {
     return (
@@ -750,66 +816,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         >
           {currentView === 'SINGLE_PROJECT' && selectedProject ? (
             <Stack spacing={3}>
-              {/* Single Project Page Header: Centered Horizontal Logo & Artist Name Button */}
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  py: { xs: 2.5, sm: 4, md: 5 },
-                }}
-              >
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  onClick={navigateToAllProjects}
-                  sx={{
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    px: { xs: 2, sm: 3 },
-                    py: 1.25,
-                    borderRadius: 4,
-                    bgcolor: darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
-                    border: '1px solid',
-                    borderColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                    backdropFilter: 'blur(8px)',
-                    transition: 'transform 0.25s ease, bgcolor 0.25s ease, border-color 0.25s ease',
-                    '&:hover': {
-                      transform: 'scale(1.04)',
-                      bgcolor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                      borderColor: 'primary.main',
-                    },
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src="/api/logo"
-                    alt="Artist Logo"
-                    draggable={false}
-                    sx={{
-                      height: { xs: 36, sm: 48, md: 54 },
-                      maxWidth: { xs: 80, sm: 120, md: 150 },
-                      objectFit: 'contain',
-                      filter: getLogoFilter(logoAnalysis, darkMode, 'none'),
-                    }}
-                  />
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 800,
-                      fontSize: { xs: '1.15rem', sm: '1.4rem' },
-                      background: darkMode
-                        ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
-                        : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
-                      WebkitBackgroundClip: artist.name ? 'text' : 'none',
-                      WebkitTextFillColor: artist.name ? 'transparent' : 'inherit',
-                    }}
-                  >
-                    {artist.name || 'Artist'}
-                  </Typography>
-                </Stack>
-              </Box>
+              {/* Single Project Page Header: Compact Artist Header */}
+              <CompactArtistHeader
+                artist={artist}
+                onNavigateHome={navigateToAllProjects}
+                darkMode={darkMode}
+                onToggleTheme={handleToggleTheme}
+                selectedPlatform={selectedPlatform}
+                onOpenPlatformModal={() => setPlatformModalOpen(true)}
+              />
 
               <ProjectCard
                 project={selectedProject}
@@ -905,6 +920,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           onSkipPrev={handleSkipPrev}
           onShowToast={showToast}
           onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
+          isShuffle={isShuffle}
+          onToggleShuffle={handleToggleShuffle}
         />
 
         {/* Feedback Snackbar / Toast */}

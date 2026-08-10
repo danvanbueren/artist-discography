@@ -9,16 +9,16 @@ import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
 import SubduedText from './SubduedText'
 
 const PLATFORM_ICONS = {
-  spotify: '/spotify.webp',
-  apple: '/apple.webp',
-  youtube: '/youtube.webp',
-  soundcloud: '/soundcloud.webp',
-  bandcamp: '/bandcamp.webp',
-  deezer: '/deezer.webp',
-  tidal: '/tidal.webp',
-  pandora: '/pandora.webp',
-  amazon: '/amazon.webp',
-  itunes: '/itunes.webp',
+  spotify: '/platforms/spotify.webp',
+  apple: '/platforms/apple.webp',
+  youtube: '/platforms/youtube.webp',
+  soundcloud: '/platforms/soundcloud.webp',
+  bandcamp: '/platforms/bandcamp.webp',
+  deezer: '/platforms/deezer.webp',
+  tidal: '/platforms/tidal.webp',
+  pandora: '/platforms/pandora.webp',
+  amazon: '/platforms/amazon.webp',
+  itunes: '/platforms/itunes.webp',
 }
 
 export default function ProjectHeader({

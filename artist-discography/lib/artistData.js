@@ -138,6 +138,19 @@ export class ArtistDataManager {
       } catch (err) {
         issues.push(`Invalid JSON syntax in file: ${err.message}.`)
         try {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+          const backupFileName = `artist-data.malformed.${timestamp}.json`
+          const backupFilePath = path.join(path.dirname(filePath), backupFileName)
+          const staticBackupFilePath = path.join(path.dirname(filePath), 'artist-data.malformed.json')
+
+          fs.writeFileSync(backupFilePath, rawContent, 'utf8')
+          fs.writeFileSync(staticBackupFilePath, rawContent, 'utf8')
+          issues.push(`Saved copy of corrupt JSON to ${backupFileName} and artist-data.malformed.json.`)
+        } catch (backupErr) {
+          issues.push(`Failed to backup corrupt JSON file: ${backupErr.message}`)
+        }
+
+        try {
           fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
           issues.push('Overwritten corrupt JSON file with default scaffold.')
         } catch (writeErr) {

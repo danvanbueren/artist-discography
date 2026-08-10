@@ -24,14 +24,16 @@ All user-managed content belongs strictly in the `artist-discography/data/` dire
 ### Directory Layout
 
 ```
-artist-discography/data/
-├── artist-data.json                  # Main discography JSON configuration
-├── logo.png (or .jpg, .webp, .svg)   # Artist logo image
-└── projects/                         # Project folders organized by project slug
-    ├── <project-slug>/
-    │   ├── art.png (or .jpg, .webp)  # Cover artwork for the project
-    │   ├── <track-slug>.wav          # Track audio files (e.g. hydrolock.wav)
-    │   └── <track-slug>.mp3
+artist-discography/
+├── public/logo.png                   # Default artist logo fallback
+└── data/
+    ├── artist-data.json              # Main discography JSON configuration
+    ├── logo.png (or .jpg, .webp, .svg) # Optional custom artist logo override
+    └── projects/                     # Project folders organized by project slug
+        ├── <project-slug>/
+        │   ├── art.png (or .jpg, .webp)  # Cover artwork for the project
+        │   ├── <track-slug>.wav      # Track audio files (e.g. hydrolock.wav)
+        │   └── <track-slug>.mp3
 ```
 
 ---
