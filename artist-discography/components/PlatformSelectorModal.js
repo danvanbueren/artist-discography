@@ -32,6 +32,7 @@ export default function PlatformSelectorModal({
   onClose,
   selectedPlatform,
   onSelectPlatform,
+  availablePlatforms = STREAMING_PLATFORMS,
 }) {
   return (
     <Dialog
@@ -73,55 +74,63 @@ export default function PlatformSelectorModal({
         </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 1 }}>
-        <List disablePadding>
-          {STREAMING_PLATFORMS.map(platform => {
-            const isSelected = selectedPlatform === platform.id
-            return (
-              <ListItemButton
-                key={platform.id}
-                onClick={() => {
-                  onSelectPlatform(platform.id)
-                  onClose()
-                }}
-                selected={isSelected}
-                sx={{
-                  py: 1.5,
-                  px: 2,
-                  borderRadius: 2,
-                  mb: 0.5,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      bgcolor: 'primary.dark',
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Box
-                    component="img"
-                    src={platform.icon}
-                    alt={platform.name}
-                    draggable={false}
-                    loading="eager"
-                    decoding="async"
-                    sx={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 1.5 }}
-                  />
-                </ListItemIcon>
-                <ListItemText
-                  primary={platform.name}
-                  slotProps={{
-                    primary: {
-                      fontWeight: isSelected ? 700 : 500,
-                      fontSize: '0.95rem',
+        {availablePlatforms.length === 0 ? (
+          <Box sx={{ py: 3, px: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              No platform links available across tracks.
+            </Typography>
+          </Box>
+        ) : (
+          <List disablePadding>
+            {availablePlatforms.map(platform => {
+              const isSelected = selectedPlatform === platform.id
+              return (
+                <ListItemButton
+                  key={platform.id}
+                  onClick={() => {
+                    onSelectPlatform(platform.id)
+                    onClose()
+                  }}
+                  selected={isSelected}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    borderRadius: 2,
+                    mb: 0.5,
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
                     },
                   }}
-                />
-              </ListItemButton>
-            )
-          })}
-        </List>
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <Box
+                      component="img"
+                      src={platform.icon}
+                      alt={platform.name}
+                      draggable={false}
+                      loading="eager"
+                      decoding="async"
+                      sx={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 1.5 }}
+                    />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={platform.name}
+                    slotProps={{
+                      primary: {
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: '0.95rem',
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              )
+            })}
+          </List>
+        )}
       </DialogContent>
     </Dialog>
   )

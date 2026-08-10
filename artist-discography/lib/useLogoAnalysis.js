@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 
 /**
- * Custom hook to analyze an image (like an artist logo) for luminance and color saturation.
+ * Custom hook to analyze an image (like an artist logo) for luminance, color saturation, and aspect ratio.
  * Determines if an image is monochrome (flat black/white) and light vs dark.
  */
 export function useLogoAnalysis(imageSrc) {
@@ -11,6 +11,7 @@ export function useLogoAnalysis(imageSrc) {
     isMonochrome: false,
     isLight: false,
     isDark: false,
+    aspectRatio: null,
     loaded: false,
   })
 
@@ -23,13 +24,19 @@ export function useLogoAnalysis(imageSrc) {
 
     img.onload = () => {
       try {
+        const naturalWidth = img.naturalWidth || img.width || 100
+        const naturalHeight = img.naturalHeight || img.height || 50
+        const aspectRatio = naturalWidth / naturalHeight
+
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
-        if (!ctx) return
+        if (!ctx) {
+          if (isMounted) setAnalysis(a => ({ ...a, aspectRatio, loaded: true }))
+          return
+        }
 
-        // Scale down image for fast pixel sampling
         const width = 64
-        const height = Math.max(1, Math.round((img.height / img.width) * width))
+        const height = Math.max(1, Math.round((naturalHeight / naturalWidth) * width))
         canvas.width = width
         canvas.height = height
 
@@ -47,26 +54,24 @@ export function useLogoAnalysis(imageSrc) {
           const b = data[i + 2]
           const a = data[i + 3]
 
-          // Ignore transparent / semi-transparent pixels
           if (a > 30) {
             opaquePixelCount++
-            // Perceived luminance formula
             const luminance = 0.299 * r + 0.587 * g + 0.114 * b
             totalLuminance += luminance
-
-            // Color saturation / difference between max and min RGB channels
             const max = Math.max(r, g, b)
             const min = Math.min(r, g, b)
             totalSaturation += max - min
           }
         }
 
-        if (opaquePixelCount === 0) return
+        if (opaquePixelCount === 0) {
+          if (isMounted) setAnalysis(a => ({ ...a, aspectRatio, loaded: true }))
+          return
+        }
 
         const avgLuminance = totalLuminance / opaquePixelCount
         const avgSaturation = totalSaturation / opaquePixelCount
 
-        // Low saturation (< 32) indicates a flat black, white, or greyscale logo
         const isMonochrome = avgSaturation < 32
         const isLight = isMonochrome && avgLuminance > 140
         const isDark = isMonochrome && avgLuminance <= 140
@@ -76,20 +81,20 @@ export function useLogoAnalysis(imageSrc) {
             isMonochrome,
             isLight,
             isDark,
+            aspectRatio,
             loaded: true,
           })
         }
       } catch (err) {
-        // Fallback gracefully if canvas sampling fails
         if (isMounted) {
-          setAnalysis({ isMonochrome: false, isLight: false, isDark: false, loaded: true })
+          setAnalysis({ isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true })
         }
       }
     }
 
     img.onerror = () => {
       if (isMounted) {
-        setAnalysis({ isMonochrome: false, isLight: false, isDark: false, loaded: true })
+        setAnalysis({ isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true })
       }
     }
 
@@ -130,12 +135,10 @@ export function getLogoFilter(analysis, isDarkMode, baseFilter = 'drop-shadow(0p
     return cleanBase || 'none'
   }
 
-  // White/light monochrome logo in light mode -> Invert to black
   if (analysis.isLight && !isDarkMode) {
     return `invert(1) ${cleanBase}`.trim()
   }
 
-  // Black/dark monochrome logo in dark mode -> Invert to white
   if (analysis.isDark && isDarkMode) {
     return `invert(1) ${cleanBase}`.trim()
   }

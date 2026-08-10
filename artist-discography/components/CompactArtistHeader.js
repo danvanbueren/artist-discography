@@ -7,6 +7,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import SubduedText from './SubduedText'
 import { SOCIAL_ICONS, getSortedActiveLinks } from './ArtistHero'
 import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
+import { useDynamicThemeGradients } from '../lib/gradientStyles'
 
 export default function CompactArtistHeader({
   artist,
@@ -15,10 +16,14 @@ export default function CompactArtistHeader({
   onToggleTheme,
   selectedPlatform,
   onOpenPlatformModal,
+  ambientImage,
+  hasAvailablePlatforms = true,
 }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
   const logoAnalysis = useLogoAnalysis('/api/logo')
+  const coverSrc = ambientImage || '/api/logo'
+  const { primaryTextSx, secondaryTextSx, logoGradientSx, getLogoFilter: getDynamicLogoFilter } = useDynamicThemeGradients(coverSrc, isDarkMode)
 
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
@@ -65,15 +70,14 @@ export default function CompactArtistHeader({
         }}
       >
         <Box
-          component="img"
-          src="/api/logo"
-          alt="Artist Logo"
-          draggable={false}
+          aria-label="Artist Logo"
           sx={{
-            height: { xs: 110, sm: 150, md: 180 },
-            maxWidth: { xs: 240, sm: 360, md: 450 },
-            objectFit: 'contain',
-            filter: getLogoFilter(logoAnalysis, isDarkMode, 'none'),
+            height: { xs: 90, sm: 130, md: 170 },
+            maxWidth: { xs: 260, sm: 380, md: 480 },
+            aspectRatio: logoAnalysis?.aspectRatio ? `${logoAnalysis.aspectRatio}` : 'auto',
+            flexShrink: 0,
+            ...logoGradientSx,
+            ...getDynamicLogoFilter(isDarkMode ? 'drop-shadow(0px 4px 12px rgba(0,0,0,0.3))' : 'drop-shadow(0px 4px 12px rgba(0,0,0,0.12))'),
           }}
         />
         <Typography
@@ -84,11 +88,7 @@ export default function CompactArtistHeader({
             fontSize: { xs: '3rem', sm: '4rem', md: '4.75rem' },
             letterSpacing: '-0.02em',
             fontFamily: 'Roboto, sans-serif',
-            background: isDarkMode
-              ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
-              : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
-            WebkitBackgroundClip: name ? 'text' : 'none',
-            WebkitTextFillColor: name ? 'transparent' : 'inherit',
+            ...primaryTextSx,
           }}
         >
           {name || 'Artist'}
@@ -106,7 +106,7 @@ export default function CompactArtistHeader({
             mx: 'auto',
             fontSize: { xs: '0.9rem', sm: '1rem' },
             lineHeight: 1.6,
-            color: 'text.secondary',
+            ...secondaryTextSx,
           }}
         />
       )}
@@ -178,9 +178,10 @@ export default function CompactArtistHeader({
         <Button
           size="small"
           variant="outlined"
+          disabled={!hasAvailablePlatforms}
           onClick={onOpenPlatformModal}
           startIcon={
-            SOCIAL_ICONS[selectedPlatform] ? (
+            selectedPlatform && SOCIAL_ICONS[selectedPlatform] ? (
               <Box
                 component="img"
                 src={SOCIAL_ICONS[selectedPlatform]}

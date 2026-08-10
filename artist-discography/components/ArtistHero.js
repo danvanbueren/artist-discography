@@ -3,6 +3,7 @@
 import { Box, Container, useTheme } from '@mui/material'
 import HeaderLogo from './HeaderLogo'
 import SubduedText from './SubduedText'
+import { useDynamicThemeGradients } from '../lib/gradientStyles'
 
 export const SOCIAL_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -66,11 +67,13 @@ export function getSortedActiveLinks(artist) {
   return activeLinks
 }
 
-export default function ArtistHero({ artist, onLogoClick }) {
+export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
+  const coverSrc = ambientImage || '/api/logo'
+  const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(coverSrc, isDark)
 
   // Collect non-empty social and platform links in explicit order
   const activeLinks = getSortedActiveLinks(artist)
@@ -89,7 +92,7 @@ export default function ArtistHero({ artist, onLogoClick }) {
         alignItems: 'center',
       }}
     >
-      <HeaderLogo onClick={onLogoClick} />
+      <HeaderLogo onClick={onLogoClick} ambientImage={coverSrc} />
 
       <SubduedText
         value={name}
@@ -102,11 +105,7 @@ export default function ArtistHero({ artist, onLogoClick }) {
           fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
           mb: 2,
           fontFamily: 'Roboto, sans-serif',
-          background: isDark
-            ? 'linear-gradient(135deg, #ffffff 0%, #a0a0b0 100%)'
-            : 'linear-gradient(135deg, #111827 0%, #4b5563 100%)',
-          WebkitBackgroundClip: name ? 'text' : 'none',
-          WebkitTextFillColor: name ? 'transparent' : 'inherit',
+          ...primaryTextSx,
         }}
       />
 
@@ -119,7 +118,7 @@ export default function ArtistHero({ artist, onLogoClick }) {
           mx: 'auto',
           fontSize: { xs: '1.05rem', sm: '1.2rem' },
           lineHeight: 1.7,
-          color: 'text.secondary',
+          ...secondaryTextSx,
         }}
       />
 
