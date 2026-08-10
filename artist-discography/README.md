@@ -9,7 +9,7 @@ For full project documentation, technology stack, and user content guide, please
 All site content is stored in `artist-discography/data/`:
 
 - `data/artist-data.json` - Discography JSON metadata (artist bio, social links, projects, tracks, streaming URLs).
-- `data/logo.png` - Artist logo image.
+- `data/logo.png` (or `.jpg`, `.webp`, `.svg`) - *Optional*. Place a custom logo file here to override the default logo in `public/logo.png`.
 - `data/projects/` - Project folders organized by project slug (`data/projects/<project-slug>/`), containing `art.<ext>` for cover artwork and `<track-slug>.<ext>` for track audio.
 
 For full JSON schema instructions and file naming conventions, see the [Operator Content Guide in Root README](../README.md#operator-content-guide-managing--updating-discography-data).

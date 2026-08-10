@@ -5,7 +5,9 @@ import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
 import Providers from './providers'
 
-const PROJECT_NAME = packageJson.name
+import { loadArtistData } from '../lib/artistData'
+
+const DEFAULT_PROJECT_NAME = packageJson.name
   .split('-')
   .map(word => word.charAt(0).toUpperCase() + word.slice(1))
   .join(' ')
@@ -13,28 +15,53 @@ const PROJECT_NAME = packageJson.name
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export const metadata = {
-  title: PROJECT_NAME,
-  description: `${PROJECT_NAME} - A web app designed to showcase an artist's complete music discography, including albums, EPs, singles, and collaborations, with direct links to listen across all published streaming platforms.`,
+export async function generateMetadata() {
+  let artistName = ''
+  try {
+    const { data } = loadArtistData()
+    artistName = data?.artist?.name?.trim() || ''
+  } catch (err) {
+    console.error('Error reading artist name for metadata:', err)
+  }
+
+  const name = artistName || 'Artist'
+  const baseTitle = `${name} | Discography`
+
+  return {
+    title: {
+      default: baseTitle,
+      template: `${name} | %s`,
+    },
+    description: `${baseTitle} - A web app designed to showcase an artist's complete music discography, including albums, EPs, singles, and collaborations, with direct links to listen across all published streaming platforms.`,
+    appleWebApp: {
+      title: baseTitle,
+    },
+    icons: {
+      icon: '/api/icon?v=custom',
+      shortcut: '/api/icon?v=custom',
+      apple: '/api/icon?v=custom',
+    },
+    manifest: '/favicons/manifest.json',
+  }
 }
 
 const PLATFORM_ICON_PRELOADS = [
-  '/spotify.webp',
-  '/apple.webp',
-  '/youtube.webp',
-  '/soundcloud.webp',
-  '/instagram.webp',
-  '/facebook.webp',
-  '/x.webp',
-  '/tiktok.webp',
-  '/discord.webp',
-  '/snapchat.webp',
-  '/bandcamp.webp',
-  '/deezer.webp',
-  '/tidal.webp',
-  '/pandora.webp',
-  '/amazon.webp',
-  '/itunes.webp',
+  '/platforms/spotify.webp',
+  '/platforms/apple.webp',
+  '/platforms/youtube.webp',
+  '/platforms/soundcloud.webp',
+  '/platforms/instagram.webp',
+  '/platforms/facebook.webp',
+  '/platforms/x.webp',
+  '/platforms/tiktok.webp',
+  '/platforms/discord.webp',
+  '/platforms/snapchat.webp',
+  '/platforms/bandcamp.webp',
+  '/platforms/deezer.webp',
+  '/platforms/tidal.webp',
+  '/platforms/pandora.webp',
+  '/platforms/amazon.webp',
+  '/platforms/itunes.webp',
 ]
 
 export default function RootLayout({ children }) {

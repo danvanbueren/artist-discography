@@ -31,6 +31,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
+import { SOCIAL_ICONS } from './ArtistHero'
 
 export const FILTER_OPTIONS = [
   'LP',
@@ -132,6 +133,24 @@ export default function FloatingNavBar({
   const filterDrag = useDragScroll()
   const sortDrag = useDragScroll()
 
+  // Track scroll position to conditionally show jump-to-top button
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const handleScrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   // Clear timer helper
   const clearInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) {
@@ -225,8 +244,11 @@ export default function FloatingNavBar({
       <Paper
         elevation={4}
         sx={{
+          height: 64,
+          minHeight: 64,
+          maxHeight: 64,
           borderRadius: 4,
-          py: 1.5,
+          py: 0,
           px: { xs: 2, sm: 3 },
           backdropFilter: 'blur(16px)',
           bgcolor: theme.palette.mode === 'dark'
@@ -237,10 +259,9 @@ export default function FloatingNavBar({
             ? 'rgba(255, 255, 255, 0.12)'
             : 'rgba(0, 0, 0, 0.12)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-          transition: 'all 0.3s ease',
+          transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
           display: 'flex',
           alignItems: 'center',
-          minHeight: 64,
         }}
       >
         {/* Back Button when inside a sub-menu */}
@@ -267,7 +288,31 @@ export default function FloatingNavBar({
               alignItems: 'center',
             }}
           >
-            {/* 1. SEARCH BUTTON & RESET */}
+            {/* 1. TOP JUMP BUTTON (Appears on far left when scrolled down) */}
+            {showScrollTop && (
+              <Button
+                size="medium"
+                onClick={handleScrollToTop}
+                startIcon={<ArrowUpwardRoundedIcon />}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                  borderRadius: 3,
+                  px: { xs: 1.25, sm: 2 },
+                  py: 1,
+                  minWidth: 0,
+                  color: 'text.primary',
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                  },
+                }}
+              >
+                Top
+              </Button>
+            )}
+
+            {/* 2. SEARCH BUTTON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
               <Button
                 size="medium"
@@ -313,7 +358,7 @@ export default function FloatingNavBar({
               )}
             </Stack>
 
-            {/* 2. FILTER BUTTON & RESET */}
+            {/* 3. FILTER BUTTON & RESET */}
             <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
               <Button
                 size="medium"
@@ -359,7 +404,7 @@ export default function FloatingNavBar({
               )}
             </Stack>
 
-            {/* 3. SORT BUTTON */}
+            {/* 4. SORT BUTTON */}
             <Button
               size="medium"
               onClick={() => setNavMode('sort')}
@@ -381,7 +426,7 @@ export default function FloatingNavBar({
               Sort
             </Button>
 
-            {/* 4. SETTINGS BUTTON */}
+            {/* 5. SETTINGS BUTTON */}
             <Button
               size="medium"
               onClick={() => setNavMode('settings')}
@@ -427,24 +472,25 @@ export default function FloatingNavBar({
                 }
               }}
               placeholder="Search by title, artist, or track..."
-              size="medium"
+              size="small"
               fullWidth
               autoFocus
               slotProps={{
                 htmlInput: {
-                  sx: { py: 1, fontSize: '1rem' },
+                  sx: { py: 0.75, fontSize: '0.95rem' },
                 },
                 input: {
+                  sx: { height: 40 },
                   endAdornment: searchQuery ? (
                     <InputAdornment position="end">
                       <IconButton
-                        size="medium"
+                        size="small"
                         onMouseDown={(e) => {
                           e.preventDefault()
                           onSearchChange('')
                         }}
                       >
-                        <ClearRoundedIcon />
+                        <ClearRoundedIcon fontSize="small" />
                       </IconButton>
                     </InputAdornment>
                   ) : null,
@@ -596,7 +642,24 @@ export default function FloatingNavBar({
               onClick={() => {
                 onOpenPlatformModal()
               }}
-              startIcon={<LinkIcon />}
+              startIcon={
+                SOCIAL_ICONS[selectedPlatform] ? (
+                  <Box
+                    component="img"
+                    src={SOCIAL_ICONS[selectedPlatform]}
+                    alt={selectedPlatform || 'Platform'}
+                    draggable={false}
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      objectFit: 'contain',
+                      borderRadius: 0.5,
+                    }}
+                  />
+                ) : (
+                  <LinkIcon />
+                )
+              }
               sx={{
                 borderRadius: 3,
                 textTransform: 'none',
@@ -604,6 +667,12 @@ export default function FloatingNavBar({
                 fontSize: '0.9rem',
                 py: 1,
                 px: 2,
+                color: 'text.primary',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'text.primary',
+                  bgcolor: 'action.hover',
+                },
               }}
             >
               Platform
@@ -629,6 +698,12 @@ export default function FloatingNavBar({
                 fontSize: '0.9rem',
                 py: 1,
                 px: 2,
+                color: 'text.primary',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'text.primary',
+                  bgcolor: 'action.hover',
+                },
               }}
             >
               {darkMode ? 'Light Theme' : 'Dark Theme'}
