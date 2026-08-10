@@ -313,13 +313,27 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }
 
-  const navigateToAllProjects = () => {
+  const navigateToAllProjects = useCallback(() => {
+    const targetProjSlug = selectedProject ? slugify(selectedProject.name || '') : null
+
     window.history.pushState({}, '', '/')
     setCurrentView('ALL_PROJECTS')
     setSelectedProject(null)
     setHighlightedTrackSlug(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+
+    if (targetProjSlug) {
+      setTimeout(() => {
+        const el = document.getElementById(`project-${targetProjSlug}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+      }, 60)
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [selectedProject])
 
   const handleNavigateToCurrentTrack = useCallback(() => {
     if (!playingTrack) return
@@ -518,26 +532,28 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     if (fromList === 'queue' && toList === 'queue') {
       if (fromIndex < 0 || fromIndex >= currentQueue.length) return
       const [moved] = currentQueue.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentQueue.length)
+      const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
+      const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentQueue.length))
       currentQueue.splice(targetIdx, 0, moved)
       setManualQueue(currentQueue)
     } else if (fromList === 'autoplay' && toList === 'autoplay') {
       if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
       const [moved] = currentAutoplay.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentAutoplay.length)
+      const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
+      const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentAutoplay.length))
       currentAutoplay.splice(targetIdx, 0, moved)
       setCustomAutoplayQueue(currentAutoplay)
     } else if (fromList === 'autoplay' && toList === 'queue') {
       if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
       const [moved] = currentAutoplay.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentQueue.length)
+      const targetIdx = Math.max(0, Math.min(toIndex, currentQueue.length))
       currentQueue.splice(targetIdx, 0, moved)
       setManualQueue(currentQueue)
       setCustomAutoplayQueue(currentAutoplay)
     } else if (fromList === 'queue' && toList === 'autoplay') {
       if (fromIndex < 0 || fromIndex >= currentQueue.length) return
       const [moved] = currentQueue.splice(fromIndex, 1)
-      const targetIdx = Math.min(toIndex, currentAutoplay.length)
+      const targetIdx = Math.max(0, Math.min(toIndex, currentAutoplay.length))
       currentAutoplay.splice(targetIdx, 0, moved)
       setManualQueue(currentQueue)
       setCustomAutoplayQueue(currentAutoplay)
@@ -821,23 +837,31 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                   />
                 </Box>
               ) : (
-                filteredProjects.map((proj, idx) => (
-                  <ProjectCard
-                    key={idx}
-                    project={proj}
-                    artistName={artist.name}
-                    onSelectProject={navigateToProject}
-                    isSingleView={false}
-                    onPlayTrack={handlePlayTrack}
-                    onAddToQueue={handleAddToQueue}
-                    onShowToast={showToast}
-                    playingTrack={playingTrack}
-                    isPlaying={isPlaying}
-                    highlightedTrackSlug={null}
-                    onSelectTrack={(track) => navigateToTrack(proj, track)}
-                    selectedPlatform={selectedPlatform}
-                  />
-                ))
+                filteredProjects.map((proj, idx) => {
+                  const pSlug = slugify(proj.name || '')
+                  return (
+                    <Box
+                      key={proj.id || pSlug || idx}
+                      id={`project-${pSlug}`}
+                      sx={{ scrollMarginTop: { xs: 80, sm: 100 } }}
+                    >
+                      <ProjectCard
+                        project={proj}
+                        artistName={artist.name}
+                        onSelectProject={navigateToProject}
+                        isSingleView={false}
+                        onPlayTrack={handlePlayTrack}
+                        onAddToQueue={handleAddToQueue}
+                        onShowToast={showToast}
+                        playingTrack={playingTrack}
+                        isPlaying={isPlaying}
+                        highlightedTrackSlug={null}
+                        onSelectTrack={(track) => navigateToTrack(proj, track)}
+                        selectedPlatform={selectedPlatform}
+                      />
+                    </Box>
+                  )
+                })
               )}
             </Stack>
           )}

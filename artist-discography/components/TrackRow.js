@@ -95,10 +95,8 @@ export default function TrackRow({
 
   const resolvedLink = getResolvedTrackLink(links, selectedPlatform)
 
-  const handleRowClick = (e) => {
-    if (e.target.closest('a')) {
-      return
-    }
+  const handleTitleClick = (e) => {
+    e.stopPropagation()
     if (onSelectTrack) {
       onSelectTrack(track)
     }
@@ -110,7 +108,6 @@ export default function TrackRow({
     <Box
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={handleRowClick}
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: 'auto 1fr auto', sm: 'auto 1fr auto' },
@@ -118,7 +115,6 @@ export default function TrackRow({
         py: 1.5,
         px: { xs: 1.5, sm: 2 },
         borderRadius: 2,
-        cursor: 'pointer',
         bgcolor: isHighlighted
           ? 'rgba(144, 202, 249, 0.14)'
           : isPlayingThisTrack
@@ -217,8 +213,24 @@ export default function TrackRow({
         )}
       </Stack>
 
-      {/* Col 2: Track Name & Artist Stack */}
-      <Stack spacing={0.25} sx={{ minWidth: 0, px: 1 }}>
+      {/* Col 2: Track Name & Artist Stack (Only part that navigates to project/track page) */}
+      <Stack
+        spacing={0.25}
+        onClick={handleTitleClick}
+        sx={{
+          minWidth: 0,
+          px: 1,
+          cursor: onSelectTrack ? 'pointer' : 'default',
+          width: 'fit-content',
+          maxWidth: '100%',
+          borderRadius: 1,
+          '&:hover': onSelectTrack
+            ? {
+                opacity: 0.9,
+              }
+            : {},
+        }}
+      >
         <SubduedText
           value={name}
           placeholder="Untitled Track"
