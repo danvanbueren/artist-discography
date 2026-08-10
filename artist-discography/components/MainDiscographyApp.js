@@ -17,11 +17,12 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero from './ArtistHero'
 import CompactArtistHeader from './CompactArtistHeader'
 import FloatingNavBar from './FloatingNavBar'
-import PlatformSelectorModal from './PlatformSelectorModal'
+import PlatformSelectorModal, { STREAMING_PLATFORMS } from './PlatformSelectorModal'
 import ProjectCard from './ProjectCard'
 import AudioPlayerBar from './AudioPlayerBar'
 import DevHealthDrawer from './DevHealthDrawer'
 import SubduedText from './SubduedText'
+import AmbientBackground from './AmbientBackground'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../lib/slugs'
 import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
 import { getCookie, setCookie } from '../lib/cookies'
@@ -227,19 +228,54 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     [darkMode]
   )
 
-  // Load preferred platform and theme from cookies on mount
+  // Available platforms calculated from links across all posted projects & tracks
+  const availablePlatformIds = useMemo(() => {
+    const availableSet = new Set()
+    for (const proj of (projects || [])) {
+      if (proj?.links && typeof proj.links === 'object') {
+        for (const [key, url] of Object.entries(proj.links)) {
+          if (url && typeof url === 'string' && url.trim() !== '') {
+            availableSet.add(key.toLowerCase())
+          }
+        }
+      }
+      for (const track of (proj?.tracks || [])) {
+        if (track?.links && typeof track.links === 'object') {
+          for (const [key, url] of Object.entries(track.links)) {
+            if (url && typeof url === 'string' && url.trim() !== '') {
+              availableSet.add(key.toLowerCase())
+            }
+          }
+        }
+      }
+    }
+    return STREAMING_PLATFORMS
+      .map(p => p.id)
+      .filter(id => availableSet.has(id))
+  }, [projects])
+
+  const availablePlatforms = useMemo(() => {
+    return STREAMING_PLATFORMS.filter(p => availablePlatformIds.includes(p.id))
+  }, [availablePlatformIds])
+
+  // Load preferred platform and theme from cookies on mount, fallback if saved platform is unavailable
   useEffect(() => {
     try {
-      const savedPlatform = getCookie('preferred_music_platform') || localStorage.getItem('preferred_music_platform')
-      if (savedPlatform) {
-        setSelectedPlatform(savedPlatform)
+      const savedPlatform = (getCookie('preferred_music_platform') || localStorage.getItem('preferred_music_platform') || '').toLowerCase()
+      if (availablePlatformIds.length > 0) {
+        if (savedPlatform && availablePlatformIds.includes(savedPlatform)) {
+          setSelectedPlatform(savedPlatform)
+        } else {
+          const fallback = availablePlatformIds[0]
+          setSelectedPlatform(fallback)
+          setCookie('preferred_music_platform', fallback)
+          localStorage.setItem('preferred_music_platform', fallback)
+        }
       } else {
-        setSelectedPlatform('youtube')
-        setCookie('preferred_music_platform', 'youtube')
-        localStorage.setItem('preferred_music_platform', 'youtube')
+        setSelectedPlatform('')
       }
     } catch {}
-  }, [])
+  }, [availablePlatformIds])
 
   const handleSelectPlatform = (platformId) => {
     setSelectedPlatform(platformId)
@@ -734,39 +770,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         }}
       />
 
-      {/* Fixed full-viewport ambient background — blurred cover art */}
-      <Box
-        aria-hidden
-        sx={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-          bgcolor: 'background.default',
-          transition: 'background-color 0.3s ease',
-        }}
-      >
-        {ambientImage && (
-          <Box
-            key={ambientImage}
-            sx={{
-              position: 'absolute',
-              inset: '-10%',
-              backgroundImage: `url(${ambientImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(80px) saturate(1.2)',
-              opacity: darkMode ? 0.18 : 0.12,
-              animation: 'ambientFadeIn 1.2s ease forwards',
-              '@keyframes ambientFadeIn': {
-                from: { opacity: 0 },
-                to: { opacity: darkMode ? 0.18 : 0.12 },
-              },
-            }}
-          />
-        )}
-      </Box>
+      {/* Fixed full-viewport ambient background with dynamic adaptive blurred dots */}
+      <AmbientBackground ambientImage={ambientImage} darkMode={darkMode} />
 
       <Box
         sx={{
@@ -784,6 +789,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           <ArtistHero
             artist={artist}
             onLogoClick={undefined}
+            ambientImage={ambientImage}
           />
         )}
 
@@ -801,6 +807,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             onToggleTheme={handleToggleTheme}
             selectedPlatform={selectedPlatform}
             onOpenPlatformModal={() => setPlatformModalOpen(true)}
+            hasAvailablePlatforms={availablePlatformIds.length > 0}
           />
         )}
 
@@ -824,6 +831,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 onToggleTheme={handleToggleTheme}
                 selectedPlatform={selectedPlatform}
                 onOpenPlatformModal={() => setPlatformModalOpen(true)}
+                ambientImage={ambientImage}
+                hasAvailablePlatforms={availablePlatformIds.length > 0}
               />
 
               <ProjectCard
@@ -888,6 +897,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           onClose={() => setPlatformModalOpen(false)}
           selectedPlatform={selectedPlatform}
           onSelectPlatform={handleSelectPlatform}
+          availablePlatforms={availablePlatforms}
         />
 
         {/* Contained Floating Audio Player Bar */}

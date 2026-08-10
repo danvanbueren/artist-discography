@@ -122,6 +122,7 @@ export default function FloatingNavBar({
   onToggleTheme,
   selectedPlatform,
   onOpenPlatformModal,
+  hasAvailablePlatforms = true,
 }) {
   const theme = useTheme()
   const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
@@ -639,11 +640,12 @@ export default function FloatingNavBar({
             <Button
               size="medium"
               variant="outlined"
+              disabled={!hasAvailablePlatforms}
               onClick={() => {
                 onOpenPlatformModal()
               }}
               startIcon={
-                SOCIAL_ICONS[selectedPlatform] ? (
+                selectedPlatform && SOCIAL_ICONS[selectedPlatform] ? (
                   <Box
                     component="img"
                     src={SOCIAL_ICONS[selectedPlatform]}

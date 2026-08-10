@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Stack, Typography, IconButton, Chip, Dialog, Tooltip } from '@mui/material'
+import { Box, Stack, Typography, IconButton, Chip, Dialog, Tooltip, useTheme } from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
 import SubduedText from './SubduedText'
+import { useDynamicThemeGradients } from '../lib/gradientStyles'
 
 const PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -28,6 +29,8 @@ export default function ProjectHeader({
   selectedPlatform,
   isSingleView = false,
 }) {
+  const theme = useTheme()
+  const isDarkMode = theme.palette.mode === 'dark'
   const [artModalOpen, setArtModalOpen] = useState(false)
 
   const name = project?.name ?? ''
@@ -35,6 +38,7 @@ export default function ProjectHeader({
   const type = project?.type ?? ''
   const date = project?.date ?? ''
   const cover = project?.cover ?? project?.image ?? ''
+  const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(cover, isDarkMode)
   const links = project?.links ?? {}
 
   // Filter out non-empty streaming links
@@ -198,6 +202,7 @@ export default function ProjectHeader({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              ...primaryTextSx,
             }}
           />
 
@@ -214,7 +219,7 @@ export default function ProjectHeader({
               sx={{
                 fontWeight: 600,
                 fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                color: 'text.secondary',
+                ...secondaryTextSx,
               }}
             />
 
