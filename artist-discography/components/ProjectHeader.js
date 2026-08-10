@@ -93,6 +93,7 @@ export default function ProjectHeader({
             component="img"
             src={cover}
             alt={name || 'Project Cover'}
+            draggable={false}
             sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
@@ -222,6 +223,7 @@ export default function ProjectHeader({
                       component="img"
                       src={icon}
                       alt={key}
+                      draggable={false}
                       loading="eager"
                       decoding="async"
                       sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}

@@ -10,10 +10,6 @@ import {
   Slider,
   Stack,
   Badge,
-  Popover,
-  List,
-  ListItem,
-  ListItemText,
   Tooltip,
   useTheme,
   Collapse,
@@ -33,10 +29,10 @@ import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
 import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
-import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import { slugify } from '../lib/slugs'
 import { getCookie, setCookie } from '../lib/cookies'
+import PlaybackQueueDialog from './PlaybackQueueDialog'
 
 export default function AudioPlayerBar({
   playingTrack,
@@ -44,12 +40,16 @@ export default function AudioPlayerBar({
   onTogglePlay,
   onClosePlayer,
   queueCount = 0,
-  audioQueue = [],
-  onRemoveFromQueue,
+  manualQueue = [],
+  autoplayTracks = [],
+  onQueueDragDrop,
+  onRemoveFromManualQueue,
+  onRemoveFromAutoplay,
   onPlayQueuedTrack,
   onSkipNext,
   onSkipPrev,
   onShowToast,
+  onNavigateToCurrentTrack,
 }) {
   const theme = useTheme()
   const [currentTime, setCurrentTime] = useState(0)
@@ -59,6 +59,7 @@ export default function AudioPlayerBar({
   const [prevVolume, setPrevVolume] = useState(100)
   const [isMuted, setIsMuted] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
+  const [queueOpen, setQueueOpen] = useState(false)
   const audioRef = useRef(null)
   const [realDuration, setRealDuration] = useState(0)
 
@@ -88,6 +89,9 @@ export default function AudioPlayerBar({
   useEffect(() => {
     setCurrentTime(0)
     setRealDuration(0)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+    }
   }, [playingTrack?.audioUrl, playingTrack?.name])
 
   // Sync playback state with audio element
@@ -215,23 +219,6 @@ export default function AudioPlayerBar({
           pointerEvents: 'none',
         }}
       >
-        {/* Single seamless backdrop mask: solid below & behind audio player, smoothly fading above */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: { xs: -48, sm: -64 },
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: {
-              xs: `linear-gradient(to top, ${bgDefault} 0%, ${bgDefault} calc(100% - 48px), ${bgTransparent} 100%)`,
-              sm: `linear-gradient(to top, ${bgDefault} 0%, ${bgDefault} calc(100% - 64px), ${bgTransparent} 100%)`,
-            },
-            zIndex: -1,
-            pointerEvents: 'none',
-            transition: 'background 0.3s ease',
-          }}
-        />
 
         <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
           <Paper
@@ -267,13 +254,15 @@ export default function AudioPlayerBar({
                 sx={{
                   alignItems: 'center',
                   minWidth: 0,
-                  width: { xs: '100%', sm: 230, md: 270 },
-                  justifyContent: 'space-between',
+                  width: { xs: '100%', sm: 'auto' },
+                  maxWidth: { sm: 260, md: 300 },
+                  flexShrink: 0,
                 }}
               >
-                <Stack direction="row" spacing={1.5} sx={{ minWidth: 0, alignItems: 'center', flexGrow: 1 }}>
-                  {/* Col 1: Album Art */}
+                {/* Col 1: Album Art */}
+                <Tooltip title="Go to track page" arrow>
                   <Box
+                    onClick={onNavigateToCurrentTrack}
                     sx={{
                       width: { xs: 40, sm: 46 },
                       height: { xs: 40, sm: 46 },
@@ -286,6 +275,9 @@ export default function AudioPlayerBar({
                       flexShrink: 0,
                       overflow: 'hidden',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease',
+                      '&:hover': { transform: 'scale(1.06)' },
                     }}
                   >
                     {coverArt ? (
@@ -293,20 +285,32 @@ export default function AudioPlayerBar({
                         component="img"
                         src={coverArt}
                         alt={playingTrack.name || 'Cover'}
+                        draggable={false}
                         sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     ) : (
                       <MusicNoteRoundedIcon fontSize="small" />
                     )}
                   </Box>
+                </Tooltip>
 
-                  {/* Col 2: Track Name & Track Artist */}
-                  <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                {/* Col 2: Track Name & Track Artist */}
+                <Tooltip title="Go to track page" arrow>
+                  <Box
+                    onClick={onNavigateToCurrentTrack}
+                    sx={{
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      '&:hover .track-title-text': { color: 'primary.main', textDecoration: 'underline' },
+                    }}
+                  >
                     <Typography
+                      className="track-title-text"
                       variant="body2"
                       fontWeight={700}
                       noWrap
-                      sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' } }}
+                      sx={{ fontSize: { xs: '0.85rem', sm: '0.9rem' }, transition: 'color 0.15s ease' }}
                     >
                       {playingTrack.name || 'Untitled Track'}
                     </Typography>
@@ -319,7 +323,7 @@ export default function AudioPlayerBar({
                       {playingTrack.artist || 'Artist'}
                     </Typography>
                   </Box>
-                </Stack>
+                </Tooltip>
 
                 {/* Col 3: Share Button */}
                 <Tooltip title="Share track link" arrow>
@@ -330,6 +334,8 @@ export default function AudioPlayerBar({
                       color: copiedShare ? 'success.main' : 'text.secondary',
                       transition: 'color 0.2s ease',
                       flexShrink: 0,
+                      p: 0.5,
+                      ml: 0.5,
                     }}
                   >
                     {copiedShare ? <CheckRoundedIcon fontSize="small" /> : <ShareRoundedIcon fontSize="small" />}
@@ -345,21 +351,20 @@ export default function AudioPlayerBar({
                 sx={{
                   flexGrow: 1,
                   minWidth: 0,
-                  width: { xs: '100%', sm: 'auto' },
-                  maxWidth: { sm: 360, md: 420 },
-                  alignItems: 'center',
+                  width: '100%',
+                  px: { xs: 0, sm: 1.5, md: 2.5 },
                 }}
               >
                 {/* Row 1: Controls */}
-                <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} sx={{ alignItems: 'center' }}>
+                <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                   {/* Shuffle */}
                   <Tooltip title={isShuffle ? 'Shuffle On' : 'Shuffle Off'} arrow>
                     <IconButton
                       size="small"
                       onClick={() => setIsShuffle(prev => !prev)}
                       sx={{
-                        color: isShuffle ? 'primary.main' : 'text.secondary',
-                        opacity: isShuffle ? 1 : 0.65,
+                        color: isShuffle ? 'primary.main' : 'text.primary',
+                        opacity: 1,
                       }}
                     >
                       <ShuffleRoundedIcon fontSize="small" />
@@ -371,12 +376,13 @@ export default function AudioPlayerBar({
                     <IconButton
                       size="small"
                       onClick={() => {
-                        if (currentTime > 3) {
-                          setCurrentTime(0)
-                        } else if (onSkipPrev) {
+                        const activeTime = audioRef.current ? audioRef.current.currentTime : currentTime
+                        if (audioRef.current) {
+                          audioRef.current.currentTime = 0
+                        }
+                        setCurrentTime(0)
+                        if (activeTime <= 3 && onSkipPrev) {
                           onSkipPrev()
-                        } else {
-                          setCurrentTime(0)
                         }
                       }}
                       sx={{ color: 'text.primary' }}
@@ -409,7 +415,15 @@ export default function AudioPlayerBar({
                   <Tooltip title="Next" arrow>
                     <IconButton
                       size="small"
-                      onClick={onSkipNext}
+                      onClick={() => {
+                        if (audioRef.current) {
+                          audioRef.current.currentTime = 0
+                        }
+                        setCurrentTime(0)
+                        if (onSkipNext) {
+                          onSkipNext()
+                        }
+                      }}
                       sx={{ color: 'text.primary' }}
                     >
                       <SkipNextRoundedIcon fontSize="small" />
@@ -431,8 +445,8 @@ export default function AudioPlayerBar({
                       size="small"
                       onClick={handleCycleRepeat}
                       sx={{
-                        color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
-                        opacity: repeatMode !== 'off' ? 1 : 0.65,
+                        color: repeatMode !== 'off' ? 'primary.main' : 'text.primary',
+                        opacity: 1,
                       }}
                     >
                       {repeatMode === 'one' ? (
@@ -449,7 +463,7 @@ export default function AudioPlayerBar({
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 32, textAlign: 'right' }}
+                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 36, textAlign: 'right', px: 0.75 }}
                   >
                     {formatTime(currentTime)}
                   </Typography>
@@ -488,7 +502,7 @@ export default function AudioPlayerBar({
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 32 }}
+                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 36, px: 0.75 }}
                   >
                     {formatTime(duration)}
                   </Typography>
@@ -502,91 +516,34 @@ export default function AudioPlayerBar({
                 spacing={0.5}
                 sx={{
                   alignItems: 'center',
-                  width: { xs: '100%', sm: 220, md: 260 },
+                  width: { xs: '100%', sm: 'auto' },
                   justifyContent: 'flex-end',
+                  flexShrink: 0,
                 }}
               >
                 {/* Col 1: View Queue */}
-                <Tooltip title="View Queue" arrow>
+                <Tooltip title={manualQueue.length > 0 ? `Queue (${manualQueue.length} manual)` : 'View Queue (Autoplay active)'} arrow>
                   <IconButton
                     size="small"
-                    onClick={(e) => setQueueAnchorEl(e.currentTarget)}
-                    sx={{ color: queueAnchorEl ? 'primary.main' : 'text.secondary' }}
+                    onClick={() => setQueueOpen(true)}
+                    sx={{ color: queueOpen ? 'primary.main' : 'text.secondary' }}
                   >
-                    <Badge badgeContent={queueCount} color="primary">
+                    <Badge badgeContent={manualQueue.length > 0 ? manualQueue.length : null} color="primary">
                       <QueueMusicRoundedIcon fontSize="small" />
                     </Badge>
                   </IconButton>
                 </Tooltip>
 
-                {/* Queue Popover */}
-                <Popover
-                  open={Boolean(queueAnchorEl)}
-                  anchorEl={queueAnchorEl}
-                  onClose={() => setQueueAnchorEl(null)}
-                  anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                  transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                  slotProps={{
-                    paper: {
-                      sx: {
-                        width: 280,
-                        maxHeight: 320,
-                        p: 1.5,
-                        borderRadius: 3,
-                        bgcolor: 'background.paper',
-                        boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
-                      },
-                    },
-                  }}
-                >
-                  <Typography variant="subtitle2" fontWeight={700} sx={{ px: 1, pb: 1 }}>
-                    Up Next ({audioQueue.length})
-                  </Typography>
-                  {audioQueue.length === 0 ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ px: 1, display: 'block' }}>
-                      Queue is empty. Click "+ Queue" on any track to add it here.
-                    </Typography>
-                  ) : (
-                    <List size="small" disablePadding sx={{ maxHeight: 240, overflowY: 'auto' }}>
-                      {audioQueue.map((item, idx) => (
-                        <ListItem
-                          key={idx}
-                          sx={{
-                            borderRadius: 1.5,
-                            mb: 0.5,
-                            py: 0.5,
-                            px: 1,
-                            '&:hover': { bgcolor: 'action.hover' },
-                          }}
-                          secondaryAction={
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                if (onRemoveFromQueue) onRemoveFromQueue(idx)
-                              }}
-                            >
-                              <DeleteOutlineRoundedIcon fontSize="small" />
-                            </IconButton>
-                          }
-                        >
-                          <ListItemText
-                            primary={item.track?.name || `Track ${idx + 1}`}
-                            secondary={item.project?.name || item.track?.artist || 'Artist'}
-                            slotProps={{
-                              primary: { variant: 'body2', fontWeight: 600, noWrap: true },
-                              secondary: { variant: 'caption', noWrap: true },
-                            }}
-                            onClick={() => {
-                              if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx)
-                              setQueueAnchorEl(null)
-                            }}
-                            sx={{ cursor: 'pointer' }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </Popover>
+                <PlaybackQueueDialog
+                  open={queueOpen}
+                  onClose={() => setQueueOpen(false)}
+                  manualQueue={manualQueue}
+                  autoplayTracks={autoplayTracks}
+                  onQueueDragDrop={onQueueDragDrop}
+                  onRemoveFromManualQueue={onRemoveFromManualQueue}
+                  onRemoveFromAutoplay={onRemoveFromAutoplay}
+                  onPlayQueuedTrack={onPlayQueuedTrack}
+                />
 
                 {/* Col 2: Dynamic Volume Icon */}
                 <Tooltip title={isMuted ? 'Unmute' : 'Mute'} arrow>
@@ -656,6 +613,10 @@ export default function AudioPlayerBar({
                 } else if (repeatMode === 'all' || queueCount > 0) {
                   if (onSkipNext) onSkipNext()
                 } else {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = 0
+                  }
+                  setCurrentTime(0)
                   if (onTogglePlay) onTogglePlay()
                 }
               }}

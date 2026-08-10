@@ -27,6 +27,7 @@ export default function HeaderLogo({ onClick }) {
         component="img"
         src="/api/logo"
         alt="Artist Logo"
+        draggable={false}
         onClick={onClick}
         sx={{
           maxHeight: { xs: 90, sm: 120, md: 150 },

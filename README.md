@@ -27,13 +27,11 @@ All user-managed content belongs strictly in the `artist-discography/data/` dire
 artist-discography/data/
 ├── artist-data.json                  # Main discography JSON configuration
 ├── logo.png (or .jpg, .webp, .svg)   # Artist logo image
-├── audio/                            # Track audio preview files
-│   ├── <project-slug>/
-│   │   └── <track-slug>.mp3          # e.g. audio/starlight-odyssey/midnight-genesis.mp3
-│   └── <track-slug>.mp3              # Flat option: e.g. audio/orbit.mp3
-└── covers/                           # Album & project cover artwork
-    ├── <project-slug>.jpg            # e.g. covers/starlight-odyssey.jpg
-    └── <project-slug>.png
+└── projects/                         # Project folders organized by project slug
+    ├── <project-slug>/
+    │   ├── art.png (or .jpg, .webp)  # Cover artwork for the project
+    │   ├── <track-slug>.wav          # Track audio files (e.g. hydrolock.wav)
+    │   └── <track-slug>.mp3
 ```
 
 ---
@@ -97,21 +95,21 @@ The `data/artist-data.json` file is the central source of truth for all artist i
 - **`links.socials`**: Social media URLs (`instagram`, `x`, `discord`, `facebook`, `tiktok`, `snapchat`).
 
 ##### 2. `projects` Array
-- **`name`**: Title of the project/album (e.g. `"Starlight Odyssey"`).
+- **`name`**: Title of the project/album (e.g. `"Monomyth"`).
 - **`type`**: Type classification (e.g. `"LP"`, `"EP"`, `"Single"`, `"Remix"`, `"Feature"`, `"Bootleg"`, `"Flip"`, `"Edit"`).
 - **`artist`**: Project artist credit (defaults to main artist if blank).
 - **`date`**: Release date in `YYYY-MM-DD` format.
 - **`cover`** *(Optional)*:
-  - Leave blank (`""`) to auto-detect `data/covers/<project-slug>.<jpg|png|webp|svg>` (e.g. `data/covers/starlight-odyssey.jpg`).
-  - Specify a relative filename inside `data/` (e.g. `"my-cover.jpg"`).
+  - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/art.<jpg|png|webp|svg>`.
+  - Specify a relative filename inside the project folder (e.g. `"cover.jpg"`).
   - Or specify an external image URL (e.g. `"https://images.example.com/cover.jpg"`).
 
 ##### 3. `tracks` Array (inside each project)
-- **`name`**: Title of the track (e.g. `"Midnight Genesis"`).
+- **`name`**: Title of the track (e.g. `"Hydrolock"`).
 - **`artist`**: Track-level artist credit (e.g. `"Lunar Echoes feat. Neon Horizon"`).
 - **`audio`** *(Optional)*:
-  - Leave blank (`""`) to auto-detect `data/audio/<project-slug>/<track-slug>.<mp3|m4a|wav|ogg>` (e.g. `data/audio/starlight-odyssey/midnight-genesis.mp3`).
-  - Specify a relative filename inside `data/audio/` (e.g. `"track1.mp3"`).
+  - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/<track-slug>.<wav|mp3|m4a|ogg>`.
+  - Specify a relative filename inside the project folder (e.g. `"track1.wav"`).
   - Or specify an external streaming URL (e.g. `"https://cdn.example.com/song.mp3"`).
 - **`links`**: Direct streaming links for this specific track.
 
@@ -119,11 +117,11 @@ The `data/artist-data.json` file is the central source of truth for all artist i
 
 ### Audio Files & Album Art Rules
 
-1. **Audio File Placement**: Place `.mp3`, `.m4a`, `.wav`, or `.ogg` files in `data/audio/<project-slug>/<track-slug>.mp3`.
+1. **Audio File Placement**: Place `.wav`, `.mp3`, `.m4a`, or `.ogg` files in `data/projects/<project-slug>/<track-slug>.<ext>`.
    - **Play & Queue Buttons**: When an audio file exists, Play and "+ Queue" buttons automatically appear in the track row.
    - **Missing Audio**: If no audio file exists, Play and "+ Queue" buttons are hidden automatically to prevent unplayable audio errors.
 
-2. **Album Art Placement**: Place `.jpg`, `.png`, `.webp`, or `.svg` images in `data/covers/<project-slug>.jpg`.
+2. **Album Art Placement**: Place `.png`, `.jpg`, `.webp`, or `.svg` images in `data/projects/<project-slug>/art.<ext>`.
    - **Missing Covers**: If no cover image exists, a styled vinyl placeholder icon is automatically displayed.
 
 ---

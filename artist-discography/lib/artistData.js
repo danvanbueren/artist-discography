@@ -294,7 +294,7 @@ export class ArtistDataManager {
 
         const projectSlug = slugify(updatedProj.name) || `project-${projIndex + 1}`
 
-        // Resolve Project Cover Artwork in data/covers/
+        // Resolve Project Cover Artwork in data/projects/<projectSlug>/art.<ext>
         let resolvedCover = null
         let hasCover = false
         if (typeof updatedProj.cover === 'string' && updatedProj.cover.trim() !== '') {
@@ -303,7 +303,11 @@ export class ArtistDataManager {
             resolvedCover = trimCover
             hasCover = true
           } else {
-            const matchPath = resolveLocalPath(dataDir, path.join('covers', trimCover)) || resolveLocalPath(dataDir, trimCover)
+            const matchPath =
+              resolveLocalPath(dataDir, path.join('projects', projectSlug, trimCover)) ||
+              resolveLocalPath(dataDir, path.join('projects', trimCover)) ||
+              resolveLocalPath(dataDir, path.join('covers', trimCover)) ||
+              resolveLocalPath(dataDir, trimCover)
             if (matchPath) {
               const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
               resolvedCover = `/api/media/${relPath}`
@@ -313,14 +317,29 @@ export class ArtistDataManager {
         }
 
         if (!hasCover && projectSlug) {
+          // Try data/projects/<projectSlug>/art.<ext>
           for (const ext of SUPPORTED_IMAGE_EXTS) {
-            const candidateRel = path.join('covers', `${projectSlug}${ext}`)
+            const candidateRel = path.join('projects', projectSlug, `art${ext}`)
             const matchPath = resolveLocalPath(dataDir, candidateRel)
             if (matchPath) {
               const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
               resolvedCover = `/api/media/${relPath}`
               hasCover = true
               break
+            }
+          }
+
+          // Legacy fallback: data/covers/<projectSlug>.<ext>
+          if (!hasCover) {
+            for (const ext of SUPPORTED_IMAGE_EXTS) {
+              const candidateRel = path.join('covers', `${projectSlug}${ext}`)
+              const matchPath = resolveLocalPath(dataDir, candidateRel)
+              if (matchPath) {
+                const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+                resolvedCover = `/api/media/${relPath}`
+                hasCover = true
+                break
+              }
             }
           }
         }
@@ -366,7 +385,7 @@ export class ArtistDataManager {
 
             const trackSlug = slugify(updatedTrack.name) || `track-${trackIndex + 1}`
 
-            // Resolve Track Audio in data/audio/
+            // Resolve Track Audio in data/projects/<projectSlug>/<trackSlug>.<ext>
             let resolvedAudioUrl = null
             let hasAudio = false
 
@@ -376,7 +395,11 @@ export class ArtistDataManager {
                 resolvedAudioUrl = trimAudio
                 hasAudio = true
               } else {
-                const matchPath = resolveLocalPath(dataDir, path.join('audio', trimAudio)) || resolveLocalPath(dataDir, trimAudio)
+                const matchPath =
+                  resolveLocalPath(dataDir, path.join('projects', projectSlug, trimAudio)) ||
+                  resolveLocalPath(dataDir, path.join('projects', trimAudio)) ||
+                  resolveLocalPath(dataDir, path.join('audio', trimAudio)) ||
+                  resolveLocalPath(dataDir, trimAudio)
                 if (matchPath) {
                   const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
                   resolvedAudioUrl = `/api/audio/${relPath}`
@@ -386,9 +409,9 @@ export class ArtistDataManager {
             }
 
             if (!hasAudio && trackSlug) {
-              // Try data/audio/<projectSlug>/<trackSlug>.<ext>
+              // Try data/projects/<projectSlug>/<trackSlug>.<ext>
               for (const ext of SUPPORTED_AUDIO_EXTS) {
-                const candidateRel = path.join('audio', projectSlug, `${trackSlug}${ext}`)
+                const candidateRel = path.join('projects', projectSlug, `${trackSlug}${ext}`)
                 const matchPath = resolveLocalPath(dataDir, candidateRel)
                 if (matchPath) {
                   const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
@@ -398,7 +421,20 @@ export class ArtistDataManager {
                 }
               }
 
-              // Try flat data/audio/<trackSlug>.<ext>
+              // Legacy fallbacks: data/audio/<projectSlug>/<trackSlug>.<ext> & data/audio/<trackSlug>.<ext>
+              if (!hasAudio) {
+                for (const ext of SUPPORTED_AUDIO_EXTS) {
+                  const candidateRel = path.join('audio', projectSlug, `${trackSlug}${ext}`)
+                  const matchPath = resolveLocalPath(dataDir, candidateRel)
+                  if (matchPath) {
+                    const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+                    resolvedAudioUrl = `/api/audio/${relPath}`
+                    hasAudio = true
+                    break
+                  }
+                }
+              }
+
               if (!hasAudio) {
                 for (const ext of SUPPORTED_AUDIO_EXTS) {
                   const candidateRel = path.join('audio', `${trackSlug}${ext}`)
@@ -424,7 +460,11 @@ export class ArtistDataManager {
               if (/^https?:\/\//i.test(trimTCover)) {
                 resolvedTrackCover = trimTCover
               } else {
-                const matchPath = resolveLocalPath(dataDir, path.join('covers', trimTCover)) || resolveLocalPath(dataDir, trimTCover)
+                const matchPath =
+                  resolveLocalPath(dataDir, path.join('projects', projectSlug, trimTCover)) ||
+                  resolveLocalPath(dataDir, path.join('projects', trimTCover)) ||
+                  resolveLocalPath(dataDir, path.join('covers', trimTCover)) ||
+                  resolveLocalPath(dataDir, trimTCover)
                 if (matchPath) {
                   const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
                   resolvedTrackCover = `/api/media/${relPath}`
@@ -441,10 +481,10 @@ export class ArtistDataManager {
     }
 
     if (totalTracksCount > 0 && tracksWithAudioCount < totalTracksCount) {
-      issues.push(`Audio Coverage: ${tracksWithAudioCount} of ${totalTracksCount} tracks have audio files in data/audio/.`)
+      issues.push(`Audio Coverage: ${tracksWithAudioCount} of ${totalTracksCount} tracks have audio files in data/projects/.`)
     }
     if (totalProjectsCount > 0 && projectsWithCoverCount < totalProjectsCount) {
-      issues.push(`Album Art Coverage: ${projectsWithCoverCount} of ${totalProjectsCount} projects have cover art in data/covers/.`)
+      issues.push(`Album Art Coverage: ${projectsWithCoverCount} of ${totalProjectsCount} projects have cover art in data/projects/.`)
     }
 
     return { data, repaired }
