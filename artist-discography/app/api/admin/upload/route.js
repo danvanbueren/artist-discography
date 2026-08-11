@@ -115,7 +115,7 @@ export async function POST(request) {
       const trackArtist = String(track.artist || artist || '').trim()
       const trackSlug = slugify(trackName) || `track-${i + 1}`
 
-      let audioProp = String(track.audioUrl || '').trim()
+      let writtenAudioFilename = null
       const audioFile = formData.get(`track_${i}_audioFile`)
 
       if (audioFile && typeof audioFile === 'object' && typeof audioFile.arrayBuffer === 'function' && audioFile.size > 0) {
@@ -124,7 +124,7 @@ export async function POST(request) {
         const audioPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
         const buffer = Buffer.from(await audioFile.arrayBuffer())
         fs.writeFileSync(audioPath, buffer)
-        audioProp = `${trackSlug}${ext}`
+        writtenAudioFilename = `${trackSlug}${ext}`
       }
 
       const defaultLinks = {
@@ -145,8 +145,8 @@ export async function POST(request) {
       formattedTracks.push({
         name: trackName,
         artist: trackArtist,
-        audio: audioProp,
         links: trackLinks,
+        _writtenAudioFilename: writtenAudioFilename,
       })
     }
 
@@ -167,13 +167,16 @@ export async function POST(request) {
       fullJsonData.projects = []
     }
 
+    // Strip internal helper field before saving to JSON
+    const tracksToSave = formattedTracks.map(({ _writtenAudioFilename, ...rest }) => rest)
+
     const newProjectObj = {
       name,
       type,
       artist,
       date,
       ...(coverProp ? { cover: coverProp } : {}),
-      tracks: formattedTracks,
+      tracks: tracksToSave,
     }
 
     // Insert new project at index 0 (latest release first)
@@ -194,15 +197,13 @@ export async function POST(request) {
           : `/api/media/projects/${projectSlug}/${coverProp}?t=${timestamp}`)
       : ''
 
-    const enrichedTracks = formattedTracks.map((t) => {
-      const audioVal = String(t.audio || '').trim()
+    const enrichedTracks = tracksToSave.map((t, i) => {
+      const writtenFilename = formattedTracks[i]?._writtenAudioFilename
       let audioUrl = ''
       let hasAudio = false
-      if (audioVal) {
+      if (writtenFilename) {
         hasAudio = true
-        audioUrl = (audioVal.startsWith('http://') || audioVal.startsWith('https://') || audioVal.startsWith('/'))
-          ? audioVal
-          : `/api/audio/projects/${projectSlug}/${audioVal}?t=${timestamp}`
+        audioUrl = `/api/audio/projects/${projectSlug}/${writtenFilename}?t=${timestamp}`
       }
       return {
         ...t,

@@ -186,7 +186,8 @@ export async function POST(request) {
       const trackArtist = String(track.artist || artist || '').trim()
       const trackSlug = slugify(trackName) || `track-${i + 1}`
 
-      let audioProp = String(track.audioUrl || track.audio || '').trim()
+      // Track the filename actually written to disk for this track (used for response + orphan cleanup)
+      let writtenAudioFilename = null
       const audioFile = formData.get(`track_${i}_audioFile`)
 
       if (audioFile && typeof audioFile === 'object' && typeof audioFile.arrayBuffer === 'function' && audioFile.size > 0) {
@@ -195,23 +196,14 @@ export async function POST(request) {
         const audioPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
         const buffer = Buffer.from(await audioFile.arrayBuffer())
         fs.writeFileSync(audioPath, buffer)
-        audioProp = `${trackSlug}${ext}`
-      } else if (audioProp && !audioProp.startsWith('http://') && !audioProp.startsWith('https://') && !audioProp.startsWith('/')) {
-        const origExt = path.extname(audioProp).toLowerCase()
-        const ext = origExt && ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm'].includes(origExt) ? origExt : '.mp3'
-        const desiredFilename = `${trackSlug}${ext}`
-        const oldAudioPath = path.join(targetProjectDir, audioProp)
-        const newAudioPath = path.join(targetProjectDir, desiredFilename)
-
-        if (audioProp !== desiredFilename && fs.existsSync(oldAudioPath)) {
-          try {
-            if (fs.existsSync(newAudioPath)) {
-              fs.unlinkSync(newAudioPath)
-            }
-            fs.renameSync(oldAudioPath, newAudioPath)
-            audioProp = desiredFilename
-          } catch (renameErr) {
-            console.error(`Failed to rename track audio file from ${audioProp} to ${desiredFilename}:`, renameErr)
+        writtenAudioFilename = `${trackSlug}${ext}`
+      } else {
+        // No new file uploaded — check if an existing audio file matches this track slug
+        const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
+        for (const ext of audioExtensions) {
+          if (fs.existsSync(path.join(targetProjectDir, `${trackSlug}${ext}`))) {
+            writtenAudioFilename = `${trackSlug}${ext}`
+            break
           }
         }
       }
@@ -234,17 +226,15 @@ export async function POST(request) {
       formattedTracks.push({
         name: trackName,
         artist: trackArtist,
-        audio: audioProp,
         links: trackLinks,
+        _writtenAudioFilename: writtenAudioFilename,
       })
     }
 
-    // Clean up unreferenced audio files in project directory
+    // Clean up audio files in project directory that are no longer referenced by any track slug
     try {
-      const referencedAudioFiles = new Set(
-        formattedTracks
-          .map((t) => t.audio)
-          .filter((a) => a && !a.startsWith('http://') && !a.startsWith('https://') && !a.startsWith('/'))
+      const expectedAudioFilenames = new Set(
+        formattedTracks.map((t) => t._writtenAudioFilename).filter(Boolean)
       )
 
       if (fs.existsSync(targetProjectDir)) {
@@ -252,7 +242,7 @@ export async function POST(request) {
         const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
         existingFiles.forEach((file) => {
           const ext = path.extname(file).toLowerCase()
-          if (audioExtensions.includes(ext) && !referencedAudioFiles.has(file)) {
+          if (audioExtensions.includes(ext) && !expectedAudioFilenames.has(file)) {
             try {
               fs.unlinkSync(path.join(targetProjectDir, file))
             } catch (e) {
@@ -265,13 +255,16 @@ export async function POST(request) {
       console.error('Error cleaning unreferenced audio files:', err)
     }
 
+    // Strip internal helper field before saving to JSON
+    const tracksToSave = formattedTracks.map(({ _writtenAudioFilename, ...rest }) => rest)
+
     const updatedProjectObj = {
       name,
       type,
       artist,
       date,
       ...(coverProp ? { cover: coverProp } : {}),
-      tracks: formattedTracks,
+      tracks: tracksToSave,
     }
 
     fullJsonData.projects[index] = updatedProjectObj
@@ -291,15 +284,13 @@ export async function POST(request) {
           : `/api/media/projects/${newSlug}/${coverProp}?t=${timestamp}`)
       : ''
 
-    const enrichedTracks = formattedTracks.map((t) => {
-      const audioVal = String(t.audio || '').trim()
+    const enrichedTracks = tracksToSave.map((t, i) => {
+      const writtenFilename = formattedTracks[i]?._writtenAudioFilename
       let audioUrl = ''
       let hasAudio = false
-      if (audioVal) {
+      if (writtenFilename) {
         hasAudio = true
-        audioUrl = (audioVal.startsWith('http://') || audioVal.startsWith('https://') || audioVal.startsWith('/'))
-          ? audioVal
-          : `/api/audio/projects/${newSlug}/${audioVal}?t=${timestamp}`
+        audioUrl = `/api/audio/projects/${newSlug}/${writtenFilename}?t=${timestamp}`
       }
       return {
         ...t,

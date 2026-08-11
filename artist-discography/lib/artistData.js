@@ -42,8 +42,6 @@ export const DEFAULT_DATA_SCAFFOLD = {
       tracks: [
         {
           name: '',
-          audio: '',
-          cover: '',
           links: {
             amazon: '',
             apple: '',
@@ -419,30 +417,11 @@ export class ArtistDataManager {
 
             const trackSlug = slugify(updatedTrack.name) || `track-${trackIndex + 1}`
 
-            // Resolve Track Audio in data/projects/<projectSlug>/<trackSlug>.<ext>
+            // Resolve Track Audio by scanning data/projects/<projectSlug>/<trackSlug>.<ext>
             let resolvedAudioUrl = null
             let hasAudio = false
 
-            if (typeof updatedTrack.audio === 'string' && updatedTrack.audio.trim() !== '') {
-              const trimAudio = updatedTrack.audio.trim()
-              if (/^https?:\/\//i.test(trimAudio)) {
-                resolvedAudioUrl = trimAudio
-                hasAudio = true
-              } else {
-                const matchPath =
-                  resolveLocalPath(dataDir, path.join('projects', projectSlug, trimAudio)) ||
-                  resolveLocalPath(dataDir, path.join('projects', trimAudio)) ||
-                  resolveLocalPath(dataDir, path.join('audio', trimAudio)) ||
-                  resolveLocalPath(dataDir, trimAudio)
-                if (matchPath) {
-                  const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
-                  resolvedAudioUrl = `/api/audio/${relPath}`
-                  hasAudio = true
-                }
-              }
-            }
-
-            if (!hasAudio && trackSlug) {
+            if (trackSlug) {
               // Try data/projects/<projectSlug>/<trackSlug>.<ext>
               for (const ext of SUPPORTED_AUDIO_EXTS) {
                 const candidateRel = path.join('projects', projectSlug, `${trackSlug}${ext}`)

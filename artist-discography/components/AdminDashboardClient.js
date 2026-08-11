@@ -518,7 +518,6 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         return {
           name: t.name.trim(),
           artist: t.artist.trim() || currentArtist.trim() || defaultArtistName,
-          audio: t.audio || '',
           links: t.links,
         }
       })
