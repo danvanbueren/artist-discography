@@ -14,7 +14,7 @@ export async function generateMetadata() {
   const name = artistName || 'Polybit'
 
   return {
-    title: `${name} | Dev Dashboard`,
+    title: 'Dev Dashboard',
     description: `Developer preview dashboard for ${name}.`,
   }
 }
