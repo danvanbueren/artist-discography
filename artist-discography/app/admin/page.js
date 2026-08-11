@@ -6,7 +6,7 @@ export async function generateMetadata() {
   try {
     const { data } = loadArtistData()
     artistName = data?.artist?.name?.trim() || ''
-  } catch (err) {}
+  } catch (err) { }
 
   const name = artistName || 'Artist'
 
@@ -18,14 +18,14 @@ export async function generateMetadata() {
 
 export default async function AdminPage() {
   let adminAccess = true
-  let artistName = 'Polybit'
+  let artistName = 'Artist'
   let data = {}
 
   try {
     const dataResult = loadArtistData()
     data = dataResult?.data ?? {}
     adminAccess = data?.adminAccess !== false
-    artistName = data?.artist?.name?.trim() || 'Polybit'
+    artistName = data?.artist?.name?.trim() || 'Artist'
   } catch (err) {
     console.error('Error loading artist data for admin page:', err)
   }

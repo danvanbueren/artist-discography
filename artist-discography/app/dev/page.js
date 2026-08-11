@@ -9,9 +9,9 @@ export async function generateMetadata() {
   try {
     const { data } = loadArtistData()
     artistName = data?.artist?.name?.trim() || ''
-  } catch (err) {}
+  } catch (err) { }
 
-  const name = artistName || 'Polybit'
+  const name = artistName || 'Artist'
 
   return {
     title: 'Dev Dashboard',
