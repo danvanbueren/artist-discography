@@ -8,6 +8,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
 import SubduedText from './SubduedText'
 import { useDynamicThemeGradients } from '../lib/gradientStyles'
+import { formatProjectDate } from '../lib/dateUtils'
 
 const PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -36,7 +37,7 @@ export default function ProjectHeader({
   const name = project?.name ?? ''
   const pArtist = project?.artist || artistName || ''
   const type = project?.type ?? ''
-  const date = project?.date ?? ''
+  const date = formatProjectDate(project?.date ?? '')
   const cover = project?.cover ?? project?.image ?? ''
   const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(cover, isDarkMode)
   const links = project?.links ?? {}

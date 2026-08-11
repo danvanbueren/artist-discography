@@ -100,7 +100,7 @@ The `data/artist-data.json` file is the central source of truth for all artist i
 - **`name`**: Title of the project/album (e.g. `"Monomyth"`).
 - **`type`**: Type classification (e.g. `"LP"`, `"EP"`, `"Single"`, `"Remix"`, `"Feature"`, `"Bootleg"`, `"Flip"`, `"Edit"`).
 - **`artist`**: Project artist credit (defaults to main artist if blank).
-- **`date`**: Release date in `YYYY-MM-DD` format.
+- **`date`**: Release date in `YYYY-MM-DD` format (formatted and displayed to users as "Jan 1, 2026").
 - **`cover`** *(Optional)*:
   - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/art.<jpg|png|webp|svg>`.
   - Specify a relative filename inside the project folder (e.g. `"cover.jpg"`).

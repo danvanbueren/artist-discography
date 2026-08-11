@@ -45,6 +45,7 @@ import ImageIcon from '@mui/icons-material/Image'
 import LinkIcon from '@mui/icons-material/Link'
 import EqualizerIcon from '@mui/icons-material/Equalizer'
 import SecurityIcon from '@mui/icons-material/Security'
+import { formatProjectDate } from '../lib/dateUtils'
 
 export default function DevArtistDiscographyView({ data, health }) {
   const [mounted, setMounted] = useState(false)
@@ -384,7 +385,7 @@ export default function DevArtistDiscographyView({ data, health }) {
                 projects.map((proj, idx) => {
                   const projName = proj.name || 'Untitled Project'
                   const projType = proj.type || 'Project'
-                  const projDate = proj.date || 'Date Unset'
+                  const projDate = proj.date ? formatProjectDate(proj.date) : 'Date Unset'
                   const trks = proj.tracks ?? []
                   const hasCover = Boolean(proj.cover || proj.hasCover)
 
