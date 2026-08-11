@@ -1082,6 +1082,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                     color="secondary"
                     size="large"
                     fullWidth
+                    disabled={dirtyFields.size > 0}
                     startIcon={<AddIcon />}
                     onClick={() => {
                       setIsCreatingNew(true)
@@ -1092,9 +1093,34 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                     Add New Project
                   </Button>
 
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5, px: 0.5, color: 'text.secondary', flexShrink: 0 }}>
-                    Existing Releases ({projectsList.length})
-                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      mb: 1.5,
+                      px: 0.5,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                      Existing Releases ({projectsList.length})
+                    </Typography>
+                    {dirtyFields.size > 0 && !isCreatingNew && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'warning.main',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <SyncIcon sx={{ fontSize: 13 }} /> Saving…
+                      </Typography>
+                    )}
+                  </Box>
 
                   <Box
                     sx={{
@@ -1125,8 +1151,39 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         <ListItemButton
                           key={idx}
                           selected={isSelected}
+                          disabled={dirtyFields.size > 0 && !isSelected}
                           onClick={() => {
+                            const formattedTracks = (p.tracks ?? []).map((t, tIdx) => ({
+                              id: `edit-track-${tIdx}-${Date.now()}`,
+                              name: t.name || '',
+                              artist: t.artist || p.artist || defaultArtistName,
+                              audio: t.audio || t.audioUrl || '',
+                              hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
+                              audioFile: null,
+                              audioFileName: '',
+                              links: {
+                                spotify: '',
+                                apple: '',
+                                youtube: '',
+                                soundcloud: '',
+                                amazon: '',
+                                bandcamp: '',
+                                deezer: '',
+                                itunes: '',
+                                pandora: '',
+                                tidal: '',
+                                ...(t.links || {}),
+                              },
+                            }))
                             setIsCreatingNew(false)
+                            setEditName(p.name || '')
+                            setEditType(p.type || 'Single')
+                            setEditArtist(p.artist || defaultArtistName)
+                            setEditDate(p.date || new Date().toISOString().split('T')[0])
+                            setEditCoverFile(null)
+                            setEditCoverPreview(p.cover || null)
+                            setEditTracks(formattedTracks)
+                            editTracksRef.current = formattedTracks
                             setSelectedProjIndex(idx)
                           }}
                           sx={{
