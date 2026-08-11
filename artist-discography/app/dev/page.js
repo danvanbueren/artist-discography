@@ -4,6 +4,21 @@ import { Container, Paper, Typography, Alert, Button, Box } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import HomeIcon from '@mui/icons-material/Home'
 
+export async function generateMetadata() {
+  let artistName = ''
+  try {
+    const { data } = loadArtistData()
+    artistName = data?.artist?.name?.trim() || ''
+  } catch (err) {}
+
+  const name = artistName || 'Polybit'
+
+  return {
+    title: `${name} | Dev Dashboard`,
+    description: `Developer preview dashboard for ${name}.`,
+  }
+}
+
 export default function DevPage() {
   let dataResult = null
   try {

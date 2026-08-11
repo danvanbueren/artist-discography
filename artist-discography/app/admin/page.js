@@ -11,7 +11,7 @@ export async function generateMetadata() {
   const name = artistName || 'Artist'
 
   return {
-    title: `${name} | Admin Portal`,
+    title: `${name} | Admin Dashboard`,
     description: `Admin management portal for ${name} discography.`,
   }
 }
