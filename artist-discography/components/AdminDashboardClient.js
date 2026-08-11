@@ -643,7 +643,52 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
       if (res.ok && result.success) {
         setStatusMessage(result.message)
-        window.location.reload()
+
+        const nextList = projectsList.filter((_, i) => i !== selectedProjIndex)
+        setProjectsList(nextList)
+
+        if (nextList.length === 0) {
+          setIsCreatingNew(true)
+          setSelectedProjIndex(-1)
+        } else {
+          const nextIndex = Math.min(selectedProjIndex, nextList.length - 1)
+          const nextProj = nextList[nextIndex]
+          const formattedTracks = (nextProj.tracks ?? []).map((t, tIdx) => ({
+            id: `edit-track-${tIdx}-${Date.now()}`,
+            name: t.name || '',
+            artist: t.artist || nextProj.artist || defaultArtistName,
+            audio: t.audio || t.audioUrl || '',
+            hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
+            audioFile: null,
+            audioFileName: '',
+            links: {
+              spotify: '',
+              apple: '',
+              youtube: '',
+              soundcloud: '',
+              amazon: '',
+              bandcamp: '',
+              deezer: '',
+              itunes: '',
+              pandora: '',
+              tidal: '',
+              ...(t.links || {}),
+            },
+          }))
+          setEditName(nextProj.name || '')
+          setEditType(nextProj.type || 'Single')
+          setEditArtist(nextProj.artist || defaultArtistName)
+          setEditDate(nextProj.date || new Date().toISOString().split('T')[0])
+          setEditCoverFile(null)
+          setEditCoverPreview(nextProj.cover || null)
+          setEditTracks(formattedTracks)
+          editTracksRef.current = formattedTracks
+          setSelectedProjIndex(nextIndex)
+        }
+
+        try {
+          router.refresh()
+        } catch (e) {}
       } else {
         setErrorMessage(result.error || 'Failed to delete project.')
       }
