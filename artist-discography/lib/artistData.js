@@ -3,6 +3,9 @@ import path from 'path'
 import { slugify } from './slugs'
 
 export const DEFAULT_DATA_SCAFFOLD = {
+  adminAccess: true,
+  adminPassword: 'admin123',
+  devAccess: false,
   artist: {
     name: '',
     bio: '',
@@ -202,6 +205,24 @@ export class ArtistDataManager {
   static validateAndRepair(raw, issues = []) {
     let repaired = false
     const data = typeof raw === 'object' && raw !== null ? { ...raw } : {}
+
+    if (typeof data.adminAccess !== 'boolean') {
+      data.adminAccess = DEFAULT_DATA_SCAFFOLD.adminAccess
+      repaired = true
+      issues.push('Missing or invalid "adminAccess" boolean property.')
+    }
+
+    if (typeof data.adminPassword !== 'string') {
+      data.adminPassword = DEFAULT_DATA_SCAFFOLD.adminPassword
+      repaired = true
+      issues.push('Missing or invalid "adminPassword" string property.')
+    }
+
+    if (typeof data.devAccess !== 'boolean') {
+      data.devAccess = DEFAULT_DATA_SCAFFOLD.devAccess
+      repaired = true
+      issues.push('Missing or invalid "devAccess" boolean property.')
+    }
 
     if (typeof data.artist !== 'object' || data.artist === null) {
       data.artist = { ...DEFAULT_DATA_SCAFFOLD.artist }
@@ -502,6 +523,21 @@ export class ArtistDataManager {
 
     return { data, repaired }
   }
+
+  static saveData(data) {
+    try {
+      const filePath = this.getFilePath()
+      const dirPath = path.dirname(filePath)
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true })
+      }
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+      return { success: true }
+    } catch (err) {
+      console.error('Error saving artist data:', err)
+      return { success: false, error: err.message }
+    }
+  }
 }
 
 export function loadArtistData() {
@@ -518,3 +554,8 @@ export function loadArtistData() {
     }
   }
 }
+
+export function saveArtistData(data) {
+  return ArtistDataManager.saveData(data)
+}
+

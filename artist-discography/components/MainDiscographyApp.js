@@ -12,7 +12,10 @@ import {
   Typography,
   Snackbar,
   CircularProgress,
+  Button,
 } from '@mui/material'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
+import BugReportIcon from '@mui/icons-material/BugReport'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero from './ArtistHero'
 import CompactArtistHeader from './CompactArtistHeader'
@@ -784,6 +787,115 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
         }}
       >
+        {/* Annoying Security Warning Banner when Admin Access is Enabled */}
+        {Boolean(data?.adminAccess) && (
+          <Box
+            sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 3000,
+              width: '100%',
+              backgroundColor: '#d50000',
+              color: '#ffffff',
+              px: 2,
+              py: 1.2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              gap: 1.5,
+              fontWeight: 700,
+              fontSize: { xs: '0.85rem', sm: '0.95rem' },
+              boxShadow: '0 4px 20px rgba(213, 0, 0, 0.7)',
+              animation: 'pulseAdminAlert 1.5s infinite ease-in-out',
+              '@keyframes pulseAdminAlert': {
+                '0%': { backgroundColor: '#b71c1c' },
+                '50%': { backgroundColor: '#ff1744' },
+                '100%': { backgroundColor: '#b71c1c' },
+              },
+            }}
+          >
+            <LockOpenIcon sx={{ fontSize: 24 }} />
+            <Typography variant="body2" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: 0.5, textAlign: 'center' }}>
+              ⚠️ ATTENTION: ADMIN ACCESS IS OPEN ON THIS SITE (/admin) — REMEMBER TO SET adminAccess TO false IN artist-data.json!
+            </Typography>
+            <Button
+              component="a"
+              href="/admin"
+              size="small"
+              variant="contained"
+              sx={{
+                backgroundColor: '#ffffff',
+                color: '#b71c1c',
+                fontWeight: 800,
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 2,
+                py: 0.4,
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              Open Admin Portal
+            </Button>
+          </Box>
+        )}
+
+        {/* Warning Banner when Dev Access is Enabled */}
+        {data?.devAccess !== false && (
+          <Box
+            sx={{
+              position: 'sticky',
+              top: Boolean(data?.adminAccess) ? { xs: 80, sm: 48 } : 0,
+              zIndex: 2999,
+              width: '100%',
+              backgroundColor: '#e65100',
+              color: '#ffffff',
+              px: 2,
+              py: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              gap: 1.5,
+              fontWeight: 700,
+              fontSize: { xs: '0.85rem', sm: '0.95rem' },
+              boxShadow: '0 4px 16px rgba(230, 81, 0, 0.6)',
+              animation: 'pulseDevAlert 2s infinite ease-in-out',
+              '@keyframes pulseDevAlert': {
+                '0%': { backgroundColor: '#ef6c00' },
+                '50%': { backgroundColor: '#e65100' },
+                '100%': { backgroundColor: '#ef6c00' },
+              },
+            }}
+          >
+            <BugReportIcon sx={{ fontSize: 22 }} />
+            <Typography variant="body2" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: 0.5, textAlign: 'center' }}>
+              🛠️ DEV MODE IS ENABLED (/dev) — REMEMBER TO SET devAccess TO false IN artist-data.json BEFORE PRODUCTION!
+            </Typography>
+            <Button
+              component="a"
+              href="/dev"
+              size="small"
+              variant="contained"
+              sx={{
+                backgroundColor: '#ffffff',
+                color: '#e65100',
+                fontWeight: 800,
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 2,
+                py: 0.3,
+                '&:hover': {
+                  backgroundColor: '#f5f5f5',
+                },
+              }}
+            >
+              Go to Dev Tool
+            </Button>
+          </Box>
+        )}
         {/* Top Screen-Height Hero Section (Only on main discography view) */}
         {currentView !== 'SINGLE_PROJECT' && (
           <ArtistHero
@@ -944,8 +1056,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           sx={{ mb: playingTrack ? 10 : 2 }}
         />
 
-        {/* Dev Data Health Drawer Badge */}
-        <DevHealthDrawer health={health} />
+        {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
+        {data?.devAccess !== false && <DevHealthDrawer health={health} />}
       </Box>
     </ThemeProvider>
   )
