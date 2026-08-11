@@ -22,7 +22,7 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import SortRoundedIcon from '@mui/icons-material/SortRounded'
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
-import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded'
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
@@ -37,14 +37,17 @@ export const FILTER_OPTIONS = [
   'LP',
   'EP',
   'Single',
+  'Feature',
   'Remix',
-  'Compilation',
-  'DJ Mix',
-  'Mixtape',
-  'Live',
   'Bootleg',
   'Flip',
   'Edit',
+  'Compilation',
+  'Minimix',
+  'DJ Set',
+  'Mixtape',
+  'Live',
+  'Other',
 ]
 
 function useDragScroll() {
@@ -348,13 +351,13 @@ export default function FloatingNavBar({
                   }}
                   sx={{
                     p: 0.75,
-                    borderRadius: 2,
-                    border: '2px solid',
-                    borderColor: 'primary.main',
-                    color: 'primary.main',
+                    color: 'error.main',
+                    '&:hover': {
+                      bgcolor: 'rgba(244, 67, 54, 0.15)',
+                    },
                   }}
                 >
-                  <RestartAltRoundedIcon fontSize="small" />
+                  <DeleteOutlineRoundedIcon fontSize="small" />
                 </IconButton>
               )}
             </Stack>
@@ -394,13 +397,13 @@ export default function FloatingNavBar({
                   }}
                   sx={{
                     p: 0.75,
-                    borderRadius: 2,
-                    border: '2px solid',
-                    borderColor: 'primary.main',
-                    color: 'primary.main',
+                    color: 'error.main',
+                    '&:hover': {
+                      bgcolor: 'rgba(244, 67, 54, 0.15)',
+                    },
                   }}
                 >
-                  <RestartAltRoundedIcon fontSize="small" />
+                  <DeleteOutlineRoundedIcon fontSize="small" />
                 </IconButton>
               )}
             </Stack>
