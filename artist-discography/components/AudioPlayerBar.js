@@ -99,18 +99,45 @@ export default function AudioPlayerBar({
   useEffect(() => {
     if (!audioRef.current) return
     if (isPlaying && playingTrack?.audioUrl) {
-      const playPromise = audioRef.current.play()
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn('Audio playback interrupted:', err)
-          if (onTogglePlay) onTogglePlay()
-          if (onShowToast) onShowToast('Audio stream unavailable')
-        })
+      if (audioRef.current.paused) {
+        const playPromise = audioRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('Audio playback interrupted:', err)
+            if (onTogglePlay) onTogglePlay()
+            if (onShowToast) onShowToast('Audio stream unavailable')
+          })
+        }
       }
     } else {
-      audioRef.current.pause()
+      if (!audioRef.current.paused) {
+        audioRef.current.pause()
+      }
     }
   }, [isPlaying, playingTrack?.audioUrl, onTogglePlay, onShowToast])
+
+  // Keep ref for onTogglePlay to avoid re-subscribing keydown listener on render
+  const onTogglePlayRef = useRef(onTogglePlay)
+  onTogglePlayRef.current = onTogglePlay
+
+  // Direct synchronous toggle for zero-latency audio playback response
+  const handleDirectTogglePlay = () => {
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        const playPromise = audioRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('Audio playback interrupted:', err)
+          })
+        }
+      } else {
+        audioRef.current.pause()
+      }
+    }
+    if (onTogglePlayRef.current) {
+      onTogglePlayRef.current()
+    }
+  }
 
   // Sync volume with audio element
   useEffect(() => {
@@ -120,6 +147,45 @@ export default function AudioPlayerBar({
       audioRef.current.muted = isMuted
     }
   }, [volume, isMuted])
+
+  // Global spacebar listener to toggle play/pause when audio player is active
+  useEffect(() => {
+    if (!playingTrack) return
+
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
+        const target = e.target
+        let isTextEditField = false
+
+        if (target) {
+          if (target.isContentEditable) {
+            isTextEditField = true
+          } else {
+            const tagName = target.tagName
+            if (tagName === 'TEXTAREA') {
+              isTextEditField = true
+            } else if (tagName === 'INPUT') {
+              const type = (target.type || 'text').toLowerCase()
+              const nonTextTypes = ['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file', 'image']
+              if (!nonTextTypes.includes(type)) {
+                isTextEditField = true
+              }
+            }
+          }
+        }
+
+        if (!isTextEditField) {
+          e.preventDefault()
+          handleDirectTogglePlay()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
+  }, [Boolean(playingTrack)])
 
   if (!playingTrack) return null
 
@@ -395,7 +461,7 @@ export default function AudioPlayerBar({
                   {/* Play/Pause */}
                   <IconButton
                     color="primary"
-                    onClick={onTogglePlay}
+                    onClick={handleDirectTogglePlay}
                     sx={{
                       bgcolor: 'primary.main',
                       color: 'primary.contrastText',

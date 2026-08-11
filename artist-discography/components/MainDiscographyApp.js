@@ -13,9 +13,13 @@ import {
   Snackbar,
   CircularProgress,
   Button,
+  Paper,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import BugReportIcon from '@mui/icons-material/BugReport'
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero from './ArtistHero'
 import CompactArtistHeader from './CompactArtistHeader'
@@ -787,114 +791,131 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
         }}
       >
-        {/* Annoying Security Warning Banner when Admin Access is Enabled */}
-        {Boolean(data?.adminAccess) && (
-          <Box
+        {/* Floating Dev & Admin Alert Cards (Top Left) */}
+        {(Boolean(data?.adminAccess) || data?.devAccess !== false) && (
+          <Stack
+            spacing={1}
             sx={{
-              position: 'sticky',
-              top: 0,
+              position: 'fixed',
+              top: { xs: 12, sm: 16 },
+              left: { xs: 12, sm: 16 },
               zIndex: 3000,
-              width: '100%',
-              backgroundColor: '#d50000',
-              color: '#ffffff',
-              px: 2,
-              py: 1.2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              gap: 1.5,
-              fontWeight: 700,
-              fontSize: { xs: '0.85rem', sm: '0.95rem' },
-              boxShadow: '0 4px 20px rgba(213, 0, 0, 0.7)',
-              animation: 'pulseAdminAlert 1.5s infinite ease-in-out',
-              '@keyframes pulseAdminAlert': {
-                '0%': { backgroundColor: '#b71c1c' },
-                '50%': { backgroundColor: '#ff1744' },
-                '100%': { backgroundColor: '#b71c1c' },
-              },
+              pointerEvents: 'none',
+              maxWidth: { xs: 'calc(100vw - 24px)', sm: 380 },
             }}
           >
-            <LockOpenIcon sx={{ fontSize: 24 }} />
-            <Typography variant="body2" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: 0.5, textAlign: 'center' }}>
-              ⚠️ ATTENTION: ADMIN ACCESS IS OPEN ON THIS SITE (/admin) — REMEMBER TO SET adminAccess TO false IN artist-data.json!
-            </Typography>
-            <Button
-              component="a"
-              href="/admin"
-              size="small"
-              variant="contained"
-              sx={{
-                backgroundColor: '#ffffff',
-                color: '#b71c1c',
-                fontWeight: 800,
-                textTransform: 'none',
-                borderRadius: 2,
-                px: 2,
-                py: 0.4,
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
-                },
-              }}
-            >
-              Open Admin Portal
-            </Button>
-          </Box>
-        )}
+            {Boolean(data?.adminAccess) && (
+              <Paper
+                elevation={6}
+                sx={{
+                  pointerEvents: 'auto',
+                  borderRadius: 3,
+                  px: 2,
+                  py: 1.25,
+                  bgcolor: '#b71c1c',
+                  color: '#ffffff',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  animation: 'pulseAdminAlert 2s infinite ease-in-out',
+                  '@keyframes pulseAdminAlert': {
+                    '0%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
+                    '50%': { backgroundColor: '#d32f2f', boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)' },
+                    '100%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
+                  },
+                }}
+              >
+                <LockOpenIcon sx={{ fontSize: 20, color: '#ffffff', flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
+                    Admin Access Open
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
+                    Set adminAccess: false for prod
+                  </Typography>
+                </Box>
+                <Tooltip title="Open Admin Portal" arrow>
+                  <IconButton
+                    component="a"
+                    href="/admin"
+                    size="small"
+                    sx={{
+                      color: '#ffffff',
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      p: 0.75,
+                      flexShrink: 0,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                        transform: 'scale(1.08)',
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <OpenInNewRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
+            )}
 
-        {/* Warning Banner when Dev Access is Enabled */}
-        {data?.devAccess !== false && (
-          <Box
-            sx={{
-              position: 'sticky',
-              top: Boolean(data?.adminAccess) ? { xs: 80, sm: 48 } : 0,
-              zIndex: 2999,
-              width: '100%',
-              backgroundColor: '#e65100',
-              color: '#ffffff',
-              px: 2,
-              py: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              gap: 1.5,
-              fontWeight: 700,
-              fontSize: { xs: '0.85rem', sm: '0.95rem' },
-              boxShadow: '0 4px 16px rgba(230, 81, 0, 0.6)',
-              animation: 'pulseDevAlert 2s infinite ease-in-out',
-              '@keyframes pulseDevAlert': {
-                '0%': { backgroundColor: '#ef6c00' },
-                '50%': { backgroundColor: '#e65100' },
-                '100%': { backgroundColor: '#ef6c00' },
-              },
-            }}
-          >
-            <BugReportIcon sx={{ fontSize: 22 }} />
-            <Typography variant="body2" sx={{ fontWeight: 800, color: '#ffffff', letterSpacing: 0.5, textAlign: 'center' }}>
-              🛠️ DEV MODE IS ENABLED (/dev) — REMEMBER TO SET devAccess TO false IN artist-data.json BEFORE PRODUCTION!
-            </Typography>
-            <Button
-              component="a"
-              href="/dev"
-              size="small"
-              variant="contained"
-              sx={{
-                backgroundColor: '#ffffff',
-                color: '#e65100',
-                fontWeight: 800,
-                textTransform: 'none',
-                borderRadius: 2,
-                px: 2,
-                py: 0.3,
-                '&:hover': {
-                  backgroundColor: '#f5f5f5',
-                },
-              }}
-            >
-              Go to Dev Tool
-            </Button>
-          </Box>
+            {data?.devAccess !== false && (
+              <Paper
+                elevation={6}
+                sx={{
+                  pointerEvents: 'auto',
+                  borderRadius: 3,
+                  px: 2,
+                  py: 1.25,
+                  bgcolor: '#e65100',
+                  color: '#ffffff',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  boxShadow: '0 8px 24px rgba(230, 81, 0, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  animation: 'pulseDevAlert 2s infinite ease-in-out',
+                  '@keyframes pulseDevAlert': {
+                    '0%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
+                    '50%': { backgroundColor: '#f57c00', boxShadow: '0 10px 28px rgba(245, 124, 0, 0.65)' },
+                    '100%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
+                  },
+                }}
+              >
+                <BugReportIcon sx={{ fontSize: 20, color: '#ffffff', flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
+                    Dev Mode Enabled
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
+                    Set devAccess: false for prod
+                  </Typography>
+                </Box>
+                <Tooltip title="Open Dev Tool" arrow>
+                  <IconButton
+                    component="a"
+                    href="/dev"
+                    size="small"
+                    sx={{
+                      color: '#ffffff',
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      p: 0.75,
+                      flexShrink: 0,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                        transform: 'scale(1.08)',
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <OpenInNewRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
+            )}
+          </Stack>
         )}
         {/* Top Screen-Height Hero Section (Only on main discography view) */}
         {currentView !== 'SINGLE_PROJECT' && (
