@@ -7,6 +7,33 @@ const theme = createTheme({
     mode: 'dark',
   },
   components: {
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          position: 'relative',
+          padding: '8px',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: -6,
+            left: -6,
+            right: -6,
+            bottom: -6,
+          },
+        },
+        sizeSmall: {
+          padding: '7px',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: -5,
+            left: -5,
+            right: -5,
+            bottom: -5,
+          },
+        },
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
         'html, body': {

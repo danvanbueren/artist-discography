@@ -76,10 +76,10 @@ export default function AudioPlayerBar({
         v = Math.min(100, Math.max(0, Number(savedVol)))
       }
 
-      let pV = 100
-      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) > 0) {
-        pV = Math.min(100, Math.max(1, Number(savedPrevVol)))
-      } else if (v > 0) {
+      let pV = 80
+      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) >= 30) {
+        pV = Math.min(100, Math.max(30, Number(savedPrevVol)))
+      } else if (v >= 30) {
         pV = v
       }
 
@@ -97,17 +97,14 @@ export default function AudioPlayerBar({
   // Track duration in seconds
   const duration = realDuration || playingTrack?.durationSeconds || playingTrack?.duration || 215
 
-  // Reset current time when track changes
+  // Reset current time ONLY when playing track actually changes
   useEffect(() => {
     setCurrentTime(0)
     setRealDuration(0)
     if (audioRef.current) {
       audioRef.current.currentTime = 0
-      const volVal = isMuted ? 0 : volume
-      audioRef.current.volume = Math.min(1, Math.max(0, volVal / 100))
-      audioRef.current.muted = isMuted
     }
-  }, [playingTrack?.audioUrl, playingTrack?.name, volume, isMuted])
+  }, [playingTrack?.audioUrl, playingTrack?.name])
 
   // Sync playback state with audio element
   useEffect(() => {
@@ -232,28 +229,34 @@ export default function AudioPlayerBar({
     }
   }
 
+  const MIN_LISTENABLE_VOLUME = 30
+  const DEFAULT_UNMUTE_VOLUME = 80
+
   // Handle Volume Icon click (toggle mute)
   const handleToggleMute = () => {
     if (isMuted || volume === 0) {
-      const targetVol = prevVolume > 0 ? prevVolume : 100
+      let targetVol = prevVolume
+      if (!targetVol || isNaN(targetVol) || targetVol < MIN_LISTENABLE_VOLUME) {
+        targetVol = DEFAULT_UNMUTE_VOLUME
+      }
       setIsMuted(false)
       setVolume(targetVol)
+      setPrevVolume(targetVol)
       try {
         setCookie('audio_playback_volume', targetVol.toString())
         localStorage.setItem('audio_playback_volume', targetVol.toString())
         setCookie('audio_playback_muted', 'false')
         localStorage.setItem('audio_playback_muted', 'false')
+        setCookie('audio_playback_prev_volume', targetVol.toString())
+        localStorage.setItem('audio_playback_prev_volume', targetVol.toString())
       } catch {}
     } else {
-      if (volume > 0) {
-        setPrevVolume(volume)
-        try {
-          setCookie('audio_playback_prev_volume', volume.toString())
-          localStorage.setItem('audio_playback_prev_volume', volume.toString())
-        } catch {}
-      }
+      const volToSave = Math.max(volume, MIN_LISTENABLE_VOLUME)
+      setPrevVolume(volToSave)
       setIsMuted(true)
       try {
+        setCookie('audio_playback_prev_volume', volToSave.toString())
+        localStorage.setItem('audio_playback_prev_volume', volToSave.toString())
         setCookie('audio_playback_muted', 'true')
         localStorage.setItem('audio_playback_muted', 'true')
       } catch {}
@@ -263,8 +266,10 @@ export default function AudioPlayerBar({
   // Handle Volume Slider change
   const handleVolumeChange = (_, val) => {
     setVolume(val)
-    if (val > 0) {
+    if (val >= MIN_LISTENABLE_VOLUME) {
       setPrevVolume(val)
+      if (isMuted) setIsMuted(false)
+    } else if (val > 0) {
       if (isMuted) setIsMuted(false)
     } else if (val === 0 && !isMuted) {
       setIsMuted(true)
@@ -274,7 +279,7 @@ export default function AudioPlayerBar({
       localStorage.setItem('audio_playback_volume', val.toString())
       setCookie('audio_playback_muted', val === 0 ? 'true' : 'false')
       localStorage.setItem('audio_playback_muted', val === 0 ? 'true' : 'false')
-      if (val > 0) {
+      if (val >= MIN_LISTENABLE_VOLUME) {
         setCookie('audio_playback_prev_volume', val.toString())
         localStorage.setItem('audio_playback_prev_volume', val.toString())
       }
@@ -430,7 +435,7 @@ export default function AudioPlayerBar({
                       color: copiedShare ? 'success.main' : 'text.secondary',
                       transition: 'color 0.2s ease',
                       flexShrink: 0,
-                      p: 0.5,
+                      p: 0.9,
                       ml: 0.5,
                     }}
                   >
@@ -461,6 +466,7 @@ export default function AudioPlayerBar({
                       sx={{
                         color: isShuffle ? 'primary.main' : 'text.primary',
                         opacity: 1,
+                        p: 0.9,
                       }}
                     >
                       <ShuffleRoundedIcon fontSize="small" />
@@ -481,7 +487,7 @@ export default function AudioPlayerBar({
                           onSkipPrev()
                         }
                       }}
-                      sx={{ color: 'text.primary' }}
+                      sx={{ color: 'text.primary', p: 0.9 }}
                     >
                       <SkipPreviousRoundedIcon fontSize="small" />
                     </IconButton>
@@ -494,16 +500,16 @@ export default function AudioPlayerBar({
                     sx={{
                       bgcolor: 'primary.main',
                       color: 'primary.contrastText',
-                      p: 0.9,
+                      p: 1.1,
                       boxShadow: '0 4px 14px rgba(144, 202, 249, 0.4)',
                       '&:hover': { bgcolor: 'primary.dark', transform: 'scale(1.05)' },
                       transition: 'all 0.2s ease',
                     }}
                   >
                     {isPlaying ? (
-                      <PauseRoundedIcon fontSize="small" />
+                      <PauseRoundedIcon fontSize="medium" />
                     ) : (
-                      <PlayArrowRoundedIcon fontSize="small" />
+                      <PlayArrowRoundedIcon fontSize="medium" />
                     )}
                   </IconButton>
 
@@ -520,7 +526,7 @@ export default function AudioPlayerBar({
                           onSkipNext()
                         }
                       }}
-                      sx={{ color: 'text.primary' }}
+                      sx={{ color: 'text.primary', p: 0.9 }}
                     >
                       <SkipNextRoundedIcon fontSize="small" />
                     </IconButton>
@@ -543,6 +549,7 @@ export default function AudioPlayerBar({
                       sx={{
                         color: repeatMode !== 'off' ? 'primary.main' : 'text.primary',
                         opacity: 1,
+                        p: 0.9,
                       }}
                     >
                       {repeatMode === 'one' ? (
@@ -622,7 +629,7 @@ export default function AudioPlayerBar({
                   <IconButton
                     size="small"
                     onClick={() => setQueueOpen(true)}
-                    sx={{ color: queueOpen ? 'primary.main' : 'text.secondary' }}
+                    sx={{ color: queueOpen ? 'primary.main' : 'text.secondary', p: 0.9 }}
                   >
                     <Badge badgeContent={manualQueue.length > 0 ? manualQueue.length : null} color="primary">
                       <QueueMusicRoundedIcon fontSize="small" />
@@ -646,7 +653,7 @@ export default function AudioPlayerBar({
                   <IconButton
                     size="small"
                     onClick={handleToggleMute}
-                    sx={{ color: isMuted ? 'error.main' : 'text.secondary' }}
+                    sx={{ color: isMuted ? 'error.main' : 'text.secondary', p: 0.9 }}
                   >
                     <VolumeIconComponent fontSize="small" />
                   </IconButton>
@@ -680,7 +687,7 @@ export default function AudioPlayerBar({
                   <IconButton
                     size="small"
                     onClick={onClosePlayer}
-                    sx={{ color: 'text.secondary', ml: 0.5 }}
+                    sx={{ color: 'text.secondary', ml: 0.5, p: 0.9 }}
                   >
                     <CloseRoundedIcon fontSize="small" />
                   </IconButton>

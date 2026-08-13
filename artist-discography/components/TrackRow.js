@@ -153,7 +153,7 @@ export default function TrackRow({
                 if (onPlayTrack) onPlayTrack(track, project)
               }}
               sx={{
-                p: 0.6,
+                p: 0.85,
                 borderRadius: 1.5,
                 transition: 'transform 0.18s ease, opacity 0.18s ease',
                 '&:hover': {
@@ -174,7 +174,7 @@ export default function TrackRow({
                 if (onPlayTrack) onPlayTrack(track, project)
               }}
               sx={{
-                p: 0.6,
+                p: 0.85,
                 borderRadius: 1.5,
                 transition: 'transform 0.18s ease, opacity 0.18s ease',
                 '&:hover': {
@@ -210,7 +210,7 @@ export default function TrackRow({
               if (onAddToQueue) onAddToQueue(track, project)
             }}
             sx={{
-              p: 0.6,
+              p: 0.85,
               borderRadius: 1.5,
               opacity: hovered ? 1 : 0.65,
               transition: 'transform 0.18s ease, opacity 0.18s ease',
@@ -284,8 +284,8 @@ export default function TrackRow({
           size="small"
           onClick={(e) => e.stopPropagation()}
           sx={{
-            p: 0.6,
-            px: resolvedLink?.icon ? 0.8 : 0.6,
+            p: 0.85,
+            px: resolvedLink?.icon ? 1 : 0.85,
             borderRadius: 1.5,
             border: resolvedLink ? '1px solid' : '1px solid transparent',
             borderColor: resolvedLink ? 'rgba(255,255,255,0.12)' : 'transparent',
@@ -332,7 +332,7 @@ export default function TrackRow({
             setTimeout(() => setCopied(false), 2000)
           }}
           sx={{
-            p: 0.6,
+            p: 0.85,
             borderRadius: 1.5,
             opacity: copied || hovered ? 1 : 0.65,
             color: copied ? 'success.main' : 'inherit',
