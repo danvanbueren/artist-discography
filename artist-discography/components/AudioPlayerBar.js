@@ -77,9 +77,9 @@ export default function AudioPlayerBar({
       }
 
       let pV = 80
-      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) >= 30) {
-        pV = Math.min(100, Math.max(30, Number(savedPrevVol)))
-      } else if (v >= 30) {
+      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) >= 10) {
+        pV = Math.min(100, Math.max(10, Number(savedPrevVol)))
+      } else if (v >= 10) {
         pV = v
       }
 
@@ -229,7 +229,7 @@ export default function AudioPlayerBar({
     }
   }
 
-  const MIN_LISTENABLE_VOLUME = 30
+  const MIN_LISTENABLE_VOLUME = 10
   const DEFAULT_UNMUTE_VOLUME = 80
 
   // Handle Volume Icon click (toggle mute)
