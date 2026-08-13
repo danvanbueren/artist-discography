@@ -858,7 +858,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 <Tooltip title="Open Admin Portal" arrow>
                   <IconButton
                     component="a"
-                    href="/admin"
+                    href="/sys/admin"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     size="small"
                     sx={{
                       color: '#ffffff',
@@ -914,7 +916,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 <Tooltip title="Open Dev Tool" arrow>
                   <IconButton
                     component="a"
-                    href="/dev"
+                    href="/sys/dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     size="small"
                     sx={{
                       color: '#ffffff',
