@@ -401,23 +401,29 @@ export default function AudioPlayerBar({
                     height: { xs: 52, sm: 58 },
                     justifyContent: 'space-between',
                     minWidth: 0,
+                    flexGrow: 1,
+                    overflow: 'hidden',
                     py: 0.1,
                   }}
                 >
                   {/* Top Row: Song Title + Share Button inline */}
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
-                    <Tooltip title="Go to track page" arrow>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                    <Tooltip title={playingTrack.name || 'Untitled Track'} arrow>
                       <Typography
                         className="track-title-text"
-                        variant="body2"
+                        variant="subtitle1"
                         fontWeight={700}
-                        noWrap
                         onClick={onNavigateToCurrentTrack}
                         sx={{
-                          fontSize: { xs: '0.875rem', sm: '0.925rem' },
-                          lineHeight: 1.15,
+                          fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                          lineHeight: 1.2,
                           cursor: 'pointer',
                           color: 'text.primary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0,
+                          flexShrink: 1,
                           transition: 'color 0.15s ease',
                           '&:hover': { color: 'primary.main', textDecoration: 'underline' },
                         }}
@@ -445,17 +451,20 @@ export default function AudioPlayerBar({
                   </Stack>
 
                   {/* Bottom Row: Artist Name aligned to bottom of cover art */}
-                  <Tooltip title="Go to track page" arrow>
+                  <Tooltip title={playingTrack.artist || 'Artist'} arrow>
                     <Typography
                       variant="caption"
                       color="text.secondary"
-                      noWrap
                       onClick={onNavigateToCurrentTrack}
                       sx={{
-                        fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                        lineHeight: 1.15,
+                        fontSize: { xs: '0.775rem', sm: '0.85rem' },
+                        lineHeight: 1.2,
                         cursor: 'pointer',
                         display: 'block',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
                         '&:hover': { color: 'text.primary' },
                       }}
                     >
