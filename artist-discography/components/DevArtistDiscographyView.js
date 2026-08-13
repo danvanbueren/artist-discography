@@ -300,9 +300,13 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                     elevation={2}
                     sx={{
                       p: 2.5,
+                      height: '100%',
                       borderRadius: 3,
                       backgroundColor: 'rgba(25, 25, 35, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -311,7 +315,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                       </Typography>
                       <AlbumIcon color="primary" />
                     </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
                       {projects.length}
                     </Typography>
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -332,9 +336,13 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                     elevation={2}
                     sx={{
                       p: 2.5,
+                      height: '100%',
                       borderRadius: 3,
                       backgroundColor: 'rgba(25, 25, 35, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -343,7 +351,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                       </Typography>
                       <MusicNoteIcon color="secondary" />
                     </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
                       {totalTracksCount}
                     </Typography>
                     <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -365,9 +373,13 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                     elevation={2}
                     sx={{
                       p: 2.5,
+                      height: '100%',
                       borderRadius: 3,
                       backgroundColor: 'rgba(25, 25, 35, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -376,7 +388,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                       </Typography>
                       <LinkIcon color="info" />
                     </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
                       {totalPlatformLinksCount}
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
@@ -390,9 +402,13 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                     elevation={2}
                     sx={{
                       p: 2.5,
+                      height: '100%',
                       borderRadius: 3,
                       backgroundColor: 'rgba(25, 25, 35, 0.75)',
                       border: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -401,7 +417,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
                       </Typography>
                       <SecurityIcon color={dataState?.adminAccess ? 'warning' : 'success'} />
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.5 }}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 0.5 }}>
                       <Chip
                         label={`Admin: ${dataState?.adminAccess ? 'OPEN' : 'LOCKED'}`}
                         color={dataState?.adminAccess ? 'error' : 'default'}
