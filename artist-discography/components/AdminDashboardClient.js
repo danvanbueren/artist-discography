@@ -56,6 +56,7 @@ import ShareIcon from '@mui/icons-material/Share'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import SyncIcon from '@mui/icons-material/Sync'
 import PendingIcon from '@mui/icons-material/Pending'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { slugify } from '../lib/slugs'
 
 const isProjectSlugDuplicate = (name, projectsList, excludeIndex = -1) => {
@@ -123,10 +124,10 @@ const SOCIAL_KEYS = [
   { key: 'snapchat', label: 'Snapchat URL' },
 ]
 
-const createEmptyTrack = (artistName = '') => ({
+const createEmptyTrack = () => ({
   id: `track-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
   name: '',
-  artist: artistName,
+  artist: '',
   audioFile: null,
   audioFileName: '',
   links: {
@@ -142,6 +143,18 @@ const createEmptyTrack = (artistName = '') => ({
     tidal: '',
   },
 })
+
+const resolveOverrideArtist = (artistVal, primaryName, projectArtistVal) => {
+  if (!artistVal || typeof artistVal !== 'string') return ''
+  const trimmed = artistVal.trim()
+  if (!trimmed) return ''
+  const primary = (primaryName || '').trim()
+  if (primary && trimmed === primary) return ''
+  const projArtist = (projectArtistVal || '').trim()
+  if (projArtist && trimmed === projArtist) return ''
+  if (trimmed === 'Artist') return ''
+  return trimmed
+}
 
 export default function AdminDashboardClient({ adminAccess = true, defaultArtistName = 'Artist', initialData = {} }) {
   const router = useRouter()
@@ -170,21 +183,25 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   // New Project Form
   const [name, setName] = useState('')
   const [type, setType] = useState('Single')
-  const [artist, setArtist] = useState(defaultArtistName)
+  const [artist, setArtist] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [coverFile, setCoverFile] = useState(null)
   const [coverPreview, setCoverPreview] = useState(null)
-  const [tracks, setTracks] = useState([createEmptyTrack(defaultArtistName)])
+  const [tracks, setTracks] = useState([createEmptyTrack()])
 
   // Edit Project Form
   const [editName, setEditName] = useState('')
   const [editType, setEditType] = useState('Single')
-  const [editArtist, setEditArtist] = useState(defaultArtistName)
+  const [editArtist, setEditArtist] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editCoverFile, setEditCoverFile] = useState(null)
   const [editCoverPreview, setEditCoverPreview] = useState(null)
   const [editTracks, setEditTracks] = useState([])
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [trackToDelete, setTrackToDelete] = useState(null)
+  const [trackToCopy, setTrackToCopy] = useState(null)
+  const [copyTargetProjectIndex, setCopyTargetProjectIndex] = useState(0)
+  const [isCopyingTrack, setIsCopyingTrack] = useState(false)
 
   const nameRef = useRef(name)
   const typeRef = useRef(type)
@@ -274,7 +291,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     if (initialData?.projects) {
       setProjectsList(initialData.projects)
       if (initialData.projects.length === 0) {
-        setIsCreatingNew(true)
+        setIsCreatingNew(false)
+        setSelectedProjIndex(-1)
       }
     }
   }, [initialData, defaultArtistName])
@@ -283,9 +301,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   useEffect(() => {
     if (!isCreatingNew && projectsList.length > 0 && selectedProjIndex >= 0 && selectedProjIndex < projectsList.length) {
       const proj = projectsList[selectedProjIndex]
+      const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
       setEditName(proj.name || '')
       setEditType(proj.type || 'Single')
-      setEditArtist(proj.artist || defaultArtistName)
+      setEditArtist(resolveOverrideArtist(proj.artist, primaryName))
       setEditDate(proj.date || new Date().toISOString().split('T')[0])
       setEditCoverFile(null)
       setEditCoverPreview(proj.cover || null)
@@ -293,7 +312,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       const formattedTracks = (proj.tracks ?? []).map((t, idx) => ({
         id: `edit-track-${idx}-${Date.now()}`,
         name: t.name || '',
-        artist: t.artist || proj.artist || defaultArtistName,
+        artist: resolveOverrideArtist(t.artist, primaryName, proj.artist),
         audio: t.audio || t.audioUrl || '',
         hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
         audioFile: null,
@@ -386,10 +405,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           password,
-          name: artistNameInput.trim(),
-          bio: artistBioInput.trim(),
-          platforms: artistPlatforms,
-          socials: artistSocials,
+          name: artistNameInputRef.current.trim(),
+          bio: artistBioInputRef.current.trim(),
+          platforms: artistPlatformsRef.current,
+          socials: artistSocialsRef.current,
         }),
       })
       const result = await res.json()
@@ -439,7 +458,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         }
         return {
           name: t.name.trim(),
-          artist: t.artist.trim() || currentArtist.trim() || defaultArtistName,
+          artist: t.artist.trim(),
           links: t.links,
         }
       })
@@ -455,14 +474,48 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       const result = await res.json()
       if (res.ok && result.success) {
         if (result.createdProject) {
-          setProjectsList((prev) => [result.createdProject, ...prev])
+          const createdProj = result.createdProject
+          setProjectsList((prev) => [createdProj, ...prev])
+          
+          const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
+          const formattedTracks = (createdProj.tracks ?? []).map((t, idx) => ({
+            id: `edit-track-${idx}-${Date.now()}`,
+            name: t.name || '',
+            artist: resolveOverrideArtist(t.artist, primaryName, createdProj.artist),
+            audio: t.audio || t.audioUrl || '',
+            hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
+            audioFile: null,
+            audioFileName: '',
+            links: {
+              spotify: '',
+              apple: '',
+              youtube: '',
+              soundcloud: '',
+              amazon: '',
+              bandcamp: '',
+              deezer: '',
+              itunes: '',
+              pandora: '',
+              tidal: '',
+              ...(t.links || {}),
+            },
+          }))
+          setEditName(createdProj.name || '')
+          setEditType(createdProj.type || 'Single')
+          setEditArtist(resolveOverrideArtist(createdProj.artist, primaryName))
+          setEditDate(createdProj.date || new Date().toISOString().split('T')[0])
+          setEditCoverFile(null)
+          setEditCoverPreview(createdProj.cover || null)
+          setEditTracks(formattedTracks)
+          editTracksRef.current = formattedTracks
+
           setSelectedProjIndex(0)
           setIsCreatingNew(false)
         }
         setName('')
         setCoverFile(null)
         setCoverPreview(null)
-        setTracks([createEmptyTrack(defaultArtistName)])
+        setTracks([createEmptyTrack()])
         try {
           router.refresh()
         } catch (e) { }
@@ -504,7 +557,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       formData.append('projectIndex', selectedProjIndex)
       formData.append('name', currentName.trim())
       formData.append('type', currentType)
-      formData.append('artist', currentArtist.trim() || defaultArtistName)
+      formData.append('artist', currentArtist.trim())
       formData.append('date', currentDate)
 
       if (currentCoverFile) {
@@ -517,7 +570,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         }
         return {
           name: t.name.trim(),
-          artist: t.artist.trim() || currentArtist.trim() || defaultArtistName,
+          artist: t.artist.trim(),
           links: t.links,
         }
       })
@@ -542,10 +595,11 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
             setEditCoverPreview(result.updatedProject.cover)
           }
 
+          const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
           const updatedFormattedTracks = (result.updatedProject.tracks ?? []).map((t, idx) => ({
             id: editTracksRef.current[idx]?.id || `edit-track-${idx}-${Date.now()}`,
             name: t.name || '',
-            artist: t.artist || result.updatedProject.artist || defaultArtistName,
+            artist: resolveOverrideArtist(t.artist, primaryName, result.updatedProject.artist),
             audio: t.audio || t.audioUrl || '',
             hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
             audioUrl: t.audioUrl || '',
@@ -648,15 +702,16 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         setProjectsList(nextList)
 
         if (nextList.length === 0) {
-          setIsCreatingNew(true)
+          setIsCreatingNew(false)
           setSelectedProjIndex(-1)
         } else {
           const nextIndex = Math.min(selectedProjIndex, nextList.length - 1)
           const nextProj = nextList[nextIndex]
+          const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
           const formattedTracks = (nextProj.tracks ?? []).map((t, tIdx) => ({
             id: `edit-track-${tIdx}-${Date.now()}`,
             name: t.name || '',
-            artist: t.artist || nextProj.artist || defaultArtistName,
+            artist: resolveOverrideArtist(t.artist, primaryName, nextProj.artist),
             audio: t.audio || t.audioUrl || '',
             hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
             audioFile: null,
@@ -677,7 +732,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           }))
           setEditName(nextProj.name || '')
           setEditType(nextProj.type || 'Single')
-          setEditArtist(nextProj.artist || defaultArtistName)
+          setEditArtist(resolveOverrideArtist(nextProj.artist, primaryName))
           setEditDate(nextProj.date || new Date().toISOString().split('T')[0])
           setEditCoverFile(null)
           setEditCoverPreview(nextProj.cover || null)
@@ -694,6 +749,98 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       }
     } catch (err) {
       setErrorMessage(`Delete failed: ${err.message}`)
+    }
+  }
+
+  // ----------------------------------------------------
+  // CONFIRM TRACK DELETE & TRACK COPY HANDLERS
+  // ----------------------------------------------------
+  const confirmDeleteTrack = () => {
+    if (!trackToDelete) return
+    const { index, isEditing } = trackToDelete
+    if (isEditing) {
+      if (editTracks.length <= 1) {
+        setTrackToDelete(null)
+        return
+      }
+      const n = editTracks.filter((_, i) => i !== index)
+      setEditTracks(n)
+      editTracksRef.current = n
+      markFieldDirty(`edit_del_${index}`, () => executeUpdateProject(n), 100)
+    } else {
+      if (tracks.length <= 1) {
+        setTrackToDelete(null)
+        return
+      }
+      setTracks((prev) => prev.filter((_, i) => i !== index))
+    }
+    setTrackToDelete(null)
+  }
+
+  const handleCopyTrack = async () => {
+    if (!trackToCopy) return
+    setIsCopyingTrack(true)
+    setErrorMessage('')
+    try {
+      const res = await fetch('/api/admin/copy-track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password,
+          sourceProjectIndex: trackToCopy.sourceProjectIndex,
+          sourceTrackIndex: trackToCopy.trackIndex,
+          targetProjectIndex: copyTargetProjectIndex,
+        }),
+      })
+
+      const result = await res.json()
+      if (res.ok && result.success) {
+        setStatusMessage(result.message)
+
+        if (result.updatedTargetProject && typeof result.targetProjectIndex === 'number') {
+          setProjectsList((prev) => {
+            const next = [...prev]
+            next[result.targetProjectIndex] = result.updatedTargetProject
+            return next
+          })
+
+          if (result.targetProjectIndex === selectedProjIndex) {
+            const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
+            const updatedTracks = (result.updatedTargetProject.tracks ?? []).map((t, idx) => ({
+              id: editTracksRef.current[idx]?.id || `edit-track-${idx}-${Date.now()}`,
+              name: t.name || '',
+              artist: resolveOverrideArtist(t.artist, primaryName, result.updatedTargetProject.artist),
+              audio: t.audio || t.audioUrl || '',
+              hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
+              audioFile: null,
+              audioFileName: '',
+              links: {
+                spotify: '',
+                apple: '',
+                youtube: '',
+                soundcloud: '',
+                amazon: '',
+                bandcamp: '',
+                deezer: '',
+                itunes: '',
+                pandora: '',
+                tidal: '',
+                ...(t.links || {}),
+              },
+            }))
+            setEditTracks(updatedTracks)
+            editTracksRef.current = updatedTracks
+          }
+        }
+
+        setTrackToCopy(null)
+      } else {
+        setErrorMessage(result.error || 'Failed to copy track.')
+      }
+    } catch (err) {
+      setErrorMessage(`Error copying track: ${err.message}`)
+    } finally {
+      setIsCopyingTrack(false)
     }
   }
 
@@ -1005,7 +1152,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         fullWidth
                         value={artistNameInput}
                         onChange={(e) => {
-                          setArtistNameInput(e.target.value)
+                          const val = e.target.value
+                          setArtistNameInput(val)
+                          artistNameInputRef.current = val
                           markFieldDirty('artistName', executeSaveArtist)
                         }}
                         sx={getFieldSx('artistName')}
@@ -1018,7 +1167,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         placeholder="Write a bio describing the artist project..."
                         value={artistBioInput}
                         onChange={(e) => {
-                          setArtistBioInput(e.target.value)
+                          const val = e.target.value
+                          setArtistBioInput(val)
+                          artistBioInputRef.current = val
                           markFieldDirty('artistBio', executeSaveArtist)
                         }}
                         sx={getFieldSx('artistBio')}
@@ -1045,7 +1196,11 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               value={artistPlatforms[key] || ''}
                               onChange={(e) => {
                                 const val = e.target.value
-                                setArtistPlatforms((prev) => ({ ...prev, [key]: val }))
+                                setArtistPlatforms((prev) => {
+                                  const next = { ...prev, [key]: val }
+                                  artistPlatformsRef.current = next
+                                  return next
+                                })
                                 markFieldDirty(`platform_${key}`, executeSaveArtist)
                               }}
                               sx={getFieldSx(`platform_${key}`)}
@@ -1070,7 +1225,11 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               value={artistSocials[key] || ''}
                               onChange={(e) => {
                                 const val = e.target.value
-                                setArtistSocials((prev) => ({ ...prev, [key]: val }))
+                                setArtistSocials((prev) => {
+                                  const next = { ...prev, [key]: val }
+                                  artistSocialsRef.current = next
+                                  return next
+                                })
                                 markFieldDirty(`social_${key}`, executeSaveArtist)
                               }}
                               sx={getFieldSx(`social_${key}`)}
@@ -1178,6 +1337,57 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                     }}
                   >
                     <List sx={{ p: 0 }}>
+                      {isCreatingNew && (
+                        <ListItemButton
+                          selected={true}
+                          sx={{
+                            borderRadius: 2,
+                            mb: 1,
+                            border: '1px dashed',
+                            borderColor: 'secondary.main',
+                            backgroundColor: 'rgba(206, 147, 216, 0.12)',
+                            py: 1.5,
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 44, mr: 1, alignSelf: 'center' }}>
+                            {coverPreview ? (
+                              <Box
+                                component="img"
+                                src={coverPreview}
+                                alt="Cover preview"
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 1.5,
+                                  objectFit: 'cover',
+                                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                                }}
+                              />
+                            ) : (
+                              <AlbumIcon color="secondary" />
+                            )}
+                          </ListItemIcon>
+                          <ListItemText
+                            slotProps={{
+                              primary: { component: 'div' },
+                              secondary: { component: 'div' },
+                            }}
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 700, color: 'secondary.main' }}>
+                                  {name.trim() || 'New Project'}
+                                </Typography>
+                                <Chip label="Draft" color="secondary" size="small" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }} />
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                                {type || 'Single'} • {tracks.length} track{tracks.length === 1 ? '' : 's'}
+                              </Typography>
+                            }
+                          />
+                        </ListItemButton>
+                      )}
                       {projectsList.map((p, idx) => {
                         const hasCover = Boolean(p.cover || p.hasCover)
                         const trks = p.tracks ?? []
@@ -1197,10 +1407,11 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             selected={isSelected}
                             disabled={dirtyFields.size > 0 && !isSelected}
                             onClick={() => {
+                              const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
                               const formattedTracks = (p.tracks ?? []).map((t, tIdx) => ({
                                 id: `edit-track-${tIdx}-${Date.now()}`,
                                 name: t.name || '',
-                                artist: t.artist || p.artist || defaultArtistName,
+                                artist: resolveOverrideArtist(t.artist, primaryName, p.artist),
                                 audio: t.audio || t.audioUrl || '',
                                 hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
                                 audioFile: null,
@@ -1222,7 +1433,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               setIsCreatingNew(false)
                               setEditName(p.name || '')
                               setEditType(p.type || 'Single')
-                              setEditArtist(p.artist || defaultArtistName)
+                              setEditArtist(resolveOverrideArtist(p.artist, primaryName))
                               setEditDate(p.date || new Date().toISOString().split('T')[0])
                               setEditCoverFile(null)
                               setEditCoverPreview(p.cover || null)
@@ -1374,12 +1585,14 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                              label="Artist Name"
+                              label="Artist Name (Optional Override)"
+                              placeholder={`Defaults to "${artistNameInput.trim() || defaultArtistName}"`}
                               fullWidth
-                              required
                               value={artist}
                               onChange={(e) => {
-                                setArtist(e.target.value)
+                                const val = e.target.value
+                                setArtist(val)
+                                artistRef.current = val
                                 markFieldDirty('new_artist', executeCreateProject)
                               }}
                               sx={getFieldSx('new_artist')}
@@ -1441,7 +1654,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             size="small"
                             startIcon={<AddIcon />}
                             onClick={() => {
-                              setTracks((prev) => [...prev, createEmptyTrack(artist)])
+                              setTracks((prev) => [...prev, createEmptyTrack()])
                               markFieldDirty('new_add_track', executeCreateProject)
                             }}
                             sx={{ borderRadius: 2, textTransform: 'none' }}
@@ -1463,7 +1676,18 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                     <IconButton size="small" disabled={index === tracks.length - 1} onClick={() => setTracks((prev) => { const n = [...prev]; const t = n[index]; n[index] = n[index + 1]; n[index + 1] = t; return n })}>
                                       <ArrowDownwardIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" color="error" disabled={tracks.length <= 1} onClick={() => setTracks((prev) => prev.filter((_, i) => i !== index))}>
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      disabled={tracks.length <= 1}
+                                      onClick={() => {
+                                        setTrackToDelete({
+                                          index,
+                                          isEditing: false,
+                                          trackName: track.name.trim() || `Track #${index + 1}`,
+                                        })
+                                      }}
+                                    >
                                       <DeleteIcon fontSize="small" />
                                     </IconButton>
                                   </Box>
@@ -1497,7 +1721,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                   </Grid>
                                   <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
-                                      label="Track Artist"
+                                      label="Track Artist (Optional Override)"
+                                      placeholder={`Defaults to "${artist.trim() || artistNameInput.trim() || defaultArtistName}"`}
                                       fullWidth
                                       size="small"
                                       value={track.artist}
@@ -1572,7 +1797,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         </Stack>
                       </Paper>
                     </Stack>
-                  ) : (
+                  ) : selectedProjIndex >= 0 && selectedProjIndex < projectsList.length ? (
                     /* EDIT EXISTING PROJECT FORM (AUTO-SAVING) */
                     <Stack spacing={3}>
                       {/* Project Metadata & Artwork */}
@@ -1637,12 +1862,14 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                              label="Artist Name"
+                              label="Artist Name (Optional Override)"
+                              placeholder={`Defaults to "${artistNameInput.trim() || defaultArtistName}"`}
                               fullWidth
-                              required
                               value={editArtist}
                               onChange={(e) => {
-                                setEditArtist(e.target.value)
+                                const val = e.target.value
+                                setEditArtist(val)
+                                editArtistRef.current = val
                                 markFieldDirty('edit_artist', executeUpdateProject)
                               }}
                               sx={getFieldSx('edit_artist')}
@@ -1704,7 +1931,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             size="small"
                             startIcon={<AddIcon />}
                             onClick={() => {
-                              const n = [...editTracks, createEmptyTrack(editArtist)]
+                              const n = [...editTracks, createEmptyTrack()]
                               setEditTracks(n)
                               editTracksRef.current = n
                               markFieldDirty('edit_add_track', () => executeUpdateProject(n), 100)
@@ -1722,13 +1949,39 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                                   <Chip label={`Track #${index + 1}`} size="small" color="primary" sx={{ fontWeight: 700 }} />
                                   <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                    <IconButton
+                                      size="small"
+                                      title="Copy Track to Another Project"
+                                      onClick={() => {
+                                        setTrackToCopy({
+                                          track,
+                                          sourceProjectIndex: selectedProjIndex,
+                                          trackIndex: index,
+                                        })
+                                        const defaultTarget = projectsList.length > 1 && selectedProjIndex === 0 ? 1 : 0
+                                        setCopyTargetProjectIndex(defaultTarget)
+                                      }}
+                                    >
+                                      <ContentCopyIcon fontSize="small" />
+                                    </IconButton>
                                     <IconButton size="small" disabled={index === 0} onClick={() => { const n = [...editTracks]; const t = n[index]; n[index] = n[index - 1]; n[index - 1] = t; setEditTracks(n); editTracksRef.current = n; markFieldDirty(`edit_move_${index}`, () => executeUpdateProject(n), 100) }}>
                                       <ArrowUpwardIcon fontSize="small" />
                                     </IconButton>
                                     <IconButton size="small" disabled={index === editTracks.length - 1} onClick={() => { const n = [...editTracks]; const t = n[index]; n[index] = n[index + 1]; n[index + 1] = t; setEditTracks(n); editTracksRef.current = n; markFieldDirty(`edit_move_${index}`, () => executeUpdateProject(n), 100) }}>
                                       <ArrowDownwardIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" color="error" disabled={editTracks.length <= 1} onClick={() => { const n = editTracks.filter((_, i) => i !== index); setEditTracks(n); editTracksRef.current = n; markFieldDirty(`edit_del_${index}`, () => executeUpdateProject(n), 100) }}>
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      disabled={editTracks.length <= 1}
+                                      onClick={() => {
+                                        setTrackToDelete({
+                                          index,
+                                          isEditing: true,
+                                          trackName: track.name.trim() || `Track #${index + 1}`,
+                                        })
+                                      }}
+                                    >
                                       <DeleteIcon fontSize="small" />
                                     </IconButton>
                                   </Box>
@@ -1762,7 +2015,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                   </Grid>
                                   <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
-                                      label="Track Artist"
+                                      label="Track Artist (Optional Override)"
+                                      placeholder={`Defaults to "${editArtist.trim() || artistNameInput.trim() || defaultArtistName}"`}
                                       fullWidth
                                       size="small"
                                       value={track.artist}
@@ -1839,7 +2093,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         </Stack>
                       </Paper>
                     </Stack>
-                  )}
+                  ) : null}
                 </Box>
               </Grid>
             </Grid>
@@ -1878,6 +2132,100 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           </Button>
           <Button variant="contained" color="error" onClick={handleDeleteProject} sx={{ borderRadius: 2 }}>
             Confirm Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Track Confirmation Dialog */}
+      <Dialog
+        open={Boolean(trackToDelete)}
+        onClose={() => setTrackToDelete(null)}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              backgroundColor: 'rgba(25, 25, 35, 0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              p: 1,
+              maxWidth: 420,
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pt: 3, color: 'error.main', fontWeight: 700 }}>
+          Delete Track?
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center' }}>
+          <Typography variant="body1">
+            Are you sure you want to delete track <strong>"{trackToDelete?.trackName}"</strong>? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3, gap: 1.5 }}>
+          <Button variant="outlined" onClick={() => setTrackToDelete(null)} sx={{ borderRadius: 2 }}>
+            Cancel
+          </Button>
+          <Button variant="contained" color="error" onClick={confirmDeleteTrack} sx={{ borderRadius: 2 }}>
+            Confirm Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Copy Track Dialog */}
+      <Dialog
+        open={Boolean(trackToCopy)}
+        onClose={() => setTrackToCopy(null)}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              backgroundColor: 'rgba(25, 25, 35, 0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              p: 1.5,
+              minWidth: 380,
+              maxWidth: 500,
+            },
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ContentCopyIcon color="primary" /> Copy Track to Another Project
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+            Copying track <strong>"{trackToCopy?.track?.name || 'Untitled Track'}"</strong> into a destination project. Any audio file will also be duplicated as an independent copy.
+          </Typography>
+
+          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+            <InputLabel id="target-project-label">Destination Project</InputLabel>
+            <Select
+              labelId="target-project-label"
+              label="Destination Project"
+              value={copyTargetProjectIndex}
+              onChange={(e) => setCopyTargetProjectIndex(Number(e.target.value))}
+            >
+              {projectsList.map((p, idx) => (
+                <MenuItem key={idx} value={idx}>
+                  {p.name || `Project #${idx + 1}`} {idx === trackToCopy?.sourceProjectIndex ? '(Current Project)' : ''}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button variant="outlined" onClick={() => setTrackToCopy(null)} sx={{ borderRadius: 2 }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCopyTrack}
+            disabled={isCopyingTrack || projectsList.length === 0}
+            startIcon={isCopyingTrack ? <CircularProgress size={16} color="inherit" /> : <ContentCopyIcon />}
+            sx={{ borderRadius: 2 }}
+          >
+            {isCopyingTrack ? 'Copying…' : 'Copy Track'}
           </Button>
         </DialogActions>
       </Dialog>

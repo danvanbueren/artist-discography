@@ -415,7 +415,7 @@ export class ArtistDataManager {
               updatedTrack.links = tLinksObj
             }
 
-            const trackSlug = slugify(updatedTrack.name) || `track-${trackIndex + 1}`
+            const trackSlug = slugify(updatedTrack.name)
 
             // Resolve Track Audio by scanning data/projects/<projectSlug>/<trackSlug>.<ext>
             let resolvedAudioUrl = null

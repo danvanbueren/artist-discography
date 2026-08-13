@@ -3,6 +3,7 @@
 import { Box, Stack, Typography, Divider } from '@mui/material'
 import TrackRow from './TrackRow'
 import SubduedText from './SubduedText'
+import { slugify } from '../lib/slugs'
 
 export default function TrackList({
   project,
@@ -35,9 +36,7 @@ export default function TrackList({
     <Stack spacing={0.5} sx={{ px: { xs: 2, sm: 2.5, md: 3 }, pt: { xs: 1.5, sm: 2 }, pb: 2.5 }}>
       <Divider sx={{ mt: 0.5, mb: 2, opacity: 0.15 }} />
       {tracks.map((track, idx) => {
-        const trackSlug = track.name
-          ? track.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-')
-          : `track-${idx + 1}`
+        const trackSlug = slugify(track.name)
         const isHighlighted = highlightedTrackSlug === trackSlug
         const isPlayingThisTrack = playingTrack?.name === track.name
         const isPlayerActive = Boolean(playingTrack)

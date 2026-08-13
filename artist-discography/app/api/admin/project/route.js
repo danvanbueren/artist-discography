@@ -84,9 +84,9 @@ export async function POST(request) {
     }
 
     // Action 2: Update Project
-    const name = String(formData.get('name') || '').trim()
-    const type = String(formData.get('type') || 'Single').trim()
-    const artist = String(formData.get('artist') || fullJsonData.artist?.name || '').trim()
+    const primaryArtistName = String(fullJsonData.artist?.name || currentData.artist?.name || 'Artist').trim()
+    const rawArtist = String(formData.get('artist') || '').trim()
+    const artist = rawArtist || primaryArtistName
     const date = String(formData.get('date') || new Date().toISOString().split('T')[0]).trim()
     const coverUrl = String(formData.get('coverUrl') || '').trim()
     const tracksRaw = String(formData.get('tracks') || '[]')
@@ -110,15 +110,8 @@ export async function POST(request) {
     }
 
     const oldProject = fullJsonData.projects[index]
-    const oldSlug = slugify(oldProject?.name || '')
-    const newSlug = slugify(name)
-
-    if (!newSlug) {
-      return NextResponse.json(
-        { success: false, error: 'Could not generate a valid slug from project name' },
-        { status: 400 }
-      )
-    }
+    const oldSlug = slugify(oldProject?.name || '') || `project-${index + 1}`
+    const newSlug = slugify(name) || `project-${index + 1}`
 
     // Check duplicate project slug across other projects
     const isDuplicateProject = fullJsonData.projects.some((p, i) => {
@@ -183,8 +176,9 @@ export async function POST(request) {
     for (let i = 0; i < parsedTracks.length; i++) {
       const track = parsedTracks[i] ?? {}
       const trackName = String(track.name || '').trim()
-      const trackArtist = String(track.artist || artist || '').trim()
-      const trackSlug = slugify(trackName) || `track-${i + 1}`
+      const rawTrackArtist = String(track.artist || '').trim()
+      const trackArtist = rawTrackArtist || artist || primaryArtistName
+      const trackSlug = slugify(trackName)
 
       // Track the filename actually written to disk for this track (used for response + orphan cleanup)
       let writtenAudioFilename = null

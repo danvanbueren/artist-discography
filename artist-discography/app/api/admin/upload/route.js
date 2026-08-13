@@ -29,9 +29,9 @@ export async function POST(request) {
       )
     }
 
-    const name = String(formData.get('name') || '').trim()
-    const type = String(formData.get('type') || 'Single').trim()
-    const artist = String(formData.get('artist') || currentData.artist?.name || '').trim()
+    const primaryArtistName = String(currentData.artist?.name || 'Artist').trim()
+    const rawArtist = String(formData.get('artist') || '').trim()
+    const artist = rawArtist || primaryArtistName
     const date = String(formData.get('date') || new Date().toISOString().split('T')[0]).trim()
     const coverUrl = String(formData.get('coverUrl') || '').trim()
     const tracksRaw = String(formData.get('tracks') || '[]')
@@ -54,13 +54,7 @@ export async function POST(request) {
       )
     }
 
-    const projectSlug = slugify(name)
-    if (!projectSlug) {
-      return NextResponse.json(
-        { success: false, error: 'Could not generate a valid slug from project name' },
-        { status: 400 }
-      )
-    }
+    const projectSlug = slugify(name) || `project-${Date.now()}`
 
     // Check duplicate project slug across existing projects
     const isDuplicateProject = (currentData.projects || []).some((p) => slugify(p.name) === projectSlug)
@@ -112,8 +106,9 @@ export async function POST(request) {
     for (let i = 0; i < parsedTracks.length; i++) {
       const track = parsedTracks[i] ?? {}
       const trackName = String(track.name || '').trim()
-      const trackArtist = String(track.artist || artist || '').trim()
-      const trackSlug = slugify(trackName) || `track-${i + 1}`
+      const rawTrackArtist = String(track.artist || '').trim()
+      const trackArtist = rawTrackArtist || artist || primaryArtistName
+      const trackSlug = slugify(trackName)
 
       let writtenAudioFilename = null
       const audioFile = formData.get(`track_${i}_audioFile`)

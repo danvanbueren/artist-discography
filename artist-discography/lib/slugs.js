@@ -4,7 +4,7 @@
  */
 export function slugify(text) {
   if (!text || typeof text !== 'string') return ''
-  return text
+  const cleaned = text
     .toString()
     .toLowerCase()
     .trim()
@@ -13,6 +13,20 @@ export function slugify(text) {
     .replace(/[^a-z0-9\s-]/g, '')   // remove non-alphanumeric chars
     .replace(/[\s_-]+/g, '-')       // replace spaces/underscores with single dash
     .replace(/^-+|-+$/g, '')        // trim leading/trailing dashes
+
+  if (cleaned) return cleaned
+
+  if (text.trim()) {
+    let hash = 0
+    const str = text.trim()
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i)
+      hash |= 0
+    }
+    return `item-${Math.abs(hash).toString(36)}`
+  }
+
+  return ''
 }
 
 /**
@@ -37,8 +51,8 @@ export function findTrackBySlug(tracks, slug) {
   const normalizedSlug = slugify(slug)
   if (!normalizedSlug) return null
 
-  return tracks.find((track, index) => {
-    const trackSlug = slugify(track.name) || `track-${index + 1}`
+  return tracks.find((track) => {
+    const trackSlug = slugify(track.name)
     return trackSlug === normalizedSlug
   }) || null
 }
