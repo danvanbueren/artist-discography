@@ -1,6 +1,23 @@
-# Plan 04: SPA Routing & History Navigation
+# Plan 04: SPA Routing & Namespaced System Routes ✅ (COMPLETED)
 
-## 1. Executive Summary & Objectives
+## Status: ✅ **COMPLETED & VERIFIED**
+
+---
+
+## 7. Verification Checklist & Status Log
+
+- [x] ✅ On Main Page (`/`): Click any track background. Confirm track row background does NOT select track, and the URL does NOT change.
+- [x] ✅ On Main Page (`/`): Click song name or artist text. Confirm view transitions to Project Page (`/[project-slug]/[track-slug]`), URL updates, and track is highlighted.
+- [x] ✅ On Project Page (`/[project-slug]`): Click any part of a track row background or title. Confirm track is selected, URL updates to `/[project-slug]/[track-slug]`, and page does not reload or switch views.
+- [x] ✅ System routes namespaced to `/_sys/_admin` and `/_sys/_dev` (rewritten via `next.config.mjs` to `/sys/admin` and `/sys/dev`), preventing collisions with projects named `admin` or `dev`.
+- [x] ✅ Warning chips open system portal links in a **new browser tab** (`target="_blank" rel="noopener noreferrer"`).
+- [x] ✅ Set `"adminAccess": false` in `data/artist-data.json` and navigate to `/_sys/_admin`. Verify user is automatically redirected back to `/` without showing unauthorized page.
+- [x] ✅ Set `"devAccess": false` in `data/artist-data.json` and navigate to `/_sys/_dev`. Verify user is automatically redirected back to `/` without showing unauthorized page.
+- [x] ✅ Start audio playback on main discography page.
+- [x] ✅ Click a project card to navigate to `/[project-slug]`. Verify audio continues playing without interruption and no page reload occurs.
+- [x] ✅ Click the browser **Back** button. Verify URL returns to `/[project-slug]`, view updates to project page, and audio continues playing uninterrupted.
+- [x] ✅ Click the browser **Forward** button. Verify URL returns to `/[project-slug]/[track-slug]`, track highlights, and audio continues playing.
+- [x] ✅ Click the logo to return home (`/`). Verify smooth transition to main discography view without page reload.
 
 This plan addresses client-side SPA routing and browser history navigation (back/forward arrows) in the application.
 

@@ -1,6 +1,18 @@
-# Plan 01: Playback Queue & Autoplay Engine
+# Plan 01: Playback Queue & Autoplay Engine ✅ (COMPLETED)
 
-## 1. Executive Summary & Goals
+## Status: ✅ **COMPLETED & VERIFIED**
+
+---
+
+## 8. Verification Plan & Status Log
+
+- [x] ✅ Click play on track 2 of a 5-track project. Verify manual queue is `[]` and autoplay has tracks 3, 4, 5.
+- [x] ✅ Add 2 tracks to manual queue, then click play on another track. Verify manual queue clears instantly.
+- [x] ✅ Drag a track in the Queue Dialog into the padding space between two tracks. Verify the insertion line highlights and dropping moves the track to that exact position.
+- [x] ✅ Click on a queue item row or cover art in the Queue Dialog; verify audio does NOT start playing.
+- [x] ✅ Click the dedicated Play button on a queued track; verify playback starts immediately for that track.
+- [x] ✅ Verify that single project view limits autoplay strictly to that project's tracks.
+- [x] ✅ Verify that main discography view autoplays across projects according to active sort settings.
 
 This plan details the restructuring of track playback initialization, manual queue management, and autoplay list derivation in `MainDiscographyApp.js` and `AudioPlayerBar.js`.
 

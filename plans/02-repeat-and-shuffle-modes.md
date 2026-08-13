@@ -1,6 +1,23 @@
-# Plan 02: Repeat & Shuffle Modes
+# Plan 02: Repeat & Shuffle Modes ✅ (COMPLETED)
 
-## 1. Executive Summary & Behavioral Matrix
+## Status: ✅ **COMPLETED & VERIFIED**
+
+---
+
+## 6. Verification Checklist & Status Log
+
+- [x] ✅ Set volume slider to 40%, refresh page, and play a track. Confirm actual audio volume level matches 40% immediately.
+- [x] ✅ Click Mute icon (volume becomes 0, icon changes to muted). Click Mute icon again; confirm volume restores to 40% (or enforces `MIN_LISTENABLE_VOLUME = 10%` floor).
+- [x] ✅ Refresh page while muted. Click Mute icon; confirm volume restores to the pre-muted saved level.
+- [x] ✅ Mute icon button is z-index elevated (`zIndex: 2`) above the volume slider thumb (`zIndex: 1`), preventing click obstruction.
+- [x] ✅ Expanded `MuiIconButton` hit target areas (`theme.js`) and button paddings allow effortless clicking app-wide.
+- [x] ✅ Press Spacebar while focus is on a button or slider in the UI; verify audio toggles play/pause reliably without triggering unintended button clicks or page scrolls.
+- [x] ✅ Press Spacebar while typing in a text field or search input; verify space character is inserted normally without pausing playback.
+- [x] ✅ Enable **Repeat ONCE**: Verify track restarts when finishing. Click Next / Prev and verify track restarts without popping items from queue or autoplay.
+- [x] ✅ Enable **Repeat ALL**: Play through to end of project/discography. Verify autoplay queue auto-replenishes without creating infinite arrays.
+- [x] ✅ Disable Repeat (set to **OFF**): Verify playback stops at the end of the current displayed tracks.
+- [x] ✅ Toggle **Shuffle ON**: Open Queue Dialog and verify autoplay tracks list visually rearranges.
+- [x] ✅ Toggle **Shuffle OFF**: Open Queue Dialog and verify autoplay tracks list restores to discography order.
 
 This plan outlines the architecture for managing audio playback loop modes (`off`, `one`, `all`) and shuffle state in `MainDiscographyApp.js` and `AudioPlayerBar.js`.
 
