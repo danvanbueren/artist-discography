@@ -387,7 +387,18 @@ export default function DevDiscographyAuditView({
                               <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', alignItems: 'center' }}>
                                 {(() => {
                                   const trackLinks = trk.links ?? {}
-                                  const standardKeys = ['spotify', 'apple', 'youtube', 'soundcloud', 'bandcamp', 'amazon']
+                                  const standardKeys = [
+                                    'spotify',
+                                    'apple',
+                                    'youtube',
+                                    'soundcloud',
+                                    'bandcamp',
+                                    'deezer',
+                                    'tidal',
+                                    'pandora',
+                                    'amazon',
+                                    'itunes',
+                                  ]
                                   const customKeys = Object.keys(trackLinks).filter(
                                     (k) => !standardKeys.includes(k.toLowerCase()) && Boolean(trackLinks[k]?.trim())
                                   )
