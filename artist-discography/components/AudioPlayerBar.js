@@ -365,9 +365,9 @@ export default function AudioPlayerBar({
                   <Box
                     onClick={onNavigateToCurrentTrack}
                     sx={{
-                      width: { xs: 40, sm: 46 },
-                      height: { xs: 40, sm: 46 },
-                      borderRadius: 2,
+                      width: { xs: 52, sm: 64, md: 66 },
+                      height: { xs: 52, sm: 64, md: 66 },
+                      borderRadius: 2.5,
                       bgcolor: 'primary.main',
                       display: 'flex',
                       alignItems: 'center',
@@ -375,10 +375,10 @@ export default function AudioPlayerBar({
                       color: 'primary.contrastText',
                       flexShrink: 0,
                       overflow: 'hidden',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
                       cursor: 'pointer',
-                      transition: 'transform 0.2s ease',
-                      '&:hover': { transform: 'scale(1.06)' },
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      '&:hover': { transform: 'scale(1.04)', boxShadow: '0 6px 18px rgba(0,0,0,0.4)' },
                     }}
                   >
                     {coverArt ? (
