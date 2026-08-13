@@ -96,7 +96,7 @@ export async function POST(request) {
     const artistBio = getRandomItem(ARTIST_BIOS)
     const handleSlug = artistName.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-    const platforms = {
+    const allPlatforms = {
       amazon: `https://music.amazon.com/artists/${handleSlug}`,
       apple: `https://music.apple.com/artist/${handleSlug}/123456789`,
       bandcamp: `https://${handleSlug}.bandcamp.com`,
@@ -109,7 +109,13 @@ export async function POST(request) {
       youtube: `https://youtube.com/@${handleSlug}`,
     }
 
-    const socials = {
+    // Randomize platform links (50% chance per platform)
+    const platforms = {}
+    Object.entries(allPlatforms).forEach(([k, url]) => {
+      platforms[k] = Math.random() > 0.45 ? url : ''
+    })
+
+    const allSocials = {
       discord: `https://discord.gg/${handleSlug}`,
       facebook: `https://facebook.com/${handleSlug}`,
       instagram: `https://instagram.com/${handleSlug}`,
@@ -117,6 +123,12 @@ export async function POST(request) {
       tiktok: `https://tiktok.com/@${handleSlug}`,
       x: `https://x.com/${handleSlug}`,
     }
+
+    // Randomize social account links (50% chance per social)
+    const socials = {}
+    Object.entries(allSocials).forEach(([k, url]) => {
+      socials[k] = Math.random() > 0.45 ? url : ''
+    })
 
     // Generate 4 randomized projects (1 Single, 1 EP, 2 Albums)
     const projectTypes = ['Single', 'EP', 'Album', 'Album']
@@ -135,21 +147,30 @@ export async function POST(request) {
       const pTrackTitles = getRandomItems(TRACK_TITLES, trackCount)
       const tracks = pTrackTitles.map((tName, tIdx) => {
         const tSlug = tName.toLowerCase().replace(/[^a-z0-9]/g, '')
+        
+        const allTrackLinks = {
+          amazon: `https://music.amazon.com/albums/${handleSlug}?track=${tIdx+1}`,
+          apple: `https://music.apple.com/song/${tSlug}`,
+          bandcamp: `https://${handleSlug}.bandcamp.com/track/${tSlug}`,
+          deezer: `https://www.deezer.com/track/${tIdx+1000}`,
+          itunes: `https://itunes.apple.com/song/${tSlug}`,
+          pandora: `https://www.pandora.com/tr/${tSlug}`,
+          soundcloud: `https://soundcloud.com/${handleSlug}/${tSlug}`,
+          spotify: `https://open.spotify.com/track/${tSlug}`,
+          tidal: `https://tidal.com/track/${tIdx+1000}`,
+          youtube: `https://youtube.com/watch?v=dummy${tIdx+1}`,
+        }
+
+        // For each track, randomly select 2-5 platform links (approx 35% chance per platform)
+        const trackLinks = {}
+        Object.entries(allTrackLinks).forEach(([k, u]) => {
+          trackLinks[k] = Math.random() > 0.65 ? u : ''
+        })
+
         return {
           name: tName,
           artist: Math.random() > 0.8 ? `${artistName} feat. Guest Artist` : '',
-          links: {
-            amazon: `https://music.amazon.com/albums/${handleSlug}?track=${tIdx+1}`,
-            apple: `https://music.apple.com/song/${tSlug}`,
-            bandcamp: `https://${handleSlug}.bandcamp.com/track/${tSlug}`,
-            deezer: `https://www.deezer.com/track/${tIdx+1000}`,
-            itunes: `https://itunes.apple.com/song/${tSlug}`,
-            pandora: `https://www.pandora.com/tr/${tSlug}`,
-            soundcloud: `https://soundcloud.com/${handleSlug}/${tSlug}`,
-            spotify: `https://open.spotify.com/track/${tSlug}`,
-            tidal: `https://tidal.com/track/${tIdx+1000}`,
-            youtube: `https://youtube.com/watch?v=dummy${tIdx+1}`,
-          },
+          links: trackLinks,
         }
       })
 
