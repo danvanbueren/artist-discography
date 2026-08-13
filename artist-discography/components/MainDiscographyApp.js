@@ -414,6 +414,24 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }
 
+  const selectTrackOnProjectPage = (project, track) => {
+    if (project && track) {
+      const projSlug = slugify(project.name)
+      const trkSlug = slugify(track.name)
+      if (projSlug && trkSlug) {
+        window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
+      }
+      setHighlightedTrackSlug(trkSlug)
+    }
+  }
+
+  const highlightTrackOnMainPage = (track) => {
+    if (track) {
+      const trkSlug = slugify(track.name)
+      setHighlightedTrackSlug(trkSlug)
+    }
+  }
+
   const navigateToAllProjects = useCallback(() => {
     const targetProjSlug = selectedProject ? slugify(selectedProject.name || '') : null
 
@@ -979,7 +997,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 playingTrack={playingTrack}
                 isPlaying={isPlaying}
                 highlightedTrackSlug={highlightedTrackSlug}
-                onSelectTrack={(track) => navigateToTrack(selectedProject, track)}
+                onSelectTrackRow={(track) => selectTrackOnProjectPage(selectedProject, track)}
+                onSelectTrackTitle={(track) => selectTrackOnProjectPage(selectedProject, track)}
                 selectedPlatform={selectedPlatform}
               />
             </Stack>
@@ -1012,8 +1031,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                         onShowToast={showToast}
                         playingTrack={playingTrack}
                         isPlaying={isPlaying}
-                        highlightedTrackSlug={null}
-                        onSelectTrack={(track) => navigateToTrack(proj, track)}
+                        highlightedTrackSlug={highlightedTrackSlug}
+                        onSelectTrackRow={(track) => highlightTrackOnMainPage(track)}
+                        onSelectTrackTitle={(track) => navigateToTrack(proj, track)}
                         selectedPlatform={selectedPlatform}
                       />
                     </Box>

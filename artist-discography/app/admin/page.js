@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { loadArtistData } from '../../lib/artistData'
 import AdminDashboardClient from '../../components/AdminDashboardClient'
 
@@ -28,6 +29,10 @@ export default async function AdminPage() {
     artistName = data?.artist?.name?.trim() || 'Artist'
   } catch (err) {
     console.error('Error loading artist data for admin page:', err)
+  }
+
+  if (!adminAccess) {
+    redirect('/')
   }
 
   return (

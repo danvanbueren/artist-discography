@@ -15,6 +15,8 @@ export default function TrackList({
   isPlaying = false,
   highlightedTrackSlug,
   onSelectTrack,
+  onSelectTrackRow,
+  onSelectTrackTitle,
   selectedPlatform,
 }) {
   if (!tracks || tracks.length === 0) {
@@ -55,6 +57,8 @@ export default function TrackList({
             isPlayerActive={isPlayerActive}
             isHighlighted={isHighlighted}
             onSelectTrack={onSelectTrack}
+            onSelectTrackRow={onSelectTrackRow}
+            onSelectTrackTitle={onSelectTrackTitle}
             selectedPlatform={selectedPlatform}
           />
         )

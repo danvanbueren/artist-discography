@@ -84,6 +84,8 @@ export default function TrackRow({
   isPlayerActive = false,
   isHighlighted,
   onSelectTrack,
+  onSelectTrackRow,
+  onSelectTrackTitle,
   selectedPlatform,
 }) {
   const [hovered, setHovered] = useState(false)
@@ -97,7 +99,17 @@ export default function TrackRow({
 
   const handleTitleClick = (e) => {
     e.stopPropagation()
-    if (onSelectTrack) {
+    if (onSelectTrackTitle) {
+      onSelectTrackTitle(track)
+    } else if (onSelectTrack) {
+      onSelectTrack(track)
+    }
+  }
+
+  const handleRowClick = () => {
+    if (onSelectTrackRow) {
+      onSelectTrackRow(track)
+    } else if (onSelectTrack) {
       onSelectTrack(track)
     }
   }
@@ -108,6 +120,7 @@ export default function TrackRow({
     <Box
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={handleRowClick}
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: 'auto 1fr auto', sm: 'auto 1fr auto' },
@@ -115,6 +128,7 @@ export default function TrackRow({
         py: 1.5,
         px: { xs: 1.5, sm: 2 },
         borderRadius: 2,
+        cursor: (onSelectTrackRow || onSelectTrack) ? 'pointer' : 'default',
         bgcolor: isHighlighted
           ? 'rgba(144, 202, 249, 0.14)'
           : isPlayingThisTrack
@@ -220,11 +234,11 @@ export default function TrackRow({
         sx={{
           minWidth: 0,
           px: 1,
-          cursor: onSelectTrack ? 'pointer' : 'default',
+          cursor: (onSelectTrackTitle || onSelectTrack) ? 'pointer' : 'default',
           width: 'fit-content',
           maxWidth: '100%',
           borderRadius: 1,
-          '&:hover': onSelectTrack
+          '&:hover': (onSelectTrackTitle || onSelectTrack)
             ? {
                 opacity: 0.9,
               }

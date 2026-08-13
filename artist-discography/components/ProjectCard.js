@@ -17,6 +17,8 @@ export default function ProjectCard({
   isPlaying = false,
   highlightedTrackSlug,
   onSelectTrack,
+  onSelectTrackRow,
+  onSelectTrackTitle,
   selectedPlatform,
 }) {
   const cover = project?.cover ?? project?.image ?? ''
@@ -80,6 +82,8 @@ export default function ProjectCard({
           isPlaying={isPlaying}
           highlightedTrackSlug={highlightedTrackSlug}
           onSelectTrack={onSelectTrack}
+          onSelectTrackRow={onSelectTrackRow}
+          onSelectTrackTitle={onSelectTrackTitle}
           selectedPlatform={selectedPlatform}
         />
       </Box>

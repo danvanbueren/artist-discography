@@ -17,6 +17,7 @@ import {
   useTheme,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
@@ -64,6 +65,46 @@ export default function PlaybackQueueDialog({
       dragOverItem.position !== position
     ) {
       setDragOverItem({ listType, targetIndex, itemIndex: index, position })
+    }
+  }
+
+  const handleListDragOver = (e, listType) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+
+    const listElement = e.currentTarget
+    const itemElements = Array.from(listElement.children)
+
+    if (itemElements.length === 0) {
+      setDragOverItem({ listType, targetIndex: 0, itemIndex: 0, position: 'top' })
+      return
+    }
+
+    let closestIndex = 0
+    let closestDist = Infinity
+    let closestPos = 'top'
+
+    itemElements.forEach((el, index) => {
+      const rect = el.getBoundingClientRect()
+      const midY = rect.top + rect.height / 2
+      const dist = Math.abs(e.clientY - midY)
+      if (dist < closestDist) {
+        closestDist = dist
+        closestIndex = index
+        closestPos = e.clientY < midY ? 'top' : 'bottom'
+      }
+    })
+
+    const targetIndex = closestPos === 'top' ? closestIndex : closestIndex + 1
+
+    if (
+      !dragOverItem ||
+      dragOverItem.listType !== listType ||
+      dragOverItem.itemIndex !== closestIndex ||
+      dragOverItem.position !== closestPos
+    ) {
+      setDragOverItem({ listType, targetIndex, itemIndex: closestIndex, position: closestPos })
     }
   }
 
@@ -218,7 +259,11 @@ export default function PlaybackQueueDialog({
               </Typography>
             </Paper>
           ) : (
-            <List disablePadding>
+            <List
+              disablePadding
+              onDragOver={(e) => handleListDragOver(e, 'queue')}
+              onDrop={(e) => handleDrop(e, 'queue', manualQueue.length)}
+            >
               {manualQueue.map((item, idx) => {
                 const showTopLine =
                   dragOverItem?.listType === 'queue' &&
@@ -255,12 +300,36 @@ export default function PlaybackQueueDialog({
                       '&:active': { cursor: 'grabbing' },
                     }}
                     secondaryAction={
-                      <IconButton
-                        size="small"
-                        onClick={() => { if (onRemoveFromManualQueue) onRemoveFromManualQueue(idx) }}
-                      >
-                        <DeleteOutlineRoundedIcon fontSize="small" />
-                      </IconButton>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          title="Play Track"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
+                            onClose()
+                          }}
+                          sx={{
+                            '&:hover': {
+                              bgcolor: 'action.selected',
+                              transform: 'scale(1.12)',
+                            },
+                          }}
+                        >
+                          <PlayArrowRoundedIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          title="Remove from Queue"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (onRemoveFromManualQueue) onRemoveFromManualQueue(idx)
+                          }}
+                        >
+                          <DeleteOutlineRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     }
                   >
                     {showTopLine && (
@@ -289,10 +358,6 @@ export default function PlaybackQueueDialog({
                       const coverUrl = item.track?.cover || item.track?.projectCover || item.project?.cover || item.project?.image || ''
                       return (
                         <Box
-                          onClick={() => {
-                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
-                            onClose()
-                          }}
                           sx={{
                             width: 40,
                             height: 40,
@@ -304,7 +369,6 @@ export default function PlaybackQueueDialog({
                             mr: 1.5,
                             flexShrink: 0,
                             overflow: 'hidden',
-                            cursor: 'pointer',
                             border: '1px solid',
                             borderColor: 'divider',
                           }}
@@ -337,11 +401,6 @@ export default function PlaybackQueueDialog({
                         primary: { variant: 'body1', fontWeight: 600, noWrap: true },
                         secondary: { variant: 'caption', noWrap: true },
                       }}
-                      onClick={() => {
-                        if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
-                        onClose()
-                      }}
-                      sx={{ cursor: 'pointer' }}
                     />
                   </ListItem>
                 )
@@ -378,7 +437,11 @@ export default function PlaybackQueueDialog({
               </Typography>
             </Paper>
           ) : (
-            <List disablePadding>
+            <List
+              disablePadding
+              onDragOver={(e) => handleListDragOver(e, 'autoplay')}
+              onDrop={(e) => handleDrop(e, 'autoplay', autoplayTracks.length)}
+            >
               {autoplayTracks.map((item, idx) => {
                 const showTopLine =
                   dragOverItem?.listType === 'autoplay' &&
@@ -415,12 +478,36 @@ export default function PlaybackQueueDialog({
                       '&:active': { cursor: 'grabbing' },
                     }}
                     secondaryAction={
-                      <IconButton
-                        size="small"
-                        onClick={() => { if (onRemoveFromAutoplay) onRemoveFromAutoplay(idx) }}
-                      >
-                        <DeleteOutlineRoundedIcon fontSize="small" />
-                      </IconButton>
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          title="Play Track"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
+                            onClose()
+                          }}
+                          sx={{
+                            '&:hover': {
+                              bgcolor: 'action.selected',
+                              transform: 'scale(1.12)',
+                            },
+                          }}
+                        >
+                          <PlayArrowRoundedIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          title="Remove from Autoplay"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (onRemoveFromAutoplay) onRemoveFromAutoplay(idx)
+                          }}
+                        >
+                          <DeleteOutlineRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                     }
                   >
                     {showTopLine && (
@@ -449,10 +536,6 @@ export default function PlaybackQueueDialog({
                       const coverUrl = item.track?.cover || item.track?.projectCover || item.project?.cover || item.project?.image || ''
                       return (
                         <Box
-                          onClick={() => {
-                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
-                            onClose()
-                          }}
                           sx={{
                             width: 40,
                             height: 40,
@@ -464,7 +547,6 @@ export default function PlaybackQueueDialog({
                             mr: 1.5,
                             flexShrink: 0,
                             overflow: 'hidden',
-                            cursor: 'pointer',
                             border: '1px solid',
                             borderColor: 'divider',
                           }}
@@ -497,11 +579,6 @@ export default function PlaybackQueueDialog({
                         primary: { variant: 'body1', fontWeight: 600, noWrap: true },
                         secondary: { variant: 'caption', noWrap: true },
                       }}
-                      onClick={() => {
-                        if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
-                        onClose()
-                      }}
-                      sx={{ cursor: 'pointer' }}
                     />
                   </ListItem>
                 )

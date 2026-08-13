@@ -64,19 +64,30 @@ export default function AudioPlayerBar({
   const audioRef = useRef(null)
   const [realDuration, setRealDuration] = useState(0)
 
-  // Load volume preference from cookie/localStorage on mount
+  // Load volume & mute preference from cookie/localStorage on mount
   useEffect(() => {
     try {
       const savedVol = getCookie('audio_playback_volume') || localStorage.getItem('audio_playback_volume')
+      const savedMuted = getCookie('audio_playback_muted') || localStorage.getItem('audio_playback_muted')
+      const savedPrevVol = getCookie('audio_playback_prev_volume') || localStorage.getItem('audio_playback_prev_volume')
+
+      let v = 100
       if (savedVol !== null && !isNaN(Number(savedVol))) {
-        const v = Math.min(100, Math.max(0, Number(savedVol)))
-        setVolume(v)
-        if (v > 0) setPrevVolume(v)
-      } else {
-        setVolume(100)
-        setCookie('audio_playback_volume', '100')
-        localStorage.setItem('audio_playback_volume', '100')
+        v = Math.min(100, Math.max(0, Number(savedVol)))
       }
+
+      let pV = 100
+      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) > 0) {
+        pV = Math.min(100, Math.max(1, Number(savedPrevVol)))
+      } else if (v > 0) {
+        pV = v
+      }
+
+      const muted = savedMuted === 'true' || (savedMuted === null && v === 0)
+
+      setVolume(v)
+      setPrevVolume(pV)
+      setIsMuted(muted)
     } catch {}
   }, [])
 
@@ -92,8 +103,11 @@ export default function AudioPlayerBar({
     setRealDuration(0)
     if (audioRef.current) {
       audioRef.current.currentTime = 0
+      const volVal = isMuted ? 0 : volume
+      audioRef.current.volume = Math.min(1, Math.max(0, volVal / 100))
+      audioRef.current.muted = isMuted
     }
-  }, [playingTrack?.audioUrl, playingTrack?.name])
+  }, [playingTrack?.audioUrl, playingTrack?.name, volume, isMuted])
 
   // Sync playback state with audio element
   useEffect(() => {
@@ -153,8 +167,8 @@ export default function AudioPlayerBar({
     if (!playingTrack) return
 
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
-        const target = e.target
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar' || e.keyCode === 32) {
+        const target = e.target || document.activeElement
         let isTextEditField = false
 
         if (target) {
@@ -176,6 +190,7 @@ export default function AudioPlayerBar({
 
         if (!isTextEditField) {
           e.preventDefault()
+          e.stopPropagation()
           handleDirectTogglePlay()
         }
       }
@@ -220,20 +235,27 @@ export default function AudioPlayerBar({
   // Handle Volume Icon click (toggle mute)
   const handleToggleMute = () => {
     if (isMuted || volume === 0) {
-      setIsMuted(false)
       const targetVol = prevVolume > 0 ? prevVolume : 100
+      setIsMuted(false)
       setVolume(targetVol)
       try {
         setCookie('audio_playback_volume', targetVol.toString())
         localStorage.setItem('audio_playback_volume', targetVol.toString())
+        setCookie('audio_playback_muted', 'false')
+        localStorage.setItem('audio_playback_muted', 'false')
       } catch {}
     } else {
-      setPrevVolume(volume)
-      setVolume(0)
+      if (volume > 0) {
+        setPrevVolume(volume)
+        try {
+          setCookie('audio_playback_prev_volume', volume.toString())
+          localStorage.setItem('audio_playback_prev_volume', volume.toString())
+        } catch {}
+      }
       setIsMuted(true)
       try {
-        setCookie('audio_playback_volume', '0')
-        localStorage.setItem('audio_playback_volume', '0')
+        setCookie('audio_playback_muted', 'true')
+        localStorage.setItem('audio_playback_muted', 'true')
       } catch {}
     }
   }
@@ -241,15 +263,22 @@ export default function AudioPlayerBar({
   // Handle Volume Slider change
   const handleVolumeChange = (_, val) => {
     setVolume(val)
-    try {
-      setCookie('audio_playback_volume', val.toString())
-      localStorage.setItem('audio_playback_volume', val.toString())
-    } catch {}
-    if (val > 0 && isMuted) {
-      setIsMuted(false)
+    if (val > 0) {
+      setPrevVolume(val)
+      if (isMuted) setIsMuted(false)
     } else if (val === 0 && !isMuted) {
       setIsMuted(true)
     }
+    try {
+      setCookie('audio_playback_volume', val.toString())
+      localStorage.setItem('audio_playback_volume', val.toString())
+      setCookie('audio_playback_muted', val === 0 ? 'true' : 'false')
+      localStorage.setItem('audio_playback_muted', val === 0 ? 'true' : 'false')
+      if (val > 0) {
+        setCookie('audio_playback_prev_volume', val.toString())
+        localStorage.setItem('audio_playback_prev_volume', val.toString())
+      }
+    } catch {}
   }
 
   // Cycle repeat mode: off -> all -> one -> off
@@ -664,9 +693,17 @@ export default function AudioPlayerBar({
               ref={audioRef}
               src={playingTrack?.audioUrl || undefined}
               preload="auto"
+              onPlay={(e) => {
+                const volVal = isMuted ? 0 : volume
+                e.currentTarget.volume = Math.min(1, Math.max(0, volVal / 100))
+                e.currentTarget.muted = isMuted
+              }}
               onLoadedMetadata={(e) => {
                 const d = e.currentTarget.duration
                 if (d && !isNaN(d)) setRealDuration(d)
+                const volVal = isMuted ? 0 : volume
+                e.currentTarget.volume = Math.min(1, Math.max(0, volVal / 100))
+                e.currentTarget.muted = isMuted
               }}
               onTimeUpdate={(e) => {
                 setCurrentTime(e.currentTarget.currentTime)
