@@ -52,10 +52,13 @@ export default function AudioPlayerBar({
   onNavigateToCurrentTrack,
   isShuffle = false,
   onToggleShuffle,
+  repeatMode: propsRepeatMode,
+  onCycleRepeatMode,
 }) {
   const theme = useTheme()
   const [currentTime, setCurrentTime] = useState(0)
-  const [repeatMode, setRepeatMode] = useState('off') // 'off' | 'all' | 'one'
+  const [localRepeatMode, setLocalRepeatMode] = useState('off') // 'off' | 'all' | 'one'
+  const repeatMode = propsRepeatMode !== undefined ? propsRepeatMode : localRepeatMode
   const [volume, setVolume] = useState(100)
   const [prevVolume, setPrevVolume] = useState(100)
   const [isMuted, setIsMuted] = useState(false)
@@ -288,11 +291,15 @@ export default function AudioPlayerBar({
 
   // Cycle repeat mode: off -> all -> one -> off
   const handleCycleRepeat = () => {
-    setRepeatMode(prev => {
-      if (prev === 'off') return 'all'
-      if (prev === 'all') return 'one'
-      return 'off'
-    })
+    if (onCycleRepeatMode) {
+      onCycleRepeatMode()
+    } else {
+      setLocalRepeatMode(prev => {
+        if (prev === 'off') return 'all'
+        if (prev === 'all') return 'one'
+        return 'off'
+      })
+    }
   }
 
   // Dynamic Volume Icon

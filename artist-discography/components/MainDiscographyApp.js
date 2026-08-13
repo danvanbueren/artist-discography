@@ -532,6 +532,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
 
   const [autoplayTracks, setAutoplayTracks] = useState([])
   const [isShuffle, setIsShuffle] = useState(false)
+  const [repeatMode, setRepeatMode] = useState('off') // 'off' | 'all' | 'one'
 
   const handleToggleShuffle = useCallback(() => {
     setIsShuffle(prev => {
@@ -571,6 +572,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       }
       setPlayingTrack(trackWithProject)
       setIsPlaying(true)
+
+      // Direct track play clears manual queue immediately
+      setManualQueue([])
 
       // User physically clicked PLAY on a new track -> populate autoplay queue with tracks that follow it
       const currIndex = (displayedDiscographyTracks || []).findIndex(
@@ -618,6 +622,10 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }, [selectedProject, projects, showToast])
 
   const handleSkipNext = useCallback(() => {
+    if (repeatMode === 'one' && playingTrack) {
+      return
+    }
+
     if (manualQueue.length > 0) {
       const [nextItem, ...restQueue] = manualQueue
       setManualQueue(restQueue)
@@ -631,10 +639,16 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       setAutoplayTracks(restAutoplay)
       setPlayingTrack(nextItem.track)
       setIsPlaying(true)
+    } else if (repeatMode === 'all' && displayedDiscographyTracks.length > 0) {
+      const freshTracks = isShuffle ? shuffleArray(displayedDiscographyTracks) : [...displayedDiscographyTracks]
+      const [firstItem, ...rest] = freshTracks
+      setAutoplayTracks(rest)
+      setPlayingTrack(firstItem.track)
+      setIsPlaying(true)
     } else {
       setIsPlaying(false)
     }
-  }, [manualQueue, autoplayTracks])
+  }, [repeatMode, playingTrack, manualQueue, autoplayTracks, displayedDiscographyTracks, isShuffle])
 
   const handleSkipPrev = useCallback(() => {
     if (displayedDiscographyTracks.length > 0) {
@@ -1089,6 +1103,21 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
           onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
           isShuffle={isShuffle}
           onToggleShuffle={handleToggleShuffle}
+          repeatMode={repeatMode}
+          onCycleRepeatMode={() => {
+            setRepeatMode(prev => {
+              if (prev === 'off') {
+                showToast('Repeat ALL')
+                return 'all'
+              }
+              if (prev === 'all') {
+                showToast('Repeat ONE')
+                return 'one'
+              }
+              showToast('Repeat OFF')
+              return 'off'
+            })
+          }}
         />
 
         {/* Feedback Snackbar / Toast */}
