@@ -673,6 +673,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   }
 
   const handleLogout = () => {
+    if (initialData?.adminPassword === '') return
     setIsAuthenticated(false)
     setPassword('')
     try {
@@ -918,8 +919,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     )
   }
 
-  // 2. Authentication view
-  if (!isAuthenticated) {
+  // 2. Authentication view (inaccessible if adminPassword is empty)
+  if (!isAuthenticated && initialData?.adminPassword !== '') {
     return (
       <Container maxWidth="sm" sx={{ py: 10 }}>
         <Paper
@@ -1088,16 +1089,18 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           >
             View Site
           </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-            sx={{ borderRadius: 2, textTransform: 'none' }}
-          >
-            Lock Panel
-          </Button>
+          {initialData?.adminPassword !== '' && (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+              sx={{ borderRadius: 2, textTransform: 'none' }}
+            >
+              Lock Panel
+            </Button>
+          )}
         </Box>
       </Paper>
 
