@@ -109,9 +109,33 @@ const handlePlayTrack = useCallback((track, proj) => {
 
 ---
 
-## 6. Verification Plan
+## 7. Queue Dialog Interaction & Drag/Drop Enhancements
+
+### Target File: [`PlaybackQueueDialog.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/PlaybackQueueDialog.js)
+
+#### A. Inter-Track Drag & Drop Padding Target Recognition
+- **Problem**: Dragging items requires precise mouse cursor targeting directly over pre-existing track row elements. Dropping onto the padding gaps between tracks fails to reorder items.
+- **Solution**:
+  - Enhance `onDragOver` handlers on the list container and item wrappers to calculate mouse pointer vertical offset (`clientY`) relative to item midpoints and padding boundaries.
+  - Expose padding areas between `ListItem` components as valid drop zones by attaching container-level `onDragOver` detection that maps Y-coordinates to nearest insertion index (`targetIndex`).
+  - Provide visual feedback (top/bottom insertion indicator lines) when dragging over spacing gaps between items.
+
+#### B. Dedicated Play Button for Queue Items (No Auto-Play on Row Click)
+- **Problem**: Clicking anywhere on a queue track row (cover art or title text) currently starts playback automatically.
+- **Solution**:
+  - Disable automatic playback on generic row/cover/text clicks in `PlaybackQueueDialog.js`.
+  - Add a dedicated `<IconButton>` featuring `<PlayArrowRoundedIcon>` to each queue row in both the **Manual Queue** and **Autoplay** sections.
+  - Clicking this dedicated play button triggers `onPlayQueuedTrack(item, idx, isManual)`, while clicking row text or background performs item selection or remains passive without forcing playback.
+
+---
+
+## 8. Verification Plan
 
 - [ ] Click play on track 2 of a 5-track project. Verify manual queue is `[]` and autoplay has tracks 3, 4, 5.
 - [ ] Add 2 tracks to manual queue, then click play on another track. Verify manual queue clears instantly.
+- [ ] Drag a track in the Queue Dialog into the padding space between two tracks. Verify the insertion line highlights and dropping moves the track to that exact position.
+- [ ] Click on a queue item row or cover art in the Queue Dialog; verify audio does NOT start playing.
+- [ ] Click the dedicated Play button on a queued track; verify playback starts immediately for that track.
 - [ ] Verify that single project view limits autoplay strictly to that project's tracks.
 - [ ] Verify that main discography view autoplays across projects according to active sort settings.
+

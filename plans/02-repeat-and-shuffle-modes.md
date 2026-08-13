@@ -117,10 +117,53 @@ onEnded={() => {
 
 ---
 
-## 4. Verification Checklist
+## 4. Volume Bar & Mute State Persistence Architecture
 
+### Target File: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/AudioPlayerBar.js)
+
+#### A. Persistence & Initial Audio Element Sync
+- **Problem**: Volume slider visually loads saved state from storage on refresh, but is not applied to the actual `<audio>` element playback volume when playback begins.
+- **Solution**:
+  - Save three distinct storage keys: `audio_playback_volume` (chosen level 0-100), `audio_playback_muted` (boolean string `'true'`/`'false'`), and `audio_playback_prev_volume` (last non-zero level).
+  - Explicitly sync `<audio>` element's `volume` and `muted` properties in:
+    1. The initial mount `useEffect` after reading saved values from storage.
+    2. An `onLoadedMetadata` / `onPlay` / `onCanPlay` handler on the `<audio>` element so every newly loaded track applies the saved volume immediately.
+    3. The state sync `useEffect` whenever `volume` or `isMuted` changes.
+
+#### B. Mute & Unmute State Restoration
+- **Problem**: Clicking the muted icon fails to toggle back to the visually loaded pre-muted volume state; it remains muted or stuck at 0.
+- **Solution**:
+  - When clicking mute (`handleToggleMute`):
+    - If `isMuted` is `true` or `volume === 0`: Restore `volume` to `prevVolume > 0 ? prevVolume : 100` and set `isMuted(false)`. Update storage with the restored volume and set `audio_playback_muted` to `'false'`.
+    - If unmuted: Save current `volume` to `prevVolume`, set `volume = 0` and `isMuted = true`. Update storage with `audio_playback_muted` = `'true'` and preserve `audio_playback_prev_volume`.
+
+---
+
+## 5. Spacebar Shortcut Reliability & Focus Handling
+
+### Target File: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/AudioPlayerBar.js)
+
+- **Problem**: Spacebar shortcut for Play/Pause is occasionally ignored or triggers default element behaviors when interactive UI elements have browser focus.
+- **Solution**:
+  - Register global capture-phase `keydown` event listener (`window.addEventListener('keydown', handleKeyDown, true)`).
+  - Inspect `document.activeElement` and `event.target`:
+    - Exempt inputs where typing space is required: `textarea`, editable text `input` (`text`, `search`, `password`, `url`, `email`, `number`), and elements with `isContentEditable === true`.
+    - Allow spacebar play/pause even when non-editable elements (such as buttons, sliders, links, or modal wrappers) hold focus by invoking `e.preventDefault()` and `e.stopPropagation()`.
+  - Check both `e.code === 'Space'` and fallback keys (`e.key === ' '`, `e.key === 'Spacebar'`, `e.keyCode === 32`).
+  - Guarantee `handleDirectTogglePlay()` executes synchronously to control the `<audio>` element immediately.
+
+---
+
+## 6. Verification Checklist
+
+- [ ] Set volume slider to 40%, refresh page, and play a track. Confirm actual audio volume level matches 40% immediately.
+- [ ] Click Mute icon (volume becomes 0, icon changes to muted). Click Mute icon again; confirm volume restores to 40% (the originally visually loaded level).
+- [ ] Refresh page while muted. Click Mute icon; confirm volume restores to the pre-muted saved level.
+- [ ] Press Spacebar while focus is on a button or slider in the UI; verify audio toggles play/pause reliably without triggering unintended button clicks or page scrolls.
+- [ ] Press Spacebar while typing in a text field or search input; verify space character is inserted normally without pausing playback.
 - [ ] Enable **Repeat ONCE**: Verify track restarts when finishing. Click Next / Prev and verify track restarts without popping items from queue or autoplay.
 - [ ] Enable **Repeat ALL**: Play through to end of project/discography. Verify autoplay queue auto-replenishes without creating infinite arrays.
 - [ ] Disable Repeat (set to **OFF**): Verify playback stops at the end of the current displayed tracks.
 - [ ] Toggle **Shuffle ON**: Open Queue Dialog and verify autoplay tracks list visually rearranges.
 - [ ] Toggle **Shuffle OFF**: Open Queue Dialog and verify autoplay tracks list restores to discography order.
+

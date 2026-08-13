@@ -106,11 +106,48 @@ const syncStateFromLocation = useCallback(() => {
 
 ---
 
-## 5. Verification Checklist
+## 5. Track Row Click & Selection Routing Rules
 
+### Target Files: [`TrackRow.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/TrackRow.js), [`ProjectCard.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/ProjectCard.js), [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/MainDiscographyApp.js)
+
+#### A. Main Discography View (`/`) Behavior
+- **Track Row Background Click**:
+  - Clicking the background `<Box>` of any `TrackRow` highlights/selects that track in local state (`highlightedTrackSlug`).
+  - **Does NOT update or change the browser URL** (`window.location.pathname` remains `/`).
+- **Song Name / Artist Field Click**:
+  - Acts as an explicit navigation button/link.
+  - Switches view mode to Single Project View (`SINGLE_PROJECT`), sets `selectedProject`, updates browser URL to `/[project-slug]/[track-slug]` via `window.history.pushState`, and automatically highlights that track on the project page.
+
+#### B. Single Project Page (`/[project-slug]`) Behavior
+- **Track Row Background or Title Click**:
+  - Clicking any part of the track row (background or title/artist stack) selects that track and updates the URL state to `/[project-slug]/[track-slug]`.
+  - **Does NOT link/navigate to a different page view** (remains on Single Project View without page reload).
+
+---
+
+## 6. Disabled Admin & Dev Route Redirection
+
+### Target Files: [`app/admin/page.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/app/admin/page.js), [`app/dev/page.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/app/dev/page.js)
+
+- **Problem**: Accessing `/admin` or `/dev` when disabled in config (`adminAccess: false` or `devAccess: false` in `data/artist-data.json`) renders an "Access Unauthorized" / "Dev Mode Access Disabled" error card instead of returning the user home.
+- **Solution**:
+  - Import `redirect` from `'next/navigation'` in `app/admin/page.js` and `app/dev/page.js`.
+  - When loading configuration in server components, if `adminAccess === false` on `/admin` or `devAccess === false` on `/dev`:
+    - Call `redirect('/')` immediately.
+    - Eliminates unauthorized error landing pages and redirects users directly back to the main discography view home page (`/`).
+
+---
+
+## 7. Verification Checklist
+
+- [ ] On Main Page (`/`): Click any track background. Confirm track row highlights visually, and the URL does NOT change.
+- [ ] On Main Page (`/`): Click song name or artist text. Confirm view transitions to Project Page (`/[project-slug]/[track-slug]`), URL updates, and track is highlighted.
+- [ ] On Project Page (`/[project-slug]`): Click any part of a track row background or title. Confirm track is selected, URL updates to `/[project-slug]/[track-slug]`, and page does not reload or switch views.
+- [ ] Set `"adminAccess": false` in `data/artist-data.json` and navigate to `/admin`. Verify user is automatically redirected back to `/` without showing unauthorized page.
+- [ ] Set `"devAccess": false` in `data/artist-data.json` and navigate to `/dev`. Verify user is automatically redirected back to `/` without showing unauthorized page.
 - [ ] Start audio playback on main discography page.
 - [ ] Click a project card to navigate to `/[project-slug]`. Verify audio continues playing without interruption and no page reload occurs.
-- [ ] Click a track to navigate to `/[project-slug]/[track-slug]`.
 - [ ] Click the browser **Back** button. Verify URL returns to `/[project-slug]`, view updates to project page, and audio continues playing uninterrupted.
 - [ ] Click the browser **Forward** button. Verify URL returns to `/[project-slug]/[track-slug]`, track highlights, and audio continues playing.
 - [ ] Click the logo to return home (`/`). Verify smooth transition to main discography view without page reload.
+
