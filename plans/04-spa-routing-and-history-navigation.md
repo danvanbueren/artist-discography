@@ -112,7 +112,7 @@ const syncStateFromLocation = useCallback(() => {
 
 #### A. Main Discography View (`/`) Behavior
 - **Track Row Background Click**:
-  - Clicking the background `<Box>` of any `TrackRow` highlights/selects that track in local state (`highlightedTrackSlug`).
+  - Clicking the background `<Box>` of any `TrackRow` does **NOT** select or highlight a track (`onSelectTrackRow={null}`).
   - **Does NOT update or change the browser URL** (`window.location.pathname` remains `/`).
 - **Song Name / Artist Field Click**:
   - Acts as an explicit navigation button/link.
