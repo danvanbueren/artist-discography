@@ -653,14 +653,19 @@ export default function AudioPlayerBar({
                   <IconButton
                     size="small"
                     onClick={handleToggleMute}
-                    sx={{ color: isMuted ? 'error.main' : 'text.secondary', p: 0.9 }}
+                    sx={{
+                      color: isMuted ? 'error.main' : 'text.secondary',
+                      p: 0.9,
+                      position: 'relative',
+                      zIndex: 2,
+                    }}
                   >
                     <VolumeIconComponent fontSize="small" />
                   </IconButton>
                 </Tooltip>
 
                 {/* Col 3: Volume Scrubber Input */}
-                <Box sx={{ width: { xs: 60, sm: 70, md: 90 }, display: 'flex', alignItems: 'center', px: 0.5 }}>
+                <Box sx={{ width: { xs: 60, sm: 70, md: 90 }, display: 'flex', alignItems: 'center', px: 0.5, ml: 0.25, position: 'relative', zIndex: 1 }}>
                   <Slider
                     size="small"
                     value={effectiveVolume}
