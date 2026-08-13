@@ -134,8 +134,8 @@ artist-discography/data/
 #### Field Specifications
 
 ##### 1. System Access Flags
-- **`adminAccess`** *(Boolean, default: false)*: Set to `true` to enable Admin Portal access (`/_sys/_admin`). When `false` or unconfigured, admin access is locked and visitors automatically redirect home (`/`).
-- **`devAccess`** *(Boolean, default: false)*: Set to `true` to enable Dev Preview Dashboard access (`/_sys/_dev`). When `false` or unconfigured, dev access is locked and visitors automatically redirect home (`/`).
+- **`adminAccess`** *(Boolean, default: true)*: Enabled (`true`) by default on initial scaffold to allow operators setup access to the Admin Portal (`/_sys/_admin`). Set to `false` in production to lock access and auto-redirect visitors home (`/`).
+- **`devAccess`** *(Boolean, default: false)*: Disabled (`false`) by default on initial scaffold. Set to `true` to enable access to the Dev Preview Dashboard (`/_sys/_dev`).
 
 ##### 2. `artist` Object
 - **`name`**: The primary artist name.

@@ -824,7 +824,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         }}
       >
         {/* Floating Dev & Admin Alert Cards (Top Left) */}
-        {(Boolean(data?.adminAccess) || Boolean(data?.devAccess)) && (
+        {(data?.adminAccess !== false || Boolean(data?.devAccess)) && (
           <Stack
             spacing={1}
             sx={{
@@ -836,7 +836,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
               maxWidth: { xs: 'calc(100vw - 24px)', sm: 380 },
             }}
           >
-            {Boolean(data?.adminAccess) && (
+            {data?.adminAccess !== false && (
               <Paper
                 elevation={6}
                 sx={{
