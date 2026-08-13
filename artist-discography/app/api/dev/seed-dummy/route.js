@@ -1,0 +1,213 @@
+import { NextResponse } from 'next/server'
+import path from 'path'
+import fs from 'fs'
+import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
+
+const ARTIST_NAMES = [
+  'Astraea & The Neon Sun',
+  'Kaelen Voss',
+  'Lunar Echoes',
+  'Obsidian Horizons',
+  'Vaporwave Symphony',
+  'Solaris Spectrum',
+  'Velvet Frequency',
+  'Aetherial Drift',
+]
+
+const ARTIST_BIOS = [
+  'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Producer and composer pushing the boundaries of ambient synthwave and cinematic soundscapes. Curating immersive audio experiences for late-night dreamers.',
+  'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Multi-instrumentalist creating textured electronic soundscapes blending organic acoustics with retro-futuristic synthesis.',
+  'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Crafting melodic soundwaves and ethereal beats from an underground studio.',
+  'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Synthesizing analog warmth with crisp digital sound design across cinematic releases.',
+]
+
+const ALBUM_COVERS = [
+  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop',
+]
+
+const PROJECT_TITLES = [
+  'Midnight Echoes',
+  'Celestial Drift',
+  'Quantum Reverie',
+  'Velvet Dusk',
+  'Neon Sunset Boulevard',
+  'Subterranean Shift',
+  'Hyperdrive',
+  'Solar Flare',
+  'Aetherial Horizons',
+  'Vapor Trail Paradigm',
+]
+
+const TRACK_TITLES = [
+  'Starlight Pulse',
+  'Fragmented Dreams',
+  'Subterranean Shift',
+  'Hyperdrive',
+  'Solar Flare',
+  'Infinite Horizon',
+  'Chasing Shadows',
+  'Vapor Trail',
+  'Echo Chamber',
+  'Aether',
+  'Luminescence',
+  'Neon Rain',
+  'Oscillation #4',
+  'Silent Reverie',
+  'Orbital Resonance',
+]
+
+function getRandomItem(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+function getRandomItems(arr, count) {
+  const shuffled = [...arr].sort(() => 0.5 - Math.random())
+  return shuffled.slice(0, count)
+}
+
+function getRandomDate(startYear = 2021, endYear = 2026) {
+  const year = Math.floor(Math.random() * (endYear - startYear + 1)) + startYear
+  const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')
+  const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export async function POST(request) {
+  try {
+    const dataResult = loadArtistData()
+    const currentData = dataResult?.data ?? {}
+
+    const devAccess = Boolean(currentData?.devAccess !== false)
+    if (!devAccess) {
+      return NextResponse.json(
+        { success: false, error: 'Dev access is disabled in artist-data.json' },
+        { status: 403 }
+      )
+    }
+
+    const artistName = getRandomItem(ARTIST_NAMES)
+    const artistBio = getRandomItem(ARTIST_BIOS)
+    const handleSlug = artistName.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+    const platforms = {
+      amazon: `https://music.amazon.com/artists/${handleSlug}`,
+      apple: `https://music.apple.com/artist/${handleSlug}/123456789`,
+      bandcamp: `https://${handleSlug}.bandcamp.com`,
+      deezer: `https://www.deezer.com/artist/${handleSlug}`,
+      itunes: `https://itunes.apple.com/artist/${handleSlug}/id123456789`,
+      pandora: `https://www.pandora.com/artist/${handleSlug}`,
+      soundcloud: `https://soundcloud.com/${handleSlug}`,
+      spotify: `https://open.spotify.com/artist/${handleSlug}`,
+      tidal: `https://tidal.com/artist/${handleSlug}`,
+      youtube: `https://youtube.com/@${handleSlug}`,
+    }
+
+    const socials = {
+      discord: `https://discord.gg/${handleSlug}`,
+      facebook: `https://facebook.com/${handleSlug}`,
+      instagram: `https://instagram.com/${handleSlug}`,
+      snapchat: `https://snapchat.com/add/${handleSlug}`,
+      tiktok: `https://tiktok.com/@${handleSlug}`,
+      x: `https://x.com/${handleSlug}`,
+    }
+
+    // Generate 4 randomized projects (1 Single, 1 EP, 2 Albums)
+    const projectTypes = ['Single', 'EP', 'Album', 'Album']
+    const selectedTitles = getRandomItems(PROJECT_TITLES, 4)
+    const selectedCovers = getRandomItems(ALBUM_COVERS, 4)
+
+    const projects = projectTypes.map((type, idx) => {
+      const pTitle = selectedTitles[idx]
+      const coverUrl = selectedCovers[idx]
+      const pDate = getRandomDate(2021, 2026)
+
+      let trackCount = 1
+      if (type === 'EP') trackCount = Math.floor(Math.random() * 3) + 3 // 3-5 tracks
+      if (type === 'Album') trackCount = Math.floor(Math.random() * 4) + 6 // 6-9 tracks
+
+      const pTrackTitles = getRandomItems(TRACK_TITLES, trackCount)
+      const tracks = pTrackTitles.map((tName, tIdx) => {
+        const tSlug = tName.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return {
+          name: tName,
+          artist: Math.random() > 0.8 ? `${artistName} feat. Guest Artist` : '',
+          links: {
+            amazon: `https://music.amazon.com/albums/${handleSlug}?track=${tIdx+1}`,
+            apple: `https://music.apple.com/song/${tSlug}`,
+            bandcamp: `https://${handleSlug}.bandcamp.com/track/${tSlug}`,
+            deezer: `https://www.deezer.com/track/${tIdx+1000}`,
+            itunes: `https://itunes.apple.com/song/${tSlug}`,
+            pandora: `https://www.pandora.com/tr/${tSlug}`,
+            soundcloud: `https://soundcloud.com/${handleSlug}/${tSlug}`,
+            spotify: `https://open.spotify.com/track/${tSlug}`,
+            tidal: `https://tidal.com/track/${tIdx+1000}`,
+            youtube: `https://youtube.com/watch?v=dummy${tIdx+1}`,
+          },
+        }
+      })
+
+      return {
+        name: pTitle,
+        type,
+        artist: Math.random() > 0.85 ? `${artistName} (Side Project)` : '',
+        date: pDate,
+        cover: coverUrl,
+        tracks,
+      }
+    })
+
+    const filePath = path.join(process.cwd(), 'data', 'artist-data.json')
+    let fullJsonData = {}
+    if (fs.existsSync(filePath)) {
+      try {
+        fullJsonData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+      } catch (e) {
+        fullJsonData = currentData
+      }
+    } else {
+      fullJsonData = currentData
+    }
+
+    fullJsonData.adminAccess = true
+    fullJsonData.adminPassword = currentData.adminPassword ?? ''
+    fullJsonData.devAccess = true
+    fullJsonData.artist = {
+      name: artistName,
+      bio: artistBio,
+      links: {
+        platforms,
+        socials,
+      },
+    }
+    fullJsonData.projects = projects
+
+    const saveResult = saveArtistData(fullJsonData)
+    if (!saveResult.success) {
+      return NextResponse.json(
+        { success: false, error: `Failed to write dummy data: ${saveResult.error}` },
+        { status: 500 }
+      )
+    }
+
+    const reloaded = loadArtistData()
+
+    return NextResponse.json({
+      success: true,
+      message: `Successfully randomized artist-data.json with dummy data for "${artistName}"!`,
+      data: reloaded?.data ?? fullJsonData,
+    })
+  } catch (err) {
+    console.error('Error generating randomized dummy data:', err)
+    return NextResponse.json(
+      { success: false, error: `Server error generating dummy data: ${err.message}` },
+      { status: 500 }
+    )
+  }
+}

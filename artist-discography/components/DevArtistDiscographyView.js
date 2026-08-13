@@ -28,6 +28,7 @@ import {
   Grid,
 } from '@mui/material'
 
+import CircularProgress from '@mui/material/CircularProgress'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import HomeIcon from '@mui/icons-material/Home'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
@@ -45,6 +46,7 @@ import ImageIcon from '@mui/icons-material/Image'
 import LinkIcon from '@mui/icons-material/Link'
 import EqualizerIcon from '@mui/icons-material/Equalizer'
 import SecurityIcon from '@mui/icons-material/Security'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { formatProjectDate } from '../lib/dateUtils'
 
 export default function DevArtistDiscographyView({ data, health }) {
@@ -53,6 +55,9 @@ export default function DevArtistDiscographyView({ data, health }) {
   const [playingAudioUrl, setPlayingAudioUrl] = useState(null)
   const [audioObj, setAudioObj] = useState(null)
   const [copiedJson, setCopiedJson] = useState(false)
+  const [isGeneratingDummy, setIsGeneratingDummy] = useState(false)
+  const [seedMessage, setSeedMessage] = useState('')
+  const [seedError, setSeedError] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -90,6 +95,32 @@ export default function DevArtistDiscographyView({ data, health }) {
       setCopiedJson(true)
       setTimeout(() => setCopiedJson(false), 2000)
     } catch (err) {}
+  }
+
+  // Generate randomized dummy data
+  const handleGenerateDummyData = async () => {
+    setIsGeneratingDummy(true)
+    setSeedMessage('')
+    setSeedError('')
+    try {
+      const res = await fetch('/api/dev/seed-dummy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const result = await res.json()
+      if (res.ok && result.success) {
+        setSeedMessage(result.message || 'Dummy data generated successfully!')
+        setTimeout(() => {
+          window.location.reload()
+        }, 600)
+      } else {
+        setSeedError(result.error || 'Failed to generate dummy data.')
+      }
+    } catch (err) {
+      setSeedError(`Error generating dummy data: ${err.message}`)
+    } finally {
+      setIsGeneratingDummy(false)
+    }
   }
 
   const artistName = data?.artist?.name ?? ''
@@ -160,7 +191,18 @@ export default function DevArtistDiscographyView({ data, health }) {
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            color="warning"
+            size="small"
+            startIcon={isGeneratingDummy ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
+            onClick={handleGenerateDummyData}
+            disabled={isGeneratingDummy}
+            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+          >
+            {isGeneratingDummy ? 'Generating...' : 'Randomize Dummy Data'}
+          </Button>
           <Button
             variant="outlined"
             size="small"
@@ -175,7 +217,7 @@ export default function DevArtistDiscographyView({ data, health }) {
             color="secondary"
             size="small"
             startIcon={<AdminPanelSettingsIcon />}
-            href="/_sys/_admin"
+            href="/sys/admin"
             target="_blank"
             rel="noopener noreferrer"
             sx={{ borderRadius: 2, textTransform: 'none' }}
@@ -184,6 +226,18 @@ export default function DevArtistDiscographyView({ data, health }) {
           </Button>
         </Box>
       </Paper>
+
+      {/* Seed Status & Warnings Alerts */}
+      {seedMessage && (
+        <Alert severity="success" onClose={() => setSeedMessage('')} sx={{ mb: 3, borderRadius: 2.5 }}>
+          {seedMessage}
+        </Alert>
+      )}
+      {seedError && (
+        <Alert severity="error" onClose={() => setSeedError('')} sx={{ mb: 3, borderRadius: 2.5 }}>
+          {seedError}
+        </Alert>
+      )}
 
       {/* Warnings & Alerts */}
       {isArtistNameEmpty && (
