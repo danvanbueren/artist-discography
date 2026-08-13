@@ -84,16 +84,19 @@ export default function DevDiscographyAuditView({
   handleToggleAudio = () => {},
 }) {
   const [viewDensity, setViewDensity] = useState('cozy')
-  // Track open state for each project index
-  const [expandedProjects, setExpandedProjects] = useState({ 0: true })
+  // Track open state for each project index (default to all expanded)
+  const [expandedProjects, setExpandedProjects] = useState({})
 
   const density = DENSITY_SETTINGS[viewDensity] || DENSITY_SETTINGS.cozy
 
   const handleAccordionToggle = (idx) => {
-    setExpandedProjects((prev) => ({
-      ...prev,
-      [idx]: !prev[idx],
-    }))
+    setExpandedProjects((prev) => {
+      const isCurrentlyExpanded = prev[idx] !== false
+      return {
+        ...prev,
+        [idx]: !isCurrentlyExpanded,
+      }
+    })
   }
 
   const handleExpandAll = () => {
@@ -105,7 +108,11 @@ export default function DevDiscographyAuditView({
   }
 
   const handleCollapseAll = () => {
-    setExpandedProjects({})
+    const allClosed = {}
+    projects.forEach((_, idx) => {
+      allClosed[idx] = false
+    })
+    setExpandedProjects(allClosed)
   }
 
   return (
@@ -236,7 +243,7 @@ export default function DevDiscographyAuditView({
           const projDate = proj.date ? formatProjectDate(proj.date) : 'Date Unset'
           const trks = proj.tracks ?? []
           const hasCover = Boolean(proj.cover || proj.hasCover)
-          const isExpanded = Boolean(expandedProjects[idx])
+          const isExpanded = expandedProjects[idx] !== false
 
           // Count track audio coverage
           const audioCount = trks.filter((t) => Boolean(t.audioUrl || t.hasAudio || t.audio)).length
