@@ -328,7 +328,7 @@ export default function AudioPlayerBar({
               borderRadius: 4,
               py: 1.5,
               pr: 1.5,
-              pl: { xs: 2, sm: 2.5 },
+              pl: { xs: 1.5, sm: 1.75 },
               minHeight: { xs: 72, sm: 84 },
               bgcolor: theme.palette.mode === 'dark'
                 ? 'rgba(24, 24, 34, 0.95)'
@@ -349,104 +349,128 @@ export default function AudioPlayerBar({
               sx={{ width: '100%', alignItems: 'center', justifyContent: 'space-between' }}
             >
               {/* === LEFT GROUP === */}
-              {/* Col 1: Album Art | Col 2: Title & Artist Stack | Col 3: Centered Share Button */}
+              {/* Col 1: Unified Cover Art + Title + Artist Clickable & Hover Area | Col 2: Centered Share Button */}
               <Stack
                 direction="row"
-                spacing={1.5}
+                spacing={1.25}
                 sx={{
                   alignItems: 'center',
                   minWidth: 0,
                   width: { xs: '100%', sm: 'auto' },
-                  maxWidth: { sm: 280, md: 320 },
+                  maxWidth: { sm: 290, md: 330 },
                   flexShrink: 0,
                 }}
               >
-                {/* Col 1: Album Art */}
+                {/* Unified Clickable & Hover Container for Cover Art + Title + Artist */}
                 <Tooltip title="Go to track page" arrow>
                   <Box
                     onClick={onNavigateToCurrentTrack}
                     sx={{
-                      width: { xs: 52, sm: 58 },
-                      height: { xs: 52, sm: 58 },
-                      borderRadius: 2.5,
-                      bgcolor: 'primary.main',
                       display: 'flex',
+                      flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'primary.contrastText',
-                      flexShrink: 0,
-                      overflow: 'hidden',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                      gap: 1.25,
+                      minWidth: 0,
+                      flexGrow: 1,
                       cursor: 'pointer',
-                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                      '&:hover': { transform: 'scale(1.04)', boxShadow: '0 6px 18px rgba(0,0,0,0.4)' },
+                      py: 0.5,
+                      px: 0.5,
+                      borderRadius: 2,
+                      transition: 'background-color 0.15s ease',
+                      '&:hover .cover-art-box': {
+                        transform: 'scale(1.05)',
+                        boxShadow: '0 6px 18px rgba(0,0,0,0.4)',
+                      },
+                      '&:hover .track-title-text': {
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                      },
+                      '&:hover .track-artist-text': {
+                        color: 'text.primary',
+                      },
                     }}
                   >
-                    {coverArt ? (
-                      <Box
-                        component="img"
-                        src={coverArt}
-                        alt={playingTrack.name || 'Cover'}
-                        draggable={false}
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <MusicNoteRoundedIcon fontSize="small" />
-                    )}
+                    {/* Cover Art Box */}
+                    <Box
+                      className="cover-art-box"
+                      sx={{
+                        width: { xs: 52, sm: 58 },
+                        height: { xs: 52, sm: 58 },
+                        borderRadius: 2.5,
+                        bgcolor: 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'primary.contrastText',
+                        flexShrink: 0,
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                    >
+                      {coverArt ? (
+                        <Box
+                          component="img"
+                          src={coverArt}
+                          alt={playingTrack.name || 'Cover'}
+                          draggable={false}
+                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <MusicNoteRoundedIcon fontSize="small" />
+                      )}
+                    </Box>
+
+                    {/* Title & Artist Stack */}
+                    <Stack
+                      spacing={0.5}
+                      sx={{
+                        minWidth: 0,
+                        flexGrow: 1,
+                        overflow: 'hidden',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography
+                        className="track-title-text"
+                        variant="subtitle1"
+                        fontWeight={700}
+                        sx={{
+                          fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                          lineHeight: 1.2,
+                          color: 'text.primary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0,
+                          transition: 'color 0.15s ease',
+                        }}
+                      >
+                        {playingTrack.name || 'Untitled Track'}
+                      </Typography>
+
+                      <Typography
+                        className="track-artist-text"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          fontSize: { xs: '0.775rem', sm: '0.85rem' },
+                          lineHeight: 1.2,
+                          display: 'block',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0,
+                          transition: 'color 0.15s ease',
+                        }}
+                      >
+                        {playingTrack.artist || 'Artist'}
+                      </Typography>
+                    </Stack>
                   </Box>
                 </Tooltip>
 
-                {/* Col 2: Title & Artist Stack (Title sits right on top of Artist) */}
-                <Tooltip title={playingTrack.name || 'Untitled Track'} arrow>
-                  <Stack
-                    spacing={0.25}
-                    onClick={onNavigateToCurrentTrack}
-                    sx={{
-                      minWidth: 0,
-                      flexGrow: 1,
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      justifyContent: 'center',
-                      '&:hover .track-title-text': { color: 'primary.main', textDecoration: 'underline' },
-                    }}
-                  >
-                    <Typography
-                      className="track-title-text"
-                      variant="subtitle1"
-                      fontWeight={700}
-                      sx={{
-                        fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                        lineHeight: 1.2,
-                        color: 'text.primary',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 0,
-                        transition: 'color 0.15s ease',
-                      }}
-                    >
-                      {playingTrack.name || 'Untitled Track'}
-                    </Typography>
-
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{
-                        fontSize: { xs: '0.775rem', sm: '0.85rem' },
-                        lineHeight: 1.2,
-                        display: 'block',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        minWidth: 0,
-                      }}
-                    >
-                      {playingTrack.artist || 'Artist'}
-                    </Typography>
-                  </Stack>
-                </Tooltip>
-
-                {/* Col 3: Share Button vertically centered after title/artist group */}
+                {/* Share Button vertically centered after title/artist group */}
                 <Tooltip title="Share track link" arrow>
                   <IconButton
                     size="small"
@@ -456,7 +480,7 @@ export default function AudioPlayerBar({
                       transition: 'color 0.2s ease',
                       flexShrink: 0,
                       p: 0.8,
-                      ml: 0.25,
+                      ml: 0.1,
                     }}
                   >
                     {copiedShare ? <CheckRoundedIcon fontSize="small" /> : <ShareRoundedIcon fontSize="small" />}
