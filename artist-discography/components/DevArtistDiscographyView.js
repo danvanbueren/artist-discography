@@ -175,7 +175,7 @@ export default function DevArtistDiscographyView({ data, health }) {
             color="secondary"
             size="small"
             startIcon={<AdminPanelSettingsIcon />}
-            href="/sys/admin"
+            href="/_sys/_admin"
             target="_blank"
             rel="noopener noreferrer"
             sx={{ borderRadius: 2, textTransform: 'none' }}

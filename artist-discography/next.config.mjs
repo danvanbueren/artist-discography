@@ -1,5 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/_sys/_admin',
+        destination: '/sys/admin',
+      },
+      {
+        source: '/_sys/_dev',
+        destination: '/sys/dev',
+      },
+    ]
+  },
   async headers() {
     return [
       {

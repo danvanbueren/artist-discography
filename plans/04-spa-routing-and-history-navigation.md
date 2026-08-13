@@ -127,12 +127,12 @@ const syncStateFromLocation = useCallback(() => {
 
 ## 6. Disabled Admin & Dev Route Redirection & Conflict Prevention
 
-### Target Files: [`app/sys/admin/page.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/app/sys/admin/page.js), [`app/sys/dev/page.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/app/sys/dev/page.js)
+### Target Files: [`app/sys/admin/page.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/app/sys/admin/page.js), [`app/sys/dev/page.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/app/sys/dev/page.js), [`next.config.mjs`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/next.config.mjs)
 
-- **Problem & Collision Prevention**: Accessing `/admin` or `/dev` directly could conflict with public music projects named "admin" or "dev". System management utilities are namespaced under `/sys/admin` and `/sys/dev` to prevent routing collisions.
+- **Problem & Collision Prevention**: Accessing `/admin` or `/dev` directly could conflict with public music projects named "admin" or "dev". System management utilities are namespaced with underscore prefixes `/_sys/_admin` and `/_sys/_dev` (via Next.js rewrites to `/sys/admin` and `/sys/dev`) to prevent routing collisions.
 - **Redirection Solution**:
   - Import `redirect` from `'next/navigation'` in `app/sys/admin/page.js` and `app/sys/dev/page.js`.
-  - When loading configuration in server components, if `adminAccess === false` on `/sys/admin` or `devAccess === false` on `/sys/dev`:
+  - When loading configuration in server components, if `adminAccess === false` on `/_sys/_admin` or `devAccess === false` on `/_sys/_dev`:
     - Call `redirect('/')` immediately.
     - Eliminates unauthorized error landing pages and redirects users directly back to the main discography view home page (`/`).
   - Alert warning chips open system portal links in a **new browser tab** (`target="_blank" rel="noopener noreferrer"`).
@@ -144,8 +144,8 @@ const syncStateFromLocation = useCallback(() => {
 - [ ] On Main Page (`/`): Click any track background. Confirm track row background does NOT select track, and the URL does NOT change.
 - [ ] On Main Page (`/`): Click song name or artist text. Confirm view transitions to Project Page (`/[project-slug]/[track-slug]`), URL updates, and track is highlighted.
 - [ ] On Project Page (`/[project-slug]`): Click any part of a track row background or title. Confirm track is selected, URL updates to `/[project-slug]/[track-slug]`, and page does not reload or switch views.
-- [ ] Set `"adminAccess": false` in `data/artist-data.json` and navigate to `/sys/admin`. Verify user is automatically redirected back to `/` without showing unauthorized page.
-- [ ] Set `"devAccess": false` in `data/artist-data.json` and navigate to `/sys/dev`. Verify user is automatically redirected back to `/` without showing unauthorized page.
+- [ ] Set `"adminAccess": false` in `data/artist-data.json` and navigate to `/_sys/_admin`. Verify user is automatically redirected back to `/` without showing unauthorized page.
+- [ ] Set `"devAccess": false` in `data/artist-data.json` and navigate to `/_sys/_dev`. Verify user is automatically redirected back to `/` without showing unauthorized page.
 - [ ] Start audio playback on main discography page.
 - [ ] Click a project card to navigate to `/[project-slug]`. Verify audio continues playing without interruption and no page reload occurs.
 - [ ] Click the browser **Back** button. Verify URL returns to `/[project-slug]`, view updates to project page, and audio continues playing uninterrupted.
