@@ -824,7 +824,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         }}
       >
         {/* Floating Dev & Admin Alert Cards (Top Left) */}
-        {(Boolean(data?.adminAccess) || data?.devAccess !== false) && (
+        {(Boolean(data?.adminAccess) || Boolean(data?.devAccess)) && (
           <Stack
             spacing={1}
             sx={{
@@ -894,7 +894,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
               </Paper>
             )}
 
-            {data?.devAccess !== false && (
+            {Boolean(data?.devAccess) && (
               <Paper
                 elevation={6}
                 sx={{
@@ -953,6 +953,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             )}
           </Stack>
         )}
+        {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
+        {Boolean(data?.devAccess) && <DevHealthDrawer health={health} />}
         {/* Top Screen-Height Hero Section (Only on main discography view) */}
         {currentView !== 'SINGLE_PROJECT' && (
           <ArtistHero

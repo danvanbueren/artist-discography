@@ -27,7 +27,7 @@ export default function DevPage() {
 
   const data = dataResult?.data ?? {}
   const health = dataResult?.health ?? { isHealthy: false, createdNewFile: false, issues: ['Failed to load data'] }
-  const devAccess = data?.devAccess !== false
+  const devAccess = Boolean(data?.devAccess)
 
   if (!devAccess) {
     redirect('/')

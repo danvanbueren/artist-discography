@@ -328,8 +328,8 @@ export default function DevArtistDiscographyView({ data, health }) {
                 sx={{ fontWeight: 700 }}
               />
               <Chip
-                label={`Dev: ${data?.devAccess !== false ? 'OPEN' : 'LOCKED'}`}
-                color={data?.devAccess !== false ? 'warning' : 'default'}
+                label={`Dev: ${Boolean(data?.devAccess) ? 'OPEN' : 'LOCKED'}`}
+                color={Boolean(data?.devAccess) ? 'warning' : 'default'}
                 size="small"
                 sx={{ fontWeight: 700 }}
               />
