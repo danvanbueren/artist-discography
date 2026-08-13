@@ -32,10 +32,30 @@ import CodeIcon from '@mui/icons-material/Code'
 import { API_TAGS, API_ROUTES_SPEC } from '../lib/apiSpec'
 
 const METHOD_COLORS = {
-  GET: { color: 'success', bg: 'rgba(46, 125, 50, 0.15)', border: 'rgba(76, 175, 80, 0.3)' },
-  POST: { color: 'primary', bg: 'rgba(25, 118, 210, 0.15)', border: 'rgba(33, 150, 243, 0.3)' },
-  PUT: { color: 'warning', bg: 'rgba(237, 108, 2, 0.15)', border: 'rgba(255, 152, 0, 0.3)' },
-  DELETE: { color: 'error', bg: 'rgba(211, 47, 47, 0.15)', border: 'rgba(244, 67, 54, 0.3)' },
+  GET: {
+    textColor: '#81c784',
+    bg: 'rgba(46, 125, 50, 0.35)',
+    border: 'rgba(76, 175, 80, 0.6)',
+    boxShadow: '0 0 10px rgba(76, 175, 80, 0.2)',
+  },
+  POST: {
+    textColor: '#64b5f6',
+    bg: 'rgba(25, 118, 210, 0.35)',
+    border: 'rgba(33, 150, 243, 0.6)',
+    boxShadow: '0 0 10px rgba(33, 150, 243, 0.2)',
+  },
+  PUT: {
+    textColor: '#ffb74d',
+    bg: 'rgba(237, 108, 2, 0.35)',
+    border: 'rgba(255, 152, 0, 0.6)',
+    boxShadow: '0 0 10px rgba(255, 152, 0, 0.2)',
+  },
+  DELETE: {
+    textColor: '#e57373',
+    bg: 'rgba(211, 47, 47, 0.35)',
+    border: 'rgba(244, 67, 54, 0.6)',
+    boxShadow: '0 0 10px rgba(244, 67, 54, 0.2)',
+  },
 }
 
 // React Error Boundary class to guarantee whole-app safety
@@ -525,13 +545,16 @@ function DevApiExplorerInner() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', flexWrap: 'wrap' }}>
                     <Chip
                       label={methodKey}
-                      color={methodStyle.color}
                       size="small"
                       sx={{
-                        fontWeight: 800,
-                        minWidth: 64,
+                        fontWeight: 900,
+                        fontSize: '0.78rem',
+                        minWidth: 68,
+                        color: methodStyle.textColor,
                         backgroundColor: methodStyle.bg,
                         border: `1px solid ${methodStyle.border}`,
+                        boxShadow: methodStyle.boxShadow,
+                        letterSpacing: '0.04em',
                       }}
                     />
 
