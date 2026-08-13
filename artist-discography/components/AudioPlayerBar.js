@@ -327,7 +327,8 @@ export default function AudioPlayerBar({
             sx={{
               borderRadius: 4,
               py: 1.5,
-              px: 1.5,
+              pr: 1.5,
+              pl: { xs: 2, sm: 2.5 },
               minHeight: { xs: 72, sm: 84 },
               bgcolor: theme.palette.mode === 'dark'
                 ? 'rgba(24, 24, 34, 0.95)'
@@ -348,7 +349,7 @@ export default function AudioPlayerBar({
               sx={{ width: '100%', alignItems: 'center', justifyContent: 'space-between' }}
             >
               {/* === LEFT GROUP === */}
-              {/* Col 1: Album Art | Col 2: Top Row (Title + Share) & Bottom Row (Artist) */}
+              {/* Col 1: Album Art | Col 2: Title & Artist Stack | Col 3: Centered Share Button */}
               <Stack
                 direction="row"
                 spacing={1.5}
@@ -395,83 +396,72 @@ export default function AudioPlayerBar({
                   </Box>
                 </Tooltip>
 
-                {/* Col 2: Text Info Stack matching Cover Art height */}
-                <Stack
-                  sx={{
-                    height: { xs: 52, sm: 58 },
-                    justifyContent: 'space-between',
-                    minWidth: 0,
-                    flexGrow: 1,
-                    overflow: 'hidden',
-                    py: 0.1,
-                  }}
-                >
-                  {/* Top Row: Song Title + Share Button inline */}
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
-                    <Tooltip title={playingTrack.name || 'Untitled Track'} arrow>
-                      <Typography
-                        className="track-title-text"
-                        variant="subtitle1"
-                        fontWeight={700}
-                        onClick={onNavigateToCurrentTrack}
-                        sx={{
-                          fontSize: { xs: '0.95rem', sm: '1.05rem' },
-                          lineHeight: 1.2,
-                          cursor: 'pointer',
-                          color: 'text.primary',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          minWidth: 0,
-                          flexShrink: 1,
-                          transition: 'color 0.15s ease',
-                          '&:hover': { color: 'primary.main', textDecoration: 'underline' },
-                        }}
-                      >
-                        {playingTrack.name || 'Untitled Track'}
-                      </Typography>
-                    </Tooltip>
+                {/* Col 2: Title & Artist Stack (Title sits right on top of Artist) */}
+                <Tooltip title={playingTrack.name || 'Untitled Track'} arrow>
+                  <Stack
+                    spacing={0.25}
+                    onClick={onNavigateToCurrentTrack}
+                    sx={{
+                      minWidth: 0,
+                      flexGrow: 1,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      justifyContent: 'center',
+                      '&:hover .track-title-text': { color: 'primary.main', textDecoration: 'underline' },
+                    }}
+                  >
+                    <Typography
+                      className="track-title-text"
+                      variant="subtitle1"
+                      fontWeight={700}
+                      sx={{
+                        fontSize: { xs: '0.95rem', sm: '1.05rem' },
+                        lineHeight: 1.2,
+                        color: 'text.primary',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                        transition: 'color 0.15s ease',
+                      }}
+                    >
+                      {playingTrack.name || 'Untitled Track'}
+                    </Typography>
 
-                    {/* Share Button right after song name */}
-                    <Tooltip title="Share track link" arrow>
-                      <IconButton
-                        size="small"
-                        onClick={handleShareTrack}
-                        sx={{
-                          color: copiedShare ? 'success.main' : 'text.secondary',
-                          transition: 'color 0.2s ease',
-                          flexShrink: 0,
-                          p: 0.3,
-                          ml: 0.25,
-                        }}
-                      >
-                        {copiedShare ? <CheckRoundedIcon sx={{ fontSize: 16 }} /> : <ShareRoundedIcon sx={{ fontSize: 16 }} />}
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-
-                  {/* Bottom Row: Artist Name aligned to bottom of cover art */}
-                  <Tooltip title={playingTrack.artist || 'Artist'} arrow>
                     <Typography
                       variant="caption"
                       color="text.secondary"
-                      onClick={onNavigateToCurrentTrack}
                       sx={{
                         fontSize: { xs: '0.775rem', sm: '0.85rem' },
                         lineHeight: 1.2,
-                        cursor: 'pointer',
                         display: 'block',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                         minWidth: 0,
-                        '&:hover': { color: 'text.primary' },
                       }}
                     >
                       {playingTrack.artist || 'Artist'}
                     </Typography>
-                  </Tooltip>
-                </Stack>
+                  </Stack>
+                </Tooltip>
+
+                {/* Col 3: Share Button vertically centered after title/artist group */}
+                <Tooltip title="Share track link" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={handleShareTrack}
+                    sx={{
+                      color: copiedShare ? 'success.main' : 'text.secondary',
+                      transition: 'color 0.2s ease',
+                      flexShrink: 0,
+                      p: 0.8,
+                      ml: 0.25,
+                    }}
+                  >
+                    {copiedShare ? <CheckRoundedIcon fontSize="small" /> : <ShareRoundedIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
               </Stack>
 
               {/* === MIDDLE GROUP === */}
