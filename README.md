@@ -72,8 +72,9 @@ artist-discography/data/
 ├── logo.png (or .jpg, .webp, .svg)     # Optional custom artist logo override
 └── projects/                           # Project folders organized by project slug
     ├── <project-slug>/
-    │   ├── art.png (or .jpg, .webp)    # Cover artwork for the project
-    │   ├── <track-slug>.wav            # Track audio files (e.g. hydrolock.wav)
+    │   ├── art.png (or .jpg, .webp, .svg, .gif, .avif) # Cover artwork for the project
+    │   ├── <track-slug>.flac                           # Track audio files (e.g. hydrolock.flac)
+    │   ├── <track-slug>.wav
     │   └── <track-slug>.mp3
 ```
 
@@ -149,14 +150,14 @@ artist-discography/data/
 - **`artist`**: Project artist credit (defaults to main artist if blank).
 - **`date`**: Release date in `YYYY-MM-DD` format (formatted and displayed as "May 15, 2026").
 - **`cover`** *(Optional)*:
-  - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/art.<jpg|png|webp|svg>`.
+  - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/art.<jpg|jpeg|png|webp|svg|gif|avif>`.
   - Or specify a relative filename inside the project folder (e.g. `"cover.jpg"`), or an external image URL.
 
 ##### 4. `tracks` Array (inside each project)
 - **`name`**: Title of the track (e.g. `"Midnight Genesis"`).
 - **`artist`**: Track-level artist credit (e.g. `"Lunar Echoes feat. Neon Horizon"`).
 - **`audio`** *(Optional)*:
-  - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/<track-slug>.<wav|mp3|m4a|ogg>`.
+  - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/<track-slug>.<mp3|m4a|wav|ogg|flac|aac|mp4|webm>`.
   - Or specify a relative filename or external audio URL.
 - **`links`**: Direct streaming links for this specific track.
 
@@ -164,11 +165,11 @@ artist-discography/data/
 
 ### Audio Files & Album Art Rules
 
-1. **Audio File Placement**: Place `.wav`, `.mp3`, `.m4a`, or `.ogg` files in `data/projects/<project-slug>/<track-slug>.<ext>`.
+1. **Audio File Placement**: Place audio files (`.mp3`, `.m4a`, `.wav`, `.ogg`, `.flac`, `.aac`, `.mp4`, or `.webm`) in `data/projects/<project-slug>/<track-slug>.<ext>`.
    - **Play & Queue Buttons**: When audio exists, Play and "+ Queue" buttons automatically render in the track row.
    - **Missing Audio**: If no audio file exists, play buttons are gracefully hidden to prevent unplayable audio errors.
 
-2. **Album Art Placement**: Place `.png`, `.jpg`, `.webp`, or `.svg` images in `data/projects/<project-slug>/art.<ext>`.
+2. **Album Art Placement**: Place image files (`.jpg`, `.jpeg`, `.png`, `.webp`, `.svg`, `.gif`, or `.avif`) in `data/projects/<project-slug>/art.<ext>`.
    - **Missing Covers**: If no cover image exists, a styled vinyl placeholder icon is automatically displayed.
 
 ---

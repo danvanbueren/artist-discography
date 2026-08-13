@@ -1513,7 +1513,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                     <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 2 }}>
                                       <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
                                         <Button variant="contained" component="label" size="small" startIcon={<CloudUploadIcon />} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
-                                          Upload Audio File (.mp3, .wav)
+                                          Upload Audio File (.flac, .mp3, .wav)
                                           <input
                                             type="file"
                                             accept="audio/*"
