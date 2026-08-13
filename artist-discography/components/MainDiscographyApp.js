@@ -1032,7 +1032,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                         playingTrack={playingTrack}
                         isPlaying={isPlaying}
                         highlightedTrackSlug={highlightedTrackSlug}
-                        onSelectTrackRow={(track) => highlightTrackOnMainPage(track)}
+                        onSelectTrackRow={null}
                         onSelectTrackTitle={(track) => navigateToTrack(proj, track)}
                         selectedPlatform={selectedPlatform}
                       />
