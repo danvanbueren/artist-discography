@@ -165,7 +165,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   })
 
   // Auth state
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => initialData?.adminPassword === '')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
   const [isAuthLoading, setIsAuthLoading] = useState(false)
@@ -264,17 +264,24 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   const [statusMessage, setStatusMessage] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
 
-  // Check stored auth session
+  // Check stored auth session or auto-authenticate if password is empty
   useEffect(() => {
     try {
-      const storedAuth = sessionStorage.getItem('admin_authenticated')
-      const storedPass = sessionStorage.getItem('admin_password')
-      if (storedAuth === 'true' && storedPass) {
+      if (initialData?.adminPassword === '') {
         setIsAuthenticated(true)
-        setPassword(storedPass)
+        setPassword('')
+        sessionStorage.setItem('admin_authenticated', 'true')
+        sessionStorage.setItem('admin_password', '')
+      } else {
+        const storedAuth = sessionStorage.getItem('admin_authenticated')
+        const storedPass = sessionStorage.getItem('admin_password')
+        if (storedAuth === 'true' && storedPass !== null) {
+          setIsAuthenticated(true)
+          setPassword(storedPass)
+        }
       }
     } catch (err) { }
-  }, [])
+  }, [initialData])
 
   // Sync initialData when passed
   useEffect(() => {
