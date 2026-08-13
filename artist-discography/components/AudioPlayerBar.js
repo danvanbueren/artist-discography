@@ -326,9 +326,9 @@ export default function AudioPlayerBar({
             elevation={6}
             sx={{
               borderRadius: 4,
-              py: { xs: 1.25, sm: 1.5 },
-              px: { xs: 2, sm: 3 },
-              minHeight: { xs: 72, sm: 80 },
+              py: 1,
+              px: 1,
+              minHeight: { xs: 68, sm: 80 },
               bgcolor: theme.palette.mode === 'dark'
                 ? 'rgba(24, 24, 34, 0.95)'
                 : 'rgba(255, 255, 255, 0.95)',
@@ -692,7 +692,7 @@ export default function AudioPlayerBar({
                   <IconButton
                     size="small"
                     onClick={onClosePlayer}
-                    sx={{ color: 'text.secondary', ml: 0.5, p: 0.9 }}
+                    sx={{ color: 'text.secondary', ml: 0.25, p: 0.9 }}
                   >
                     <CloseRoundedIcon fontSize="small" />
                   </IconButton>
