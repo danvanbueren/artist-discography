@@ -4,10 +4,10 @@ import { Box, Stack, Typography, Button, useTheme } from '@mui/material'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import LinkIcon from '@mui/icons-material/Link'
-import SubduedText from './SubduedText'
-import { SOCIAL_ICONS, getSortedActiveLinks } from './ArtistHero'
-import { useLogoAnalysis, getLogoFilter } from '../lib/useLogoAnalysis'
-import { useDynamicThemeGradients } from '../lib/gradientStyles'
+import SubduedText from '../ui/SubduedText'
+import { SOCIAL_ICONS, getSortedActiveLinks } from '../artist/ArtistHero'
+import { useLogoAnalysis, getLogoFilter } from '../../lib/hooks/useLogoAnalysis'
+import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
 
 export default function CompactArtistHeader({
   artist,

@@ -61,7 +61,7 @@ In the current implementation:
 
 ## 4. Proposed Code Changes
 
-### Target File: [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/MainDiscographyApp.js)
+### Target File: [`MainDiscographyApp.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js)
 
 Update `handlePlayTrack`:
 
@@ -123,7 +123,7 @@ const handlePlayTrack = useCallback((track, proj) => {
 
 ## 7. Queue Dialog Interaction & Drag/Drop Enhancements
 
-### Target File: [`PlaybackQueueDialog.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/PlaybackQueueDialog.js)
+### Target File: [`PlaybackQueueDialog.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/player/PlaybackQueueDialog.js)
 
 #### A. Inter-Track Drag & Drop Padding Target Recognition
 - **Problem**: Dragging items requires precise mouse cursor targeting directly over pre-existing track row elements. Dropping onto the padding gaps between tracks fails to reorder items.

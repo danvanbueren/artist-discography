@@ -1,7 +1,7 @@
 'use client'
 
 import { Box } from '@mui/material'
-import { useVibrantColors } from '../lib/useVibrantColors'
+import { useVibrantColors } from '../../lib/hooks/useVibrantColors'
 
 export default function AmbientBackground({ ambientImage, darkMode }) {
   const { colors, isMonochrome } = useVibrantColors(ambientImage)

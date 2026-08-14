@@ -75,7 +75,7 @@ Path == '/'               Path == '/[proj]' or '/[proj]/[track]'
 
 ## 4. Proposed Code Refinements
 
-### Target File: [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/MainDiscographyApp.js)
+### Target File: [`MainDiscographyApp.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js)
 
 Ensure `syncStateFromLocation` memoization is rock-solid and `popstate` state updates do not re-render unnecessary parent trees:
 
@@ -125,7 +125,7 @@ const syncStateFromLocation = useCallback(() => {
 
 ## 5. Track Row Click & Selection Routing Rules
 
-### Target Files: [`TrackRow.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/TrackRow.js), [`ProjectCard.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/ProjectCard.js), [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/MainDiscographyApp.js)
+### Target Files: [`TrackRow.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/TrackRow.js), [`ProjectCard.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/ProjectCard.js), [`MainDiscographyApp.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js)
 
 #### A. Main Discography View (`/`) Behavior
 - **Track Row Background Click**:

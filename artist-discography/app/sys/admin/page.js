@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { loadArtistData } from '../../../lib/artistData'
-import AdminDashboardClient from '../../../components/AdminDashboardClient'
+import AdminDashboardClient from '../../../components/admin/AdminDashboardClient'
 
 export async function generateMetadata() {
   let artistName = ''

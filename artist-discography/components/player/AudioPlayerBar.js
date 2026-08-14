@@ -30,8 +30,8 @@ import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
-import { slugify } from '../lib/slugs'
-import { getCookie, setCookie } from '../lib/cookies'
+import { slugify } from '../../lib/slugs'
+import { getCookie, setCookie } from '../../lib/cookies'
 import PlaybackQueueDialog from './PlaybackQueueDialog'
 
 export default function AudioPlayerBar({

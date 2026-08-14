@@ -37,7 +37,7 @@ import ViewHeadlineIcon from '@mui/icons-material/ViewHeadline'
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
 
-import { formatProjectDate } from '../lib/dateUtils'
+import { formatProjectDate } from '../../lib/dateUtils'
 
 const DENSITY_SETTINGS = {
   comfortable: {

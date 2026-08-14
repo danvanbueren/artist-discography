@@ -31,7 +31,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
-import { SOCIAL_ICONS } from './ArtistHero'
+import { SOCIAL_ICONS } from '../artist/ArtistHero'
 
 export const FILTER_OPTIONS = [
   'LP',

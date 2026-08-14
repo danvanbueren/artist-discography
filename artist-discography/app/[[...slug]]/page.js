@@ -1,5 +1,5 @@
 import { loadArtistData } from '../../lib/artistData'
-import MainDiscographyApp from '../../components/MainDiscographyApp'
+import MainDiscographyApp from '../../components/discography/MainDiscographyApp'
 import { slugify } from '../../lib/slugs'
 
 export async function generateMetadata({ params }) {

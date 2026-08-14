@@ -1,9 +1,9 @@
 'use client'
 
 import { Box, Container, useTheme } from '@mui/material'
-import HeaderLogo from './HeaderLogo'
-import SubduedText from './SubduedText'
-import { useDynamicThemeGradients } from '../lib/gradientStyles'
+import HeaderLogo from '../layout/HeaderLogo'
+import SubduedText from '../ui/SubduedText'
+import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
 
 export const SOCIAL_ICONS = {
   spotify: '/platforms/spotify.webp',

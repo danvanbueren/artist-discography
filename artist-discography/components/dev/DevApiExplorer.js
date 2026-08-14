@@ -29,7 +29,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import LockIcon from '@mui/icons-material/Lock'
 import CodeIcon from '@mui/icons-material/Code'
 
-import { API_TAGS, API_ROUTES_SPEC } from '../lib/apiSpec'
+import { API_TAGS, API_ROUTES_SPEC } from '../../lib/apiSpec'
 
 const METHOD_COLORS = {
   GET: {

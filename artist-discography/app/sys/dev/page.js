@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { loadArtistData } from '../../../lib/artistData'
-import DevArtistDiscographyView from '../../../components/DevArtistDiscographyView'
+import DevArtistDiscographyView from '../../../components/dev/DevArtistDiscographyView'
 
 export async function generateMetadata() {
   let artistName = ''

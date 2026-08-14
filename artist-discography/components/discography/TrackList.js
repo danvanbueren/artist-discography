@@ -2,8 +2,8 @@
 
 import { Box, Stack, Typography, Divider } from '@mui/material'
 import TrackRow from './TrackRow'
-import SubduedText from './SubduedText'
-import { slugify } from '../lib/slugs'
+import SubduedText from '../ui/SubduedText'
+import { slugify } from '../../lib/slugs'
 
 export default function TrackList({
   project,

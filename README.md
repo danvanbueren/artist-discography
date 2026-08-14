@@ -45,12 +45,20 @@ artist-discography/
 │   │   ├── sys/admin/page.js           # Admin Portal route (rewritten from /_sys/_admin)
 │   │   ├── sys/dev/page.js             # Dev Preview Dashboard route (rewritten from /_sys/_dev)
 │   │   └── theme.js                    # Material UI theme & expanded hit target overrides
-│   ├── components/                     # React components (AudioPlayerBar, TrackRow, etc.)
+│   ├── components/                     # Modular React UI components
+│   │   ├── admin/                      # Admin Portal management dashboard
+│   │   ├── artist/                     # Artist hero banner & social links
+│   │   ├── dev/                        # Developer preview tools & health audit
+│   │   ├── discography/                # Main app container, catalog grid, & track lists
+│   │   ├── layout/                     # Sticky headers, navbar, logos, & background ambience
+│   │   ├── player/                     # Audio player bar & queue dialog
+│   │   └── ui/                         # Shared primitive UI components
 │   ├── data/                           # Operator content directory (JSON, audio, covers)
 │   │   ├── artist-data.json            # Central discography configuration
 │   │   ├── logo.png                    # Optional custom artist logo override
 │   │   └── projects/                   # Project folders organized by project slug
-│   ├── lib/                            # Data loading & slugification helpers
+│   ├── lib/                            # Core data & utility functions
+│   │   └── hooks/                      # Custom React hooks (dynamic color & logo analysis)
 │   ├── next.config.mjs                 # Next.js configuration & route rewrites
 │   └── package.json
 ├── AGENTS.md                           # Development rules & core code standards

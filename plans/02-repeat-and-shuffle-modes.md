@@ -57,7 +57,7 @@ Currently, `repeatMode` is stored locally inside `AudioPlayerBar.js`, which prev
 
 ## 3. Proposed Code Modifications
 
-### A. [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/MainDiscographyApp.js)
+### A. [`MainDiscographyApp.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js)
 
 Add `repeatMode` state and update skip handlers:
 
@@ -111,7 +111,7 @@ const handleSkipNext = useCallback(() => {
 }, [repeatMode, playingTrack, manualQueue, autoplayTracks, repeatMode, displayedDiscographyTracks, isShuffle])
 ```
 
-### B. [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/AudioPlayerBar.js)
+### B. [`AudioPlayerBar.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js)
 
 Update `<audio>` `onEnded` and button click handlers to delegate to lifted props:
 
@@ -136,7 +136,7 @@ onEnded={() => {
 
 ## 4. Volume Bar & Mute State Persistence Architecture
 
-### Target File: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/AudioPlayerBar.js)
+### Target File: [`AudioPlayerBar.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js)
 
 #### A. Persistence & Initial Audio Element Sync
 - **Problem**: Volume slider visually loads saved state from storage on refresh, but is not applied to the actual `<audio>` element playback volume when playback begins.
@@ -158,7 +158,7 @@ onEnded={() => {
 
 ## 5. Spacebar Shortcut Reliability & Focus Handling
 
-### Target File: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/AudioPlayerBar.js)
+### Target File: [`AudioPlayerBar.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js)
 
 - **Problem**: Spacebar shortcut for Play/Pause is occasionally ignored or triggers default element behaviors when interactive UI elements have browser focus.
 - **Solution**:

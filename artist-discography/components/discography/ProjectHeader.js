@@ -6,9 +6,9 @@ import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
-import SubduedText from './SubduedText'
-import { useDynamicThemeGradients } from '../lib/gradientStyles'
-import { formatProjectDate } from '../lib/dateUtils'
+import SubduedText from '../ui/SubduedText'
+import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
+import { formatProjectDate } from '../../lib/dateUtils'
 
 const PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',

@@ -57,7 +57,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import SyncIcon from '@mui/icons-material/Sync'
 import PendingIcon from '@mui/icons-material/Pending'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import { slugify } from '../lib/slugs'
+import { slugify } from '../../lib/slugs'
 
 const isProjectSlugDuplicate = (name, projectsList, excludeIndex = -1) => {
   const targetSlug = slugify(name)
