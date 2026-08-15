@@ -7,8 +7,8 @@ import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradien
 export default function HeaderLogo({ onClick, ambientImage }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
-  const analysis = useLogoAnalysis('/api/logo')
-  const coverSrc = ambientImage || '/api/logo'
+  const analysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
+  const coverSrc = ambientImage || '/api/logo?w=640&fmt=webp'
   const { logoGradientSx, getLogoFilter: getDynamicLogoFilter } = useDynamicThemeGradients(coverSrc, isDarkMode)
 
   const baseShadow = isDarkMode

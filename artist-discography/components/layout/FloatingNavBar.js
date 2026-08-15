@@ -134,8 +134,10 @@ export default function FloatingNavBar({
   const [isHovering, setIsHovering] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
 
+  const mainDrag = useDragScroll()
   const filterDrag = useDragScroll()
   const sortDrag = useDragScroll()
+  const settingsDrag = useDragScroll()
 
   // Track scroll position to conditionally show jump-to-top button
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -283,22 +285,37 @@ export default function FloatingNavBar({
 
         {/* --- MAIN MENU MODE --- */}
         {navMode === 'main' && (
-          <Stack
-            direction="row"
-            spacing={{ xs: 0.5, sm: 1.5 }}
+          <Box
+            ref={mainDrag.ref}
+            {...mainDrag.bind}
             sx={{
+              display: 'flex',
+              gap: { xs: 0.75, sm: 1.5 },
+              overflowX: 'auto',
+              py: 0.5,
+              px: 0.5,
+              minWidth: 0,
               width: '100%',
-              justifyContent: 'space-around',
               alignItems: 'center',
+              justifyContent: { xs: 'flex-start', sm: 'space-around' },
+              cursor: mainDrag.isDragging ? 'grabbing' : 'grab',
+              userSelect: 'none',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
             }}
           >
             {/* 1. TOP JUMP BUTTON (Appears on far left when scrolled down) */}
             {showScrollTop && (
               <Button
                 size="medium"
-                onClick={handleScrollToTop}
+                onClick={() => {
+                  if (mainDrag.hasDraggedRef.current) return
+                  handleScrollToTop()
+                }}
                 startIcon={<ArrowUpwardRoundedIcon />}
                 sx={{
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
                   textTransform: 'none',
                   fontWeight: 600,
                   fontSize: { xs: '0.85rem', sm: '0.95rem' },
@@ -317,12 +334,17 @@ export default function FloatingNavBar({
             )}
 
             {/* 2. SEARCH BUTTON & RESET */}
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
               <Button
                 size="medium"
-                onClick={() => setNavMode('search')}
+                onClick={() => {
+                  if (mainDrag.hasDraggedRef.current) return
+                  setNavMode('search')
+                }}
                 startIcon={<SearchRoundedIcon />}
                 sx={{
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
                   textTransform: 'none',
                   fontWeight: isSearchActive ? 700 : 600,
                   fontSize: { xs: '0.85rem', sm: '0.95rem' },
@@ -347,11 +369,13 @@ export default function FloatingNavBar({
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (mainDrag.hasDraggedRef.current) return
                     onSearchChange('')
                   }}
                   sx={{
                     p: 0.75,
                     color: 'error.main',
+                    flexShrink: 0,
                     '&:hover': {
                       bgcolor: 'rgba(244, 67, 54, 0.15)',
                     },
@@ -363,12 +387,17 @@ export default function FloatingNavBar({
             </Stack>
 
             {/* 3. FILTER BUTTON & RESET */}
-            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
               <Button
                 size="medium"
-                onClick={() => setNavMode('filter')}
+                onClick={() => {
+                  if (mainDrag.hasDraggedRef.current) return
+                  setNavMode('filter')
+                }}
                 startIcon={<TuneRoundedIcon />}
                 sx={{
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
                   textTransform: 'none',
                   fontWeight: isFilterActive ? 700 : 600,
                   fontSize: { xs: '0.85rem', sm: '0.95rem' },
@@ -393,11 +422,13 @@ export default function FloatingNavBar({
                   size="small"
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (mainDrag.hasDraggedRef.current) return
                     onResetTypes()
                   }}
                   sx={{
                     p: 0.75,
                     color: 'error.main',
+                    flexShrink: 0,
                     '&:hover': {
                       bgcolor: 'rgba(244, 67, 54, 0.15)',
                     },
@@ -411,9 +442,14 @@ export default function FloatingNavBar({
             {/* 4. SORT BUTTON */}
             <Button
               size="medium"
-              onClick={() => setNavMode('sort')}
+              onClick={() => {
+                if (mainDrag.hasDraggedRef.current) return
+                setNavMode('sort')
+              }}
               startIcon={<SortRoundedIcon />}
               sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
                 textTransform: 'none',
                 fontWeight: 600,
                 fontSize: { xs: '0.85rem', sm: '0.95rem' },
@@ -433,9 +469,14 @@ export default function FloatingNavBar({
             {/* 5. SETTINGS BUTTON */}
             <Button
               size="medium"
-              onClick={() => setNavMode('settings')}
+              onClick={() => {
+                if (mainDrag.hasDraggedRef.current) return
+                setNavMode('settings')
+              }}
               startIcon={<SettingsRoundedIcon />}
               sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
                 textTransform: 'none',
                 fontWeight: 600,
                 fontSize: { xs: '0.85rem', sm: '0.95rem' },
@@ -451,7 +492,7 @@ export default function FloatingNavBar({
             >
               Settings
             </Button>
-          </Stack>
+          </Box>
         )}
 
         {/* --- SEARCH MODE (Full-width text input expand, stays active while focused, immediate return on blur/Esc) --- */}
@@ -631,13 +672,23 @@ export default function FloatingNavBar({
 
         {/* --- SETTINGS MODE (Theme toggle & Platform selector) --- */}
         {navMode === 'settings' && (
-          <Stack
-            direction="row"
-            spacing={1.5}
+          <Box
+            ref={settingsDrag.ref}
+            {...settingsDrag.bind}
             sx={{
+              display: 'flex',
+              gap: 1.5,
+              overflowX: 'auto',
+              py: 0.5,
+              px: 0.5,
+              minWidth: 0,
               flexGrow: 1,
               justifyContent: 'flex-start',
               alignItems: 'center',
+              cursor: settingsDrag.isDragging ? 'grabbing' : 'grab',
+              userSelect: 'none',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
             }}
           >
             <Button
@@ -645,6 +696,7 @@ export default function FloatingNavBar({
               variant="outlined"
               disabled={!hasAvailablePlatforms}
               onClick={() => {
+                if (settingsDrag.hasDraggedRef.current) return
                 onOpenPlatformModal()
               }}
               startIcon={
@@ -666,6 +718,8 @@ export default function FloatingNavBar({
                 )
               }
               sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 600,
@@ -687,6 +741,7 @@ export default function FloatingNavBar({
               size="medium"
               variant="outlined"
               onClick={() => {
+                if (settingsDrag.hasDraggedRef.current) return
                 onToggleTheme()
               }}
               startIcon={
@@ -697,6 +752,8 @@ export default function FloatingNavBar({
                 )
               }
               sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 600,
@@ -713,7 +770,7 @@ export default function FloatingNavBar({
             >
               {darkMode ? 'Light Theme' : 'Dark Theme'}
             </Button>
-          </Stack>
+          </Box>
         )}
       </Paper>
     </Container>

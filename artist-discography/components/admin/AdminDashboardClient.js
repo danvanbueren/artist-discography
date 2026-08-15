@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   Box,
   Container,
@@ -35,6 +34,7 @@ import {
   ListItemText,
   ListItemIcon,
   Stack,
+  InputAdornment,
 } from '@mui/material'
 
 import LockIcon from '@mui/icons-material/Lock'
@@ -57,6 +57,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import SyncIcon from '@mui/icons-material/Sync'
 import PendingIcon from '@mui/icons-material/Pending'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { SOCIAL_ICONS } from '../artist/ArtistHero'
 import { slugify } from '../../lib/slugs'
 
 const isProjectSlugDuplicate = (name, projectsList, excludeIndex = -1) => {
@@ -157,7 +158,6 @@ const resolveOverrideArtist = (artistVal, primaryName, projectArtistVal) => {
 }
 
 export default function AdminDashboardClient({ adminAccess = true, defaultArtistName = 'Artist', initialData = {} }) {
-  const router = useRouter()
   // Tabs: 0 = Artist Profile, 1 = Manage Projects
   const [activeTab, setActiveTab] = useState(() => {
     const existingName = initialData?.artist?.name
@@ -304,6 +304,87 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     }
   }, [initialData, defaultArtistName])
 
+  // Instant project selection handler
+  const handleSelectProject = useCallback((idx) => {
+    if (idx < 0 || idx >= projectsList.length) return
+
+    if (autoSaveDebounceRef.current) {
+      clearTimeout(autoSaveDebounceRef.current)
+    }
+    setDirtyFields(new Set())
+    setSavedFields(new Set())
+    setIsCreatingNew(false)
+
+    const proj = projectsList[idx]
+    const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
+    const formattedTracks = (proj.tracks ?? []).map((t, tIdx) => ({
+      id: `edit-track-${tIdx}-${Date.now()}`,
+      name: t.name || '',
+      artist: resolveOverrideArtist(t.artist, primaryName, proj.artist),
+      audio: t.audio || t.audioUrl || '',
+      hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
+      audioFile: null,
+      audioFileName: '',
+      links: {
+        spotify: '',
+        apple: '',
+        youtube: '',
+        soundcloud: '',
+        amazon: '',
+        bandcamp: '',
+        deezer: '',
+        itunes: '',
+        pandora: '',
+        tidal: '',
+        ...(t.links || {}),
+      },
+    }))
+
+    setEditName(proj.name || '')
+    setEditType(proj.type || 'Single')
+    setEditArtist(resolveOverrideArtist(proj.artist, primaryName))
+    setEditDate(proj.date || new Date().toISOString().split('T')[0])
+    setEditCoverFile(null)
+    setEditCoverPreview(proj.cover || null)
+    setEditTracks(formattedTracks)
+
+    editNameRef.current = proj.name || ''
+    editTypeRef.current = proj.type || 'Single'
+    editArtistRef.current = resolveOverrideArtist(proj.artist, primaryName)
+    editDateRef.current = proj.date || new Date().toISOString().split('T')[0]
+    editCoverFileRef.current = null
+    editTracksRef.current = formattedTracks
+
+    setSelectedProjIndex(idx)
+  }, [projectsList, artistData?.name, defaultArtistName])
+
+  // Instant create new project initialization handler
+  const handleStartCreateNewProject = useCallback(() => {
+    if (autoSaveDebounceRef.current) {
+      clearTimeout(autoSaveDebounceRef.current)
+    }
+    setDirtyFields(new Set())
+    setSavedFields(new Set())
+    setSelectedProjIndex(-1)
+    setIsCreatingNew(true)
+    setName('')
+    setType('Single')
+    const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
+    setArtist(primaryName)
+    setDate(new Date().toISOString().split('T')[0])
+    setCoverFile(null)
+    setCoverPreview(null)
+    const initialTracks = [createEmptyTrack()]
+    setTracks(initialTracks)
+
+    nameRef.current = ''
+    typeRef.current = 'Single'
+    artistRef.current = primaryName
+    dateRef.current = new Date().toISOString().split('T')[0]
+    coverFileRef.current = null
+    tracksRef.current = initialTracks
+  }, [artistData?.name, defaultArtistName])
+
   // Populate Edit Project form when selecting project index
   useEffect(() => {
     if (!isCreatingNew && projectsList.length > 0 && selectedProjIndex >= 0 && selectedProjIndex < projectsList.length) {
@@ -376,7 +457,13 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     autoSaveDebounceRef.current = setTimeout(async () => {
       setIsAutoSaving(true)
       const keysToSave = Array.from(fieldKey ? [fieldKey] : [])
-      const success = await saveCallback()
+      let success = false
+      try {
+        success = await saveCallback()
+      } catch (err) {
+        setErrorMessage(`Save error: ${err.message}`)
+        success = false
+      }
 
       setIsAutoSaving(false)
       if (success) {
@@ -398,6 +485,15 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         savedHighlightTimeoutRef.current = setTimeout(() => {
           setSavedFields(new Set())
         }, 1500)
+      } else {
+        // Clear dirty fields after displaying error so UI does not hang in "Unsaved changes"
+        setTimeout(() => {
+          setDirtyFields((prev) => {
+            const next = new Set(prev)
+            keysToSave.forEach((k) => next.delete(k))
+            return next
+          })
+        }, 2500)
       }
     }, delayMs)
   }, [])
@@ -417,9 +513,14 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           platforms: artistPlatformsRef.current,
           socials: artistSocialsRef.current,
         }),
+        signal: AbortSignal.timeout(20000),
       })
-      const result = await res.json()
-      return res.ok && result.success
+      const result = await res.json().catch(() => ({}))
+      if (res.ok && result.success) {
+        return true
+      }
+      setErrorMessage(result.error || 'Failed to save artist profile.')
+      return false
     } catch (err) {
       setErrorMessage(`Auto-save error: ${err.message}`)
       return false
@@ -476,9 +577,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         method: 'POST',
         headers: { 'x-admin-password': password },
         body: formData,
+        signal: AbortSignal.timeout(25000),
       })
 
-      const result = await res.json()
+      const result = await res.json().catch(() => ({}))
       if (res.ok && result.success) {
         if (result.createdProject) {
           const createdProj = result.createdProject
@@ -523,9 +625,6 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         setCoverFile(null)
         setCoverPreview(null)
         setTracks([createEmptyTrack()])
-        try {
-          router.refresh()
-        } catch (e) { }
         return true
       }
       setErrorMessage(result.error || 'Failed to save project.')
@@ -588,9 +687,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         method: 'POST',
         headers: { 'x-admin-password': password },
         body: formData,
+        signal: AbortSignal.timeout(25000),
       })
 
-      const result = await res.json()
+      const result = await res.json().catch(() => ({}))
       if (res.ok && result.success) {
         if (result.updatedProject) {
           setProjectsList((prev) => {
@@ -630,14 +730,14 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           editTracksRef.current = updatedFormattedTracks
         }
         setEditCoverFile(null)
-        try {
-          router.refresh()
-        } catch (e) { }
         return true
       }
+      setErrorMessage(result.error || 'Failed to update project.')
+      setEditCoverFile(null)
       return false
     } catch (err) {
       setErrorMessage(`Auto-save update error: ${err.message}`)
+      setEditCoverFile(null)
       return false
     }
   }
@@ -748,10 +848,6 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           editTracksRef.current = formattedTracks
           setSelectedProjIndex(nextIndex)
         }
-
-        try {
-          router.refresh()
-        } catch (e) { }
       } else {
         setErrorMessage(result.error || 'Failed to delete project.')
       }
@@ -1197,26 +1293,49 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         <LinkIcon color="primary" /> Artist Streaming Platform URLs
                       </Typography>
                       <Grid container spacing={2}>
-                        {PLATFORM_KEYS.map(({ key, label }) => (
-                          <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                            <TextField
-                              label={label}
-                              size="small"
-                              fullWidth
-                              value={artistPlatforms[key] || ''}
-                              onChange={(e) => {
-                                const val = e.target.value
-                                setArtistPlatforms((prev) => {
-                                  const next = { ...prev, [key]: val }
-                                  artistPlatformsRef.current = next
-                                  return next
-                                })
-                                markFieldDirty(`platform_${key}`, executeSaveArtist)
-                              }}
-                              sx={getFieldSx(`platform_${key}`)}
-                            />
-                          </Grid>
-                        ))}
+                        {PLATFORM_KEYS.map(({ key, label }) => {
+                          const iconSrc = SOCIAL_ICONS[key]
+                          return (
+                            <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                              <TextField
+                                label={label}
+                                size="small"
+                                fullWidth
+                                value={artistPlatforms[key] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setArtistPlatforms((prev) => {
+                                    const next = { ...prev, [key]: val }
+                                    artistPlatformsRef.current = next
+                                    return next
+                                  })
+                                  markFieldDirty(`platform_${key}`, executeSaveArtist)
+                                }}
+                                slotProps={{
+                                  input: {
+                                    startAdornment: iconSrc ? (
+                                      <InputAdornment position="start">
+                                        <Box
+                                          component="img"
+                                          src={iconSrc}
+                                          alt=""
+                                          sx={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '4px',
+                                            objectFit: 'contain',
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      </InputAdornment>
+                                    ) : null,
+                                  },
+                                }}
+                                sx={getFieldSx(`platform_${key}`)}
+                              />
+                            </Grid>
+                          )
+                        })}
                       </Grid>
                     </Paper>
 
@@ -1226,26 +1345,49 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         <ShareIcon color="primary" /> Social Media Accounts
                       </Typography>
                       <Grid container spacing={2}>
-                        {SOCIAL_KEYS.map(({ key, label }) => (
-                          <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                            <TextField
-                              label={label}
-                              size="small"
-                              fullWidth
-                              value={artistSocials[key] || ''}
-                              onChange={(e) => {
-                                const val = e.target.value
-                                setArtistSocials((prev) => {
-                                  const next = { ...prev, [key]: val }
-                                  artistSocialsRef.current = next
-                                  return next
-                                })
-                                markFieldDirty(`social_${key}`, executeSaveArtist)
-                              }}
-                              sx={getFieldSx(`social_${key}`)}
-                            />
-                          </Grid>
-                        ))}
+                        {SOCIAL_KEYS.map(({ key, label }) => {
+                          const iconSrc = SOCIAL_ICONS[key]
+                          return (
+                            <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                              <TextField
+                                label={label}
+                                size="small"
+                                fullWidth
+                                value={artistSocials[key] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value
+                                  setArtistSocials((prev) => {
+                                    const next = { ...prev, [key]: val }
+                                    artistSocialsRef.current = next
+                                    return next
+                                  })
+                                  markFieldDirty(`social_${key}`, executeSaveArtist)
+                                }}
+                                slotProps={{
+                                  input: {
+                                    startAdornment: iconSrc ? (
+                                      <InputAdornment position="start">
+                                        <Box
+                                          component="img"
+                                          src={iconSrc}
+                                          alt=""
+                                          sx={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '4px',
+                                            objectFit: 'contain',
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      </InputAdornment>
+                                    ) : null,
+                                  },
+                                }}
+                                sx={getFieldSx(`social_${key}`)}
+                              />
+                            </Grid>
+                          )
+                        })}
                       </Grid>
                     </Paper>
                   </Stack>
@@ -1295,12 +1437,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                     color="secondary"
                     size="large"
                     fullWidth
-                    disabled={dirtyFields.size > 0}
                     startIcon={<AddIcon />}
-                    onClick={() => {
-                      setIsCreatingNew(true)
-                      setSelectedProjIndex(-1)
-                    }}
+                    onClick={handleStartCreateNewProject}
                     sx={{ mb: 2.5, py: 1.2, borderRadius: 2, textTransform: 'none', fontWeight: 700, fontSize: '0.95rem', flexShrink: 0 }}
                   >
                     Add New Project
@@ -1341,9 +1479,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                       overflowY: 'auto',
                       pr: 0.5,
                       scrollbarWidth: 'thin',
-                      scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+                      scrollbarColor: 'rgba(255, 255, 255, 0.45) transparent',
                       '&::-webkit-scrollbar': { width: 6 },
-                      '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255, 255, 255, 0.2)', borderRadius: 3 },
+                      '&::-webkit-scrollbar-track': { background: 'transparent' },
+                      '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255, 255, 255, 0.45)', borderRadius: 3, '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.75)' } },
                     }}
                   >
                     <List sx={{ p: 0 }}>
@@ -1415,42 +1554,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                           <ListItemButton
                             key={idx}
                             selected={isSelected}
-                            disabled={dirtyFields.size > 0 && !isSelected}
-                            onClick={() => {
-                              const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
-                              const formattedTracks = (p.tracks ?? []).map((t, tIdx) => ({
-                                id: `edit-track-${tIdx}-${Date.now()}`,
-                                name: t.name || '',
-                                artist: resolveOverrideArtist(t.artist, primaryName, p.artist),
-                                audio: t.audio || t.audioUrl || '',
-                                hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
-                                audioFile: null,
-                                audioFileName: '',
-                                links: {
-                                  spotify: '',
-                                  apple: '',
-                                  youtube: '',
-                                  soundcloud: '',
-                                  amazon: '',
-                                  bandcamp: '',
-                                  deezer: '',
-                                  itunes: '',
-                                  pandora: '',
-                                  tidal: '',
-                                  ...(t.links || {}),
-                                },
-                              }))
-                              setIsCreatingNew(false)
-                              setEditName(p.name || '')
-                              setEditType(p.type || 'Single')
-                              setEditArtist(resolveOverrideArtist(p.artist, primaryName))
-                              setEditDate(p.date || new Date().toISOString().split('T')[0])
-                              setEditCoverFile(null)
-                              setEditCoverPreview(p.cover || null)
-                              setEditTracks(formattedTracks)
-                              editTracksRef.current = formattedTracks
-                              setSelectedProjIndex(idx)
-                            }}
+                            onClick={() => handleSelectProject(idx)}
                             sx={{
                               borderRadius: 2,
                               mb: 1,
@@ -1540,9 +1644,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                     overflowY: { md: 'auto' },
                     pr: { md: 1 },
                     scrollbarWidth: 'thin',
-                    scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
+                    scrollbarColor: 'rgba(255, 255, 255, 0.45) transparent',
                     '&::-webkit-scrollbar': { width: 6 },
-                    '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255, 255, 255, 0.2)', borderRadius: 3 },
+                    '&::-webkit-scrollbar-track': { background: 'transparent' },
+                    '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255, 255, 255, 0.45)', borderRadius: 3, '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.75)' } },
                   }}
                 >
                   {isCreatingNew ? (
@@ -1642,7 +1747,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               hidden
                               onChange={(e) => {
                                 if (e.target.files?.[0]) {
-                                  setCoverFile(e.target.files[0])
+                                  const file = e.target.files[0]
+                                  setCoverFile(file)
+                                  coverFileRef.current = file
                                   markFieldDirty('new_cover', executeCreateProject)
                                 }
                               }}
@@ -1756,7 +1863,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                             onChange={(e) => {
                                               if (e.target.files?.[0]) {
                                                 const file = e.target.files[0]
-                                                setTracks((prev) => { const n = [...prev]; n[index].audioFile = file; n[index].audioFileName = file.name; return n })
+                                                const n = tracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
+                                                setTracks(n)
+                                                tracksRef.current = n
                                                 markFieldDirty(`new_track_${index}_audio`, executeCreateProject)
                                               }
                                             }}
@@ -1780,22 +1889,45 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                       </AccordionSummary>
                                       <AccordionDetails>
                                         <Grid container spacing={1.5}>
-                                          {PLATFORM_KEYS.map(({ key, label }) => (
-                                            <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                                              <TextField
-                                                label={label}
-                                                size="small"
-                                                fullWidth
-                                                value={track.links[key] || ''}
-                                                onChange={(e) => {
-                                                  const val = e.target.value
-                                                  setTracks((prev) => { const n = [...prev]; n[index].links[key] = val; return n })
-                                                  markFieldDirty(`new_track_${index}_${key}`, executeCreateProject)
-                                                }}
-                                                sx={getFieldSx(`new_track_${index}_${key}`)}
-                                              />
-                                            </Grid>
-                                          ))}
+                                          {PLATFORM_KEYS.map(({ key, label }) => {
+                                            const iconSrc = SOCIAL_ICONS[key]
+                                            return (
+                                              <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                  label={label}
+                                                  size="small"
+                                                  fullWidth
+                                                  value={track.links[key] || ''}
+                                                  onChange={(e) => {
+                                                    const val = e.target.value
+                                                    setTracks((prev) => { const n = [...prev]; n[index].links[key] = val; return n })
+                                                    markFieldDirty(`new_track_${index}_${key}`, executeCreateProject)
+                                                  }}
+                                                  slotProps={{
+                                                    input: {
+                                                      startAdornment: iconSrc ? (
+                                                        <InputAdornment position="start">
+                                                          <Box
+                                                            component="img"
+                                                            src={iconSrc}
+                                                            alt=""
+                                                            sx={{
+                                                              width: 20,
+                                                              height: 20,
+                                                              borderRadius: '4px',
+                                                              objectFit: 'contain',
+                                                              flexShrink: 0,
+                                                            }}
+                                                          />
+                                                        </InputAdornment>
+                                                      ) : null,
+                                                    },
+                                                  }}
+                                                  sx={getFieldSx(`new_track_${index}_${key}`)}
+                                                />
+                                              </Grid>
+                                            )
+                                          })}
                                         </Grid>
                                       </AccordionDetails>
                                     </Accordion>
@@ -1919,7 +2051,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               hidden
                               onChange={(e) => {
                                 if (e.target.files?.[0]) {
-                                  setEditCoverFile(e.target.files[0])
+                                  const file = e.target.files[0]
+                                  setEditCoverFile(file)
+                                  editCoverFileRef.current = file
                                   markFieldDirty('edit_cover', executeUpdateProject, 100)
                                 }
                               }}
@@ -2050,8 +2184,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                             onChange={(e) => {
                                               if (e.target.files?.[0]) {
                                                 const file = e.target.files[0]
-                                                setEditTracks((prev) => { const n = [...prev]; n[index].audioFile = file; n[index].audioFileName = file.name; return n })
-                                                markFieldDirty(`edit_track_${index}_audio`, executeUpdateProject, 100)
+                                                const n = editTracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
+                                                setEditTracks(n)
+                                                editTracksRef.current = n
+                                                markFieldDirty(`edit_track_${index}_audio`, () => executeUpdateProject(n), 100)
                                               }
                                             }}
                                           />
@@ -2076,22 +2212,45 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                       </AccordionSummary>
                                       <AccordionDetails>
                                         <Grid container spacing={1.5}>
-                                          {PLATFORM_KEYS.map(({ key, label }) => (
-                                            <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                                              <TextField
-                                                label={label}
-                                                size="small"
-                                                fullWidth
-                                                value={track.links[key] || ''}
-                                                onChange={(e) => {
-                                                  const val = e.target.value
-                                                  setEditTracks((prev) => { const n = [...prev]; n[index].links[key] = val; return n })
-                                                  markFieldDirty(`edit_track_${index}_${key}`, executeUpdateProject)
-                                                }}
-                                                sx={getFieldSx(`edit_track_${index}_${key}`)}
-                                              />
-                                            </Grid>
-                                          ))}
+                                          {PLATFORM_KEYS.map(({ key, label }) => {
+                                            const iconSrc = SOCIAL_ICONS[key]
+                                            return (
+                                              <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                  label={label}
+                                                  size="small"
+                                                  fullWidth
+                                                  value={track.links[key] || ''}
+                                                  onChange={(e) => {
+                                                    const val = e.target.value
+                                                    setEditTracks((prev) => { const n = [...prev]; n[index].links[key] = val; return n })
+                                                    markFieldDirty(`edit_track_${index}_${key}`, executeUpdateProject)
+                                                  }}
+                                                  slotProps={{
+                                                    input: {
+                                                      startAdornment: iconSrc ? (
+                                                        <InputAdornment position="start">
+                                                          <Box
+                                                            component="img"
+                                                            src={iconSrc}
+                                                            alt=""
+                                                            sx={{
+                                                              width: 20,
+                                                              height: 20,
+                                                              borderRadius: '4px',
+                                                              objectFit: 'contain',
+                                                              flexShrink: 0,
+                                                            }}
+                                                          />
+                                                        </InputAdornment>
+                                                      ) : null,
+                                                    },
+                                                  }}
+                                                  sx={getFieldSx(`edit_track_${index}_${key}`)}
+                                                />
+                                              </Grid>
+                                            )
+                                          })}
                                         </Grid>
                                       </AccordionDetails>
                                     </Accordion>

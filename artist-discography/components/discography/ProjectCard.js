@@ -22,6 +22,9 @@ export default function ProjectCard({
   selectedPlatform,
 }) {
   const cover = project?.cover ?? project?.image ?? ''
+  const ambientCover = cover && typeof cover === 'string' && cover.startsWith('/api/media')
+    ? `${cover}${cover.includes('?') ? '&' : '?'}w=48&q=20&blur=8`
+    : cover
 
   return (
     <Paper
@@ -43,13 +46,13 @@ export default function ProjectCard({
       }}
     >
       {/* Blurred album art ambient background */}
-      {cover && (
+      {ambientCover && (
         <Box
           aria-hidden
           sx={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url(${cover})`,
+            backgroundImage: `url(${ambientCover})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(40px) saturate(1.4)',

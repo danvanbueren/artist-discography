@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { NextResponse } from 'next/server'
+import { getOptimizedAudio } from '../../../../lib/audioOptimizer'
 
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
@@ -12,6 +13,8 @@ const AUDIO_MIME_TYPES = {
   '.flac': 'audio/flac',
   '.webm': 'audio/webm',
 }
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request, { params }) {
   try {
@@ -29,27 +32,60 @@ export async function GET(request, { params }) {
     const fullAudioPath = path.resolve(path.join(dataDir, 'audio', requestedPath))
     const fallbackPath = path.resolve(path.join(dataDir, requestedPath))
 
-    let targetFilePath = null
-    if (fallbackPath.startsWith(dataDir) && fs.existsSync(fallbackPath) && fs.statSync(fallbackPath).isFile()) {
-      targetFilePath = fallbackPath
-    } else if (fullProjectsPath.startsWith(dataDir) && fs.existsSync(fullProjectsPath) && fs.statSync(fullProjectsPath).isFile()) {
-      targetFilePath = fullProjectsPath
-    } else if (fullAudioPath.startsWith(dataDir) && fs.existsSync(fullAudioPath) && fs.statSync(fullAudioPath).isFile()) {
-      targetFilePath = fullAudioPath
+    let sourceFilePath = null
+    if (fallbackPath.startsWith(dataDir) && fs.existsSync(fallbackPath) && fs.statSync(/*turbopackIgnore: true*/ fallbackPath).isFile()) {
+      sourceFilePath = fallbackPath
+    } else if (fullProjectsPath.startsWith(dataDir) && fs.existsSync(fullProjectsPath) && fs.statSync(/*turbopackIgnore: true*/ fullProjectsPath).isFile()) {
+      sourceFilePath = fullProjectsPath
+    } else if (fullAudioPath.startsWith(dataDir) && fs.existsSync(fullAudioPath) && fs.statSync(/*turbopackIgnore: true*/ fullAudioPath).isFile()) {
+      sourceFilePath = fullAudioPath
     }
 
-    if (!targetFilePath) {
+    if (!sourceFilePath) {
       return new NextResponse('Audio file not found', { status: 404 })
     }
 
-    const ext = path.extname(targetFilePath).toLowerCase()
-    const mimeType = AUDIO_MIME_TYPES[ext] || 'application/octet-stream'
-    const stat = fs.statSync(targetFilePath)
-    const fileSize = stat.size
+    const { searchParams } = new URL(request.url)
+    const quality = searchParams.get('q') || searchParams.get('quality') || (searchParams.has('b') || searchParams.has('bitrate') ? 'custom' : 'high')
+    const bitrate = searchParams.get('b') || searchParams.get('bitrate') || null
+    const format = searchParams.get('fmt') || searchParams.get('format') || 'mp3'
 
-    // Handle HTTP Range Requests for HTML5 Audio seeking
+    // Process & retrieve optimized audio variant from data/cache/audio/
+    const optimized = await getOptimizedAudio(sourceFilePath, {
+      quality,
+      bitrate,
+      format,
+    })
+
+    const targetFilePath = optimized.filePath
+    const ext = path.extname(targetFilePath).toLowerCase()
+    const mimeType = optimized.mimeType || AUDIO_MIME_TYPES[ext] || 'application/octet-stream'
+    const stat = fs.statSync(/*turbopackIgnore: true*/ targetFilePath)
+    const fileSize = optimized.size || stat.size
+    const etag = `W/"audio-${fileSize.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}-q${quality}-b${bitrate || 'def'}-f${format}"`
+    const lastModified = new Date(stat.mtimeMs).toUTCString()
+    const cacheControl = 'public, max-age=86400, stale-while-revalidate=604800'
+
+    // HTTP 304 Validation
+    const ifNoneMatch = request.headers.get('if-none-match')
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          'Cache-Control': cacheControl,
+          'Last-Modified': lastModified,
+          'X-Audio-Cache': optimized.isFromCache ? 'HIT' : 'MISS',
+        },
+      })
+    }
+
     const rangeHeader = request.headers.get('range')
-    if (rangeHeader) {
+    const ifRange = request.headers.get('if-range')
+    const isRangeValid = !ifRange || ifRange === etag || ifRange === lastModified
+
+    // Handle HTTP Range Requests for HTML5 Audio seeking and initial chunk buffering
+    if (rangeHeader && isRangeValid) {
       const parts = rangeHeader.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
@@ -57,7 +93,10 @@ export async function GET(request, { params }) {
       if (isNaN(start) || start >= fileSize || end >= fileSize) {
         return new NextResponse(null, {
           status: 416,
-          headers: { 'Content-Range': `bytes */${fileSize}` },
+          headers: {
+            'Content-Range': `bytes */${fileSize}`,
+            'Accept-Ranges': 'bytes',
+          },
         })
       }
 
@@ -83,7 +122,10 @@ export async function GET(request, { params }) {
           'Accept-Ranges': 'bytes',
           'Content-Length': chunkSize.toString(),
           'Content-Type': mimeType,
-          'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+          'Cache-Control': cacheControl,
+          ETag: etag,
+          'Last-Modified': lastModified,
+          'X-Audio-Cache': optimized.isFromCache ? 'HIT' : 'MISS',
         },
       })
     }
@@ -107,7 +149,10 @@ export async function GET(request, { params }) {
         'Accept-Ranges': 'bytes',
         'Content-Length': fileSize.toString(),
         'Content-Type': mimeType,
-        'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+        'Cache-Control': cacheControl,
+        ETag: etag,
+        'Last-Modified': lastModified,
+        'X-Audio-Cache': optimized.isFromCache ? 'HIT' : 'MISS',
       },
     })
   } catch (err) {

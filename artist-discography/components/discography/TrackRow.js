@@ -10,6 +10,7 @@ import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import SubduedText from '../ui/SubduedText'
 import { slugify } from '../../lib/slugs'
+import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
 
 const TRACK_PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -90,6 +91,7 @@ export default function TrackRow({
 }) {
   const [hovered, setHovered] = useState(false)
   const [copied, setCopied] = useState(false)
+  const isTouch = useTouchDevice()
 
   const name = track?.name ?? ''
   const artist = track?.artist || projectArtist || ''
@@ -99,18 +101,46 @@ export default function TrackRow({
 
   const handleTitleClick = (e) => {
     e.stopPropagation()
-    if (onSelectTrackTitle) {
-      onSelectTrackTitle(track)
-    } else if (onSelectTrack) {
-      onSelectTrack(track)
+    if (isTouch) {
+      if (track?.hasAudio) {
+        if (onPlayTrack) {
+          onPlayTrack(track, project, { restart: true, restartIfSame: true })
+        }
+      } else {
+        if (onSelectTrackTitle) {
+          onSelectTrackTitle(track)
+        } else if (onSelectTrack) {
+          onSelectTrack(track)
+        }
+      }
+    } else {
+      if (onSelectTrackTitle) {
+        onSelectTrackTitle(track)
+      } else if (onSelectTrack) {
+        onSelectTrack(track)
+      }
     }
   }
 
   const handleRowClick = () => {
-    if (onSelectTrackRow) {
-      onSelectTrackRow(track)
-    } else if (onSelectTrack) {
-      onSelectTrack(track)
+    if (isTouch) {
+      if (track?.hasAudio) {
+        if (onPlayTrack) {
+          onPlayTrack(track, project, { restart: true, restartIfSame: true })
+        }
+      } else {
+        if (onSelectTrackRow) {
+          onSelectTrackRow(track)
+        } else if (onSelectTrack) {
+          onSelectTrack(track)
+        }
+      }
+    } else {
+      if (onSelectTrackRow) {
+        onSelectTrackRow(track)
+      } else if (onSelectTrack) {
+        onSelectTrack(track)
+      }
     }
   }
 
@@ -128,7 +158,7 @@ export default function TrackRow({
         py: 1.5,
         px: { xs: 1.5, sm: 2 },
         borderRadius: 2,
-        cursor: (onSelectTrackRow || onSelectTrack) ? 'pointer' : 'default',
+        cursor: (isTouch && track?.hasAudio) || onSelectTrackRow || onSelectTrack ? 'pointer' : 'default',
         bgcolor: isHighlighted
           ? 'rgba(144, 202, 249, 0.14)'
           : isPlayingThisTrack
@@ -150,7 +180,11 @@ export default function TrackRow({
               color="primary"
               onClick={(e) => {
                 e.stopPropagation()
-                if (onPlayTrack) onPlayTrack(track, project)
+                if (isTouch) {
+                  if (onPlayTrack) onPlayTrack(track, project, { restart: true, restartIfSame: true })
+                } else {
+                  if (onPlayTrack) onPlayTrack(track, project)
+                }
               }}
               sx={{
                 p: 0.85,
@@ -165,13 +199,13 @@ export default function TrackRow({
             >
               <PauseRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
-          ) : track?.hasAudio && (hovered || isPlayingThisTrack) ? (
+          ) : track?.hasAudio && (hovered || isPlayingThisTrack || isTouch) ? (
             <IconButton
               size="small"
               color={isPlayingThisTrack ? "primary" : "default"}
               onClick={(e) => {
                 e.stopPropagation()
-                if (onPlayTrack) onPlayTrack(track, project)
+                if (onPlayTrack) onPlayTrack(track, project, { restart: true, restartIfSame: true })
               }}
               sx={{
                 p: 0.85,

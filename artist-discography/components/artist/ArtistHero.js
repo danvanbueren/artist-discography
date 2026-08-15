@@ -72,7 +72,7 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
   const isDark = theme.palette.mode === 'dark'
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
-  const coverSrc = ambientImage || '/api/logo'
+  const coverSrc = ambientImage || '/api/logo?w=640&fmt=webp'
   const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(coverSrc, isDark)
 
   // Collect non-empty social and platform links in explicit order

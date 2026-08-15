@@ -85,6 +85,8 @@ export async function POST(request) {
 
     // Action 2: Update Project
     const primaryArtistName = String(fullJsonData.artist?.name || currentData.artist?.name || 'Artist').trim()
+    const name = String(formData.get('name') || '').trim()
+    const type = String(formData.get('type') || 'Single').trim()
     const rawArtist = String(formData.get('artist') || '').trim()
     const artist = rawArtist || primaryArtistName
     const date = String(formData.get('date') || new Date().toISOString().split('T')[0]).trim()

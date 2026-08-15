@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Box, Stack, Typography, IconButton, Chip, Dialog, Tooltip, useTheme } from '@mui/material'
+import { Box, Stack, Typography, IconButton, Chip, Dialog, Tooltip, Skeleton, useTheme } from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
+import ProgressiveImage from '../common/ProgressiveImage'
+import { isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
 import SubduedText from '../ui/SubduedText'
 import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
 import { formatProjectDate } from '../../lib/dateUtils'
@@ -33,6 +35,7 @@ export default function ProjectHeader({
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
   const [artModalOpen, setArtModalOpen] = useState(false)
+  const [isModalArtLoaded, setIsModalArtLoaded] = useState(false)
 
   const name = project?.name ?? ''
   const pArtist = project?.artist || artistName || ''
@@ -63,9 +66,12 @@ export default function ProjectHeader({
     }
   }
 
+  const modalHighResUrl = cover ? (cover.includes('?') ? `${cover}&w=1600&q=90&fmt=webp` : `${cover}?w=1600&q=90&fmt=webp`) : ''
+
   const handleCoverClick = (e) => {
     if (cover) {
       e.stopPropagation()
+      setIsModalArtLoaded(isHighResCached(modalHighResUrl))
       setArtModalOpen(true)
     }
   }
@@ -78,8 +84,8 @@ export default function ProjectHeader({
           p: { xs: 2, sm: 3 },
           display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          gap: { xs: 2, sm: 3 },
+          alignItems: 'center',
+          gap: { xs: 2.5, sm: 3 },
           cursor: onSelectProject ? 'pointer' : 'default',
           borderRadius: 3,
           transition: 'background-color 0.25s ease',
@@ -90,15 +96,15 @@ export default function ProjectHeader({
             : {},
         }}
       >
-        {/* Left: Album Cover Art */}
+        {/* Left: Album Cover Art (Larger on Mobile) */}
         <Tooltip title={cover ? 'Click to view full album art' : ''} arrow disableHoverListener={!cover}>
           <Box
             onClick={handleCoverClick}
             sx={{
               position: 'relative',
-              width: { xs: 100, sm: 130, md: 150 },
-              height: { xs: 100, sm: 130, md: 150 },
-              borderRadius: 3,
+              width: { xs: 200, sm: 130, md: 150 },
+              height: { xs: 200, sm: 130, md: 150 },
+              borderRadius: 3.5,
               overflow: 'hidden',
               flexShrink: 0,
               boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
@@ -122,12 +128,13 @@ export default function ProjectHeader({
           >
             {cover ? (
               <>
-                <Box
-                  component="img"
+                <ProgressiveImage
                   src={cover}
                   alt={name || 'Project Cover'}
-                  draggable={false}
-                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  targetWidth={400}
+                  placeholderWidth={40}
+                  priority
+                  sx={{ width: '100%', height: '100%' }}
                 />
                 <Box
                   className="cover-zoom-icon"
@@ -148,7 +155,7 @@ export default function ProjectHeader({
             ) : (
               <AlbumRoundedIcon
                 sx={{
-                  fontSize: { xs: 56, sm: 72 },
+                  fontSize: { xs: 72, sm: 72 },
                   color: 'rgba(255,255,255,0.35)',
                 }}
               />
@@ -156,10 +163,19 @@ export default function ProjectHeader({
           </Box>
         </Tooltip>
 
-        {/* Right: Metadata Stack */}
-        <Stack spacing={1} sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
+        {/* Right: Metadata Stack (Centered on Mobile) */}
+        <Stack
+          spacing={1}
+          sx={{
+            flexGrow: 1,
+            minWidth: 0,
+            width: '100%',
+            alignItems: { xs: 'center', sm: 'flex-start' },
+            textAlign: { xs: 'center', sm: 'left' },
+          }}
+        >
           {/* Type Badge */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-start' }, width: '100%' }}>
             {type ? (
               <Chip
                 label={type.toUpperCase()}
@@ -203,6 +219,8 @@ export default function ProjectHeader({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              textAlign: { xs: 'center', sm: 'left' },
+              width: '100%',
               ...primaryTextSx,
             }}
           />
@@ -211,7 +229,12 @@ export default function ProjectHeader({
           <Stack
             direction="row"
             spacing={1}
-            sx={{ alignItems: 'center', flexWrap: 'wrap' }}
+            sx={{
+              alignItems: 'center',
+              justifyContent: { xs: 'center', sm: 'flex-start' },
+              flexWrap: 'wrap',
+              width: '100%',
+            }}
           >
             <SubduedText
               value={pArtist}
@@ -238,12 +261,19 @@ export default function ProjectHeader({
             />
           </Stack>
 
-          {/* Platform Streaming Icons (LARGER 28px) */}
+          {/* Platform Streaming Icons */}
           {availablePlatforms.length > 0 && (
             <Stack
               direction="row"
               spacing={1.25}
-              sx={{ pt: 1, flexWrap: 'wrap', gap: 1, alignItems: 'center' }}
+              sx={{
+                pt: 1,
+                flexWrap: 'wrap',
+                gap: 1,
+                alignItems: 'center',
+                justifyContent: { xs: 'center', sm: 'flex-start' },
+                width: '100%',
+              }}
             >
               {availablePlatforms.map(({ key, url, icon }) => {
                 const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
@@ -348,11 +378,32 @@ export default function ProjectHeader({
             >
               <CloseRoundedIcon />
             </IconButton>
+
+            {/* Skeleton loading placeholder while full-res image downloads */}
+            {!isModalArtLoaded && (
+              <Skeleton
+                variant="rounded"
+                animation="wave"
+                sx={{
+                  width: { xs: '80vw', sm: 420, md: 540 },
+                  height: { xs: '80vw', sm: 420, md: 540 },
+                  maxWidth: '85vw',
+                  maxHeight: '82vh',
+                  borderRadius: 4,
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                }}
+              />
+            )}
+
             <Box
               component="img"
-              src={cover}
+              src={modalHighResUrl || cover}
               alt={name || 'Project Cover Art'}
               draggable={false}
+              onLoad={() => {
+                setIsModalArtLoaded(true)
+                if (modalHighResUrl) markHighResCached(modalHighResUrl)
+              }}
               sx={{
                 maxWidth: '85vw',
                 maxHeight: '82vh',
@@ -362,6 +413,7 @@ export default function ProjectHeader({
                 borderRadius: 4,
                 boxShadow: '0 32px 64px rgba(0,0,0,0.75)',
                 border: '1px solid rgba(255,255,255,0.1)',
+                display: isModalArtLoaded ? 'block' : 'none',
               }}
             />
           </Box>

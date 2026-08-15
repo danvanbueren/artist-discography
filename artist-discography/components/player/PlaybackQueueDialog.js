@@ -23,6 +23,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
+import ProgressiveImage from '../common/ProgressiveImage'
 
 export default function PlaybackQueueDialog({
   open,
@@ -374,12 +375,12 @@ export default function PlaybackQueueDialog({
                           }}
                         >
                           {coverUrl ? (
-                            <Box
-                              component="img"
+                            <ProgressiveImage
                               src={coverUrl}
                               alt={item.track?.name || 'Cover'}
-                              draggable={false}
-                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              targetWidth={80}
+                              placeholderWidth={24}
+                              sx={{ width: '100%', height: '100%' }}
                             />
                           ) : (
                             <MusicNoteRoundedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
@@ -552,12 +553,12 @@ export default function PlaybackQueueDialog({
                           }}
                         >
                           {coverUrl ? (
-                            <Box
-                              component="img"
+                            <ProgressiveImage
                               src={coverUrl}
                               alt={item.track?.name || 'Cover'}
-                              draggable={false}
-                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              targetWidth={80}
+                              placeholderWidth={24}
+                              sx={{ width: '100%', height: '100%' }}
                             />
                           ) : (
                             <MusicNoteRoundedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />

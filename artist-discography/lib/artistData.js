@@ -510,7 +510,9 @@ export class ArtistDataManager {
       if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true })
       }
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+      const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
+      fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8')
+      fs.renameSync(tempPath, filePath)
       return { success: true }
     } catch (err) {
       console.error('Error saving artist data:', err)

@@ -18,7 +18,7 @@ function parseHsl(hslStr) {
  * Lightness is adaptively adjusted for dark/light themes to guarantee AAA contrast.
  */
 export function useDynamicThemeGradients(imageSrc, isDarkMode) {
-  const { colors, isMonochrome } = useVibrantColors(imageSrc)
+  const { colors, isMonochrome, isLoaded } = useVibrantColors(imageSrc)
 
   const parsed = colors.map(parseHsl)
   const p1 = parsed[0] || { h: 220, s: 15, l: 50 }
@@ -79,7 +79,7 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
       backgroundSize: '250% 250%',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
-      transition: 'background 1.5s ease-in-out',
+      transition: isLoaded ? 'background 1.2s ease-in-out' : 'none',
       animation: 'headingGradientShift 14s ease infinite alternate',
       '@keyframes headingGradientShift': {
         '0%': { backgroundPosition: '0% 50%' },
@@ -92,7 +92,7 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
       backgroundSize: '250% 250%',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
-      transition: 'background 1.5s ease-in-out',
+      transition: isLoaded ? 'background 1.2s ease-in-out' : 'none',
       animation: 'bioGradientShift 18s ease infinite alternate',
       '@keyframes bioGradientShift': {
         '0%': { backgroundPosition: '0% 50%' },
@@ -103,10 +103,10 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
     logoGradientSx: {
       background: primaryGradient,
       backgroundSize: '250% 250%',
-      transition: 'background 1.5s ease-in-out',
+      transition: isLoaded ? 'background 1.2s ease-in-out' : 'none',
       animation: 'logoGradientShift 14s ease infinite alternate',
-      WebkitMaskImage: 'url(/api/logo)',
-      maskImage: 'url(/api/logo)',
+      WebkitMaskImage: 'url(/api/logo?w=640&fmt=webp)',
+      maskImage: 'url(/api/logo?w=640&fmt=webp)',
       WebkitMaskSize: 'contain',
       maskSize: 'contain',
       WebkitMaskRepeat: 'no-repeat',

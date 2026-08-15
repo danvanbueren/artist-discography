@@ -34,8 +34,16 @@ const theme = createTheme({
         },
       },
     },
+    MuiModal: {
+      defaultProps: {
+        disableScrollLock: true,
+      },
+    },
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          scrollbarGutter: 'stable',
+        },
         'html, body': {
           userSelect: 'none',
           WebkitUserSelect: 'none',

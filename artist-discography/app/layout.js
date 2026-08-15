@@ -45,39 +45,17 @@ export async function generateMetadata() {
   }
 }
 
-const PLATFORM_ICON_PRELOADS = [
-  '/platforms/spotify.webp',
-  '/platforms/apple.webp',
-  '/platforms/youtube.webp',
-  '/platforms/soundcloud.webp',
-  '/platforms/instagram.webp',
-  '/platforms/facebook.webp',
-  '/platforms/x.webp',
-  '/platforms/tiktok.webp',
-  '/platforms/discord.webp',
-  '/platforms/snapchat.webp',
-  '/platforms/bandcamp.webp',
-  '/platforms/deezer.webp',
-  '/platforms/tidal.webp',
-  '/platforms/pandora.webp',
-  '/platforms/amazon.webp',
-  '/platforms/itunes.webp',
-]
-
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {PLATFORM_ICON_PRELOADS.map(iconPath => (
-          <link
-            key={iconPath}
-            rel="preload"
-            href={iconPath}
-            as="image"
-            type="image/webp"
-            fetchPriority="high"
-          />
-        ))}
+        <link
+          rel="preload"
+          href="/api/logo?w=240&fmt=webp"
+          as="image"
+          type="image/webp"
+          fetchPriority="high"
+        />
       </head>
       <body suppressHydrationWarning>
         <Providers>

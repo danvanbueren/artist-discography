@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, forwardRef } from 'react'
 import {
   Box,
   Container,
@@ -13,6 +13,8 @@ import {
   Tooltip,
   useTheme,
   Collapse,
+  Dialog,
+  Slide,
 } from '@mui/material'
 import { alpha } from '@mui/material/styles'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
@@ -30,9 +32,29 @@ import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded'
+import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded'
 import { slugify } from '../../lib/slugs'
 import { getCookie, setCookie } from '../../lib/cookies'
+import { mediaPreloader, isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
+import { useVibrantColors } from '../../lib/hooks/useVibrantColors'
+import ProgressiveImage from '../common/ProgressiveImage'
 import PlaybackQueueDialog from './PlaybackQueueDialog'
+
+const FullScreenSlideTransition = forwardRef(function FullScreenSlideTransition(props, ref) {
+  return (
+    <Slide
+      direction="up"
+      ref={ref}
+      {...props}
+      timeout={{ enter: 460, exit: 225 }}
+      easing={{
+        enter: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        exit: 'cubic-bezier(0.4, 0, 0.6, 1)',
+      }}
+    />
+  )
+})
 
 export default function AudioPlayerBar({
   playingTrack,
@@ -54,6 +76,7 @@ export default function AudioPlayerBar({
   onToggleShuffle,
   repeatMode: propsRepeatMode,
   onCycleRepeatMode,
+  restartCount = 0,
 }) {
   const theme = useTheme()
   const [currentTime, setCurrentTime] = useState(0)
@@ -64,8 +87,103 @@ export default function AudioPlayerBar({
   const [isMuted, setIsMuted] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
   const [queueOpen, setQueueOpen] = useState(false)
-  const audioRef = useRef(null)
+  const [mobileFullScreenOpen, setMobileFullScreenOpen] = useState(false)
   const [realDuration, setRealDuration] = useState(0)
+  const [activeTier, setActiveTier] = useState(() => {
+    if (typeof navigator !== 'undefined' && navigator.connection) {
+      const conn = navigator.connection
+      if (conn.saveData || conn.effectiveType === '2g') return '128k'
+      if (conn.effectiveType === '3g') return '192k'
+    }
+    return '320k'
+  })
+
+  const pendingResumeTimeRef = useRef(null)
+  const shouldResumeAfterQualitySwitchRef = useRef(false)
+  const isSwitchingTierRef = useRef(false)
+  const stallTimerRef = useRef(null)
+  const preloaderAudioRef = useRef(null)
+  const isPrewarmingRef = useRef(false)
+  const targetPrewarmTierRef = useRef(null)
+  const audioRef = useRef(null)
+
+  const rawAudioUrl = playingTrack?.audioUrl
+
+  // Compute adaptive audio source URL
+  const activeAudioSrc = useMemo(() => {
+    if (!rawAudioUrl) return undefined
+    const sep = rawAudioUrl.includes('?') ? '&' : '?'
+    if (activeTier === 'lossless') return `${rawAudioUrl}${sep}q=lossless`
+    if (activeTier === '320k') return `${rawAudioUrl}${sep}b=320k`
+    return `${rawAudioUrl}${sep}b=${activeTier}`
+  }, [rawAudioUrl, activeTier])
+
+  // Dynamic Quality Label for Pill
+  const audioQualityLabel = useMemo(() => {
+    if (playingTrack?.quality) return playingTrack.quality
+    if (activeTier === '128k') return '128 kbps'
+    if (activeTier === '192k') return '192 kbps'
+    if (activeTier === '320k') return '320 kbps'
+    if (activeTier === 'lossless') return 'Lossless'
+    return '320 kbps'
+  }, [playingTrack?.quality, activeTier])
+  const coverArt = playingTrack?.cover || playingTrack?.image || playingTrack?.projectCover || ''
+  const { colors, isLoaded: isPaletteLoaded } = useVibrantColors(coverArt)
+
+  // Single solid background color matching artwork palette
+  const playerBgColor = useMemo(() => {
+    if (!coverArt || !isPaletteLoaded || !colors || colors.length === 0) {
+      return theme.palette.mode === 'dark' ? '#181822' : '#f8f9fa'
+    }
+    const match = colors[0].match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i)
+    if (!match) {
+      return theme.palette.mode === 'dark' ? '#181822' : '#f8f9fa'
+    }
+    const h = parseInt(match[1], 10)
+    const s = parseInt(match[2], 10)
+    if (theme.palette.mode === 'dark') {
+      return `hsl(${h}, ${Math.min(50, Math.max(12, s))}%, 12%)`
+    } else {
+      return `hsl(${h}, ${Math.min(45, Math.max(10, s))}%, 94%)`
+    }
+  }, [coverArt, isPaletteLoaded, colors, theme.palette.mode])
+
+  // Subtle single color border derived from palette
+  const playerBorderColor = useMemo(() => {
+    if (!coverArt || !isPaletteLoaded || !colors || colors.length === 0) {
+      return theme.palette.mode === 'dark'
+        ? 'rgba(255, 255, 255, 0.12)'
+        : 'rgba(0, 0, 0, 0.12)'
+    }
+    const match = colors[0].match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i)
+    if (!match) {
+      return theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'
+    }
+    const h = parseInt(match[1], 10)
+    const s = parseInt(match[2], 10)
+    return theme.palette.mode === 'dark'
+      ? `hsla(${h}, ${Math.min(50, Math.max(12, s))}%, 60%, 0.2)`
+      : `hsla(${h}, ${Math.min(45, Math.max(10, s))}%, 30%, 0.15)`
+  }, [coverArt, isPaletteLoaded, colors, theme.palette.mode])
+
+  // Handle restart count trigger (restarts current track from beginning)
+  const isFirstMountRef = useRef(true)
+  useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false
+      return
+    }
+    if (restartCount > 0 && audioRef.current) {
+      audioRef.current.currentTime = 0
+      setCurrentTime(0)
+      if (isPlaying) {
+        const p = audioRef.current.play()
+        if (p !== undefined) {
+          p.catch(console.warn)
+        }
+      }
+    }
+  }, [restartCount])
 
   // Load volume & mute preference from cookie/localStorage on mount
   useEffect(() => {
@@ -100,23 +218,253 @@ export default function AudioPlayerBar({
   // Track duration in seconds
   const duration = realDuration || playingTrack?.durationSeconds || playingTrack?.duration || 215
 
-  // Reset current time ONLY when playing track actually changes
+  // Clear stall debounce timer and background preloader on unmount
+  useEffect(() => {
+    return () => {
+      if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
+      if (preloaderAudioRef.current) {
+        preloaderAudioRef.current.src = ''
+        preloaderAudioRef.current = null
+      }
+    }
+  }, [])
+
+  // Helper to compute audio URL for any tier
+  const getAudioUrlForTier = useCallback((baseUrl, tier) => {
+    if (!baseUrl) return ''
+    const sep = baseUrl.includes('?') ? '&' : '?'
+    if (tier === 'lossless') return `${baseUrl}${sep}q=lossless`
+    if (tier === '320k') return `${baseUrl}${sep}b=320k`
+    return `${baseUrl}${sep}b=${tier}`
+  }, [])
+
+  // Seamless Pre-warmed Adaptive Bitrate Switching Callback
+  const switchQualityTier = useCallback((nextTier) => {
+    if (nextTier === activeTier || !rawAudioUrl) return
+
+    // If downgrading due to a real stall, switch immediately to unfreeze playback ASAP
+    const isDowngrade =
+      (activeTier === 'lossless') ||
+      (activeTier === '320k' && (nextTier === '192k' || nextTier === '128k')) ||
+      (activeTier === '192k' && nextTier === '128k')
+
+    if (isDowngrade) {
+      if (preloaderAudioRef.current) {
+        preloaderAudioRef.current.src = ''
+        preloaderAudioRef.current = null
+      }
+      isPrewarmingRef.current = false
+      const currentPos = audioRef.current ? audioRef.current.currentTime : currentTime
+      const wasPlaying = isPlaying && (!audioRef.current || !audioRef.current.paused)
+      isSwitchingTierRef.current = true
+      pendingResumeTimeRef.current = currentPos
+      shouldResumeAfterQualitySwitchRef.current = wasPlaying
+      setActiveTier(nextTier)
+      return
+    }
+
+    // For upgrades (128k -> 192k -> 320k -> lossless):
+    // Pre-warm the target stream in a background Audio element while the current stream plays UNINTERRUPTED!
+    if (isPrewarmingRef.current && targetPrewarmTierRef.current === nextTier) return
+    isPrewarmingRef.current = true
+    targetPrewarmTierRef.current = nextTier
+
+    const targetUrl = getAudioUrlForTier(rawAudioUrl, nextTier)
+    const currentAudio = audioRef.current
+
+    if (preloaderAudioRef.current) {
+      preloaderAudioRef.current.src = ''
+      preloaderAudioRef.current = null
+    }
+
+    const preloader = new Audio()
+    preloaderAudioRef.current = preloader
+    preloader.preload = 'auto'
+
+    const volVal = isMuted ? 0 : volume
+    preloader.volume = Math.min(1, Math.max(0, volVal / 100))
+    preloader.muted = isMuted
+
+    let timeoutId = null
+
+    const handlePrewarmReady = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (!preloaderAudioRef.current || preloaderAudioRef.current !== preloader) return
+      if (targetPrewarmTierRef.current !== nextTier) return
+
+      // Target stream is already buffered in memory/cache and ready for 0ms transition!
+      const syncTime = audioRef.current ? audioRef.current.currentTime : currentTime
+      const shouldPlay = isPlaying && (audioRef.current ? !audioRef.current.paused : true)
+
+      isSwitchingTierRef.current = true
+      pendingResumeTimeRef.current = syncTime
+      shouldResumeAfterQualitySwitchRef.current = shouldPlay
+
+      setActiveTier(nextTier)
+
+      setTimeout(() => {
+        if (preloaderAudioRef.current === preloader) {
+          preloader.src = ''
+          preloaderAudioRef.current = null
+        }
+        isPrewarmingRef.current = false
+      }, 500)
+    }
+
+    preloader.addEventListener('canplaythrough', handlePrewarmReady, { once: true })
+    preloader.addEventListener('canplay', handlePrewarmReady, { once: true })
+    preloader.addEventListener('error', () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      isPrewarmingRef.current = false
+      if (preloaderAudioRef.current === preloader) {
+        preloaderAudioRef.current = null
+      }
+    }, { once: true })
+
+    timeoutId = setTimeout(() => {
+      isPrewarmingRef.current = false
+      if (preloaderAudioRef.current === preloader) {
+        preloader.src = ''
+        preloaderAudioRef.current = null
+      }
+    }, 4000)
+
+    preloader.src = targetUrl
+    if (currentAudio && currentAudio.currentTime > 0) {
+      try {
+        preloader.currentTime = currentAudio.currentTime
+      } catch {}
+    }
+    preloader.load()
+  }, [activeTier, rawAudioUrl, isPlaying, currentTime, isMuted, volume, getAudioUrlForTier])
+
+  // Fast Stall Handler: Drops quality after 800ms of true freeze
+  const handleBufferingStall = useCallback(() => {
+    mediaPreloader.setAudioBuffering(true)
+    if (isSwitchingTierRef.current) return
+
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
+    stallTimerRef.current = setTimeout(() => {
+      if (isSwitchingTierRef.current) return
+      if (activeTier === 'lossless') {
+        switchQualityTier('320k')
+      } else if (activeTier === '320k') {
+        switchQualityTier('192k')
+      } else if (activeTier === '192k') {
+        switchQualityTier('128k')
+      }
+    }, 800)
+  }, [activeTier, switchQualityTier])
+
+  // Ready / Playing Handler: Restores playback position instantly
+  const handleCanPlayOrPlaying = useCallback(() => {
+    mediaPreloader.setAudioBuffering(false)
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current)
+      stallTimerRef.current = null
+    }
+
+    if (pendingResumeTimeRef.current !== null && audioRef.current) {
+      const targetTime = pendingResumeTimeRef.current
+      pendingResumeTimeRef.current = null
+      try {
+        audioRef.current.currentTime = targetTime
+      } catch {}
+      if (shouldResumeAfterQualitySwitchRef.current) {
+        audioRef.current.play().catch((err) => {
+          if (err.name !== 'AbortError') console.warn('Resume play error:', err)
+        })
+      }
+    }
+    isSwitchingTierRef.current = false
+  }, [])
+
+  // Fast Buffer Upgrade Handler: Upgrades swiftly as buffer headroom grows
+  const handleBufferProgress = useCallback(() => {
+    if (!audioRef.current || isSwitchingTierRef.current || isPrewarmingRef.current || activeTier === 'lossless') return
+
+    const audio = audioRef.current
+    const cur = audio.currentTime
+    let bufferAhead = 0
+
+    for (let i = 0; i < audio.buffered.length; i++) {
+      const start = audio.buffered.start(i)
+      const end = audio.buffered.end(i)
+      if (cur >= start && cur <= end) {
+        bufferAhead = end - cur
+        break
+      }
+    }
+
+    // Upgrades rapidly as buffer ahead is available:
+    if (activeTier === '128k' && bufferAhead >= 2.5) {
+      switchQualityTier('192k')
+    } else if (activeTier === '192k' && bufferAhead >= 3) {
+      switchQualityTier('320k')
+    } else if (activeTier === '320k' && bufferAhead >= 4) {
+      switchQualityTier('lossless')
+    }
+  }, [activeTier, switchQualityTier])
+
+  // Reset current time and preload audio when playing track changes
   useEffect(() => {
     setCurrentTime(0)
     setRealDuration(0)
+    pendingResumeTimeRef.current = null
+    isSwitchingTierRef.current = false
+    isPrewarmingRef.current = false
+    targetPrewarmTierRef.current = null
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current)
+      stallTimerRef.current = null
+    }
+    if (preloaderAudioRef.current) {
+      preloaderAudioRef.current.src = ''
+      preloaderAudioRef.current = null
+    }
     if (audioRef.current) {
       audioRef.current.currentTime = 0
     }
-  }, [playingTrack?.audioUrl, playingTrack?.name])
+    if (typeof navigator !== 'undefined' && navigator.connection) {
+      const conn = navigator.connection
+      if (conn.saveData || conn.effectiveType === '2g') {
+        setActiveTier('128k')
+      } else if (conn.effectiveType === '3g') {
+        setActiveTier('192k')
+      }
+    }
+    if (rawAudioUrl) {
+      mediaPreloader.preloadAudioChunk(rawAudioUrl)
+    }
+  }, [rawAudioUrl, playingTrack?.name])
+
+  // Pre-buffer initial audio chunks and artwork for upcoming queue tracks during idle time
+  useEffect(() => {
+    const upcoming = [...(manualQueue || []), ...(autoplayTracks || [])].slice(0, 3)
+    for (const item of upcoming) {
+      const trackObj = item?.track || item
+      if (trackObj?.audioUrl) {
+        mediaPreloader.preloadAudioChunk(trackObj.audioUrl)
+      }
+      const coverUrl = item?.project?.cover || item?.track?.cover || trackObj?.projectCover || trackObj?.cover
+      if (coverUrl && typeof coverUrl === 'string' && coverUrl.startsWith('/api/media')) {
+        mediaPreloader.preloadImage(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}w=120&q=75&fmt=webp`)
+      }
+    }
+  }, [manualQueue, autoplayTracks, rawAudioUrl])
 
   // Sync playback state with audio element
   useEffect(() => {
     if (!audioRef.current) return
-    if (isPlaying && playingTrack?.audioUrl) {
+    if (isPlaying && activeAudioSrc) {
       if (audioRef.current.paused) {
         const playPromise = audioRef.current.play()
         if (playPromise !== undefined) {
           playPromise.catch((err) => {
+            if (err.name === 'AbortError') {
+              // Expected browser event when audio source changes while play() is pending.
+              return
+            }
             console.warn('Audio playback interrupted:', err)
             if (onTogglePlay) onTogglePlay()
             if (onShowToast) onShowToast('Audio stream unavailable')
@@ -128,7 +476,7 @@ export default function AudioPlayerBar({
         audioRef.current.pause()
       }
     }
-  }, [isPlaying, playingTrack?.audioUrl, onTogglePlay, onShowToast])
+  }, [isPlaying, activeAudioSrc, onTogglePlay, onShowToast])
 
   // Keep ref for onTogglePlay to avoid re-subscribing keydown listener on render
   const onTogglePlayRef = useRef(onTogglePlay)
@@ -202,8 +550,6 @@ export default function AudioPlayerBar({
     }
   }, [Boolean(playingTrack)])
 
-  if (!playingTrack) return null
-
   // Time formatter MM:SS
   const formatTime = (secs) => {
     const totalSecs = Math.max(0, Math.floor(secs || 0))
@@ -216,15 +562,15 @@ export default function AudioPlayerBar({
   const handleShareTrack = (e) => {
     e.stopPropagation()
     if (typeof window !== 'undefined' && playingTrack) {
-      const projectSlug = slugify(playingTrack.project || '')
-      const trackSlug = slugify(playingTrack.name || '')
+      const projectSlug = slugify(playingTrack?.project || '')
+      const trackSlug = slugify(playingTrack?.name || '')
       const shareUrl = `${window.location.origin}${projectSlug ? `/${projectSlug}` : ''}${trackSlug ? `/${trackSlug}` : ''}`
       try {
         navigator.clipboard.writeText(shareUrl)
         setCopiedShare(true)
         setTimeout(() => setCopiedShare(false), 2000)
         if (onShowToast) {
-          onShowToast(`Copied share link to "${playingTrack.name || 'track'}"`)
+          onShowToast(`Copied share link to "${playingTrack?.name || 'track'}"`)
         }
       } catch (err) {
         console.error('Failed to copy share URL:', err)
@@ -311,11 +657,11 @@ export default function AudioPlayerBar({
     VolumeIconComponent = VolumeDownRoundedIcon
   }
 
-  const coverArt = playingTrack.cover || playingTrack.image || playingTrack.projectCover
-
   return (
-    <Collapse in={Boolean(playingTrack)} unmountOnExit>
+    <>
+      <Collapse in={Boolean(playingTrack)} unmountOnExit>
       <Box
+        className="mui-fixed"
         sx={{
           position: 'fixed',
           bottom: 0,
@@ -328,32 +674,212 @@ export default function AudioPlayerBar({
         }}
       >
 
-        <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
+        <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 1.5, sm: 3 } }}>
           <Paper
             elevation={6}
             sx={{
-              borderRadius: 4,
-              py: 1.5,
-              pr: 1.5,
-              pl: { xs: 1.5, sm: 1.75 },
-              minHeight: { xs: 72, sm: 84 },
-              bgcolor: theme.palette.mode === 'dark'
-                ? 'rgba(24, 24, 34, 0.95)'
-                : 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
+              borderRadius: { xs: 3, sm: 4 },
+              py: { xs: 1, sm: 1.5 },
+              pr: { xs: 1.25, sm: 1.5 },
+              pl: { xs: 1.25, sm: 1.75 },
+              minHeight: { xs: 58, sm: 84 },
+              bgcolor: playerBgColor,
               border: '1px solid',
-              borderColor: theme.palette.mode === 'dark'
-                ? 'rgba(255, 255, 255, 0.12)'
-                : 'rgba(0, 0, 0, 0.12)',
+              borderColor: playerBorderColor,
               boxShadow: '0 12px 36px rgba(0,0,0,0.35)',
-              display: 'flex',
-              alignItems: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'background-color 0.4s ease, border-color 0.4s ease',
             }}
           >
+            {/* === MOBILE MINI-PLAYER (Single Compact Row) === */}
+            <Box
+              onClick={() => setMobileFullScreenOpen(true)}
+              sx={{
+                display: { xs: 'flex', sm: 'none' },
+                alignItems: 'center',
+                width: '100%',
+                pb: 0.5,
+                cursor: 'pointer',
+              }}
+            >
+              {/* 1. Album Art Thumbnail */}
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2,
+                  bgcolor: 'primary.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'primary.contrastText',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                }}
+              >
+                {coverArt ? (
+                  <ProgressiveImage
+                    src={coverArt}
+                    alt={playingTrack?.name || 'Cover'}
+                    targetWidth={100}
+                    placeholderWidth={32}
+                    priority
+                    sx={{ width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <MusicNoteRoundedIcon fontSize="small" />
+                )}
+              </Box>
+
+              {/* 2. Track Name and Artist Stacked */}
+              <Stack
+                spacing={0.25}
+                sx={{
+                  ml: 1.25,
+                  minWidth: 0,
+                  flexShrink: 1,
+                  justifyContent: 'center',
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  sx={{
+                    fontSize: '0.875rem',
+                    lineHeight: 1.2,
+                    color: 'text.primary',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {playingTrack?.name || 'Untitled Track'}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    fontSize: '0.75rem',
+                    lineHeight: 1.2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {playingTrack?.artist || 'Artist'}
+                </Typography>
+                {/* Audio Quality Pill */}
+                <Box
+                  component="span"
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    px: 0.5,
+                    py: 0.08,
+                    borderRadius: 9999,
+                    fontSize: '0.575rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    lineHeight: 1.1,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                    color: 'text.secondary',
+                    border: '1px solid',
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+                    width: 'fit-content',
+                    userSelect: 'none',
+                    mt: 0.1,
+                  }}
+                >
+                  {audioQualityLabel}
+                </Box>
+              </Stack>
+
+              {/* 3. Auto-filled gap to push remaining controls to the right */}
+              <Box sx={{ flexGrow: 1 }} />
+
+              {/* 4. Copy track link share button */}
+              <Tooltip title={copiedShare ? 'Copied!' : 'Copy track link'} arrow>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleShareTrack(e)
+                  }}
+                  sx={{
+                    color: copiedShare ? 'success.main' : 'text.secondary',
+                    transition: 'color 0.2s ease',
+                    p: 0.9,
+                    flexShrink: 0,
+                  }}
+                >
+                  {copiedShare ? (
+                    <CheckRoundedIcon fontSize="small" />
+                  ) : (
+                    <ShareRoundedIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </Tooltip>
+
+              {/* 5. Play / Pause Button */}
+              <IconButton
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDirectTogglePlay()
+                }}
+                sx={{
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                  p: 0.9,
+                  ml: 0.5,
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(144, 202, 249, 0.35)',
+                  '&:hover': { bgcolor: 'primary.dark' },
+                }}
+              >
+                {isPlaying ? (
+                  <PauseRoundedIcon fontSize="small" />
+                ) : (
+                  <PlayArrowRoundedIcon fontSize="small" />
+                )}
+              </IconButton>
+            </Box>
+
+            {/* Read-Only Bottom Progress Line for Mobile */}
+            <Box
+              sx={{
+                display: { xs: 'block', sm: 'none' },
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              <Box
+                sx={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.max(0, (currentTime / (duration || 1)) * 100))}%`,
+                  bgcolor: 'primary.main',
+                  transition: 'width 0.15s linear',
+                }}
+              />
+            </Box>
+
+            {/* === DESKTOP / TABLET PLAYER (Full Controls) === */}
             <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={{ xs: 1, sm: 2 }}
-              sx={{ width: '100%', alignItems: 'center', justifyContent: 'space-between' }}
+              direction="row"
+              spacing={2}
+              sx={{
+                display: { xs: 'none', sm: 'flex' },
+                width: '100%',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
             >
               {/* === LEFT GROUP === */}
               {/* Col 1: Unified Cover Art + Title + Artist Clickable & Hover Area | Col 2: Centered Share Button */}
@@ -416,12 +942,13 @@ export default function AudioPlayerBar({
                       }}
                     >
                       {coverArt ? (
-                        <Box
-                          component="img"
+                        <ProgressiveImage
                           src={coverArt}
-                          alt={playingTrack.name || 'Cover'}
-                          draggable={false}
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          alt={playingTrack?.name || 'Cover'}
+                          targetWidth={120}
+                          placeholderWidth={32}
+                          priority
+                          sx={{ width: '100%', height: '100%' }}
                         />
                       ) : (
                         <MusicNoteRoundedIcon fontSize="small" />
@@ -453,7 +980,7 @@ export default function AudioPlayerBar({
                           transition: 'color 0.15s ease',
                         }}
                       >
-                        {playingTrack.name || 'Untitled Track'}
+                        {playingTrack?.name || 'Untitled Track'}
                       </Typography>
 
                       <Typography
@@ -471,8 +998,34 @@ export default function AudioPlayerBar({
                           transition: 'color 0.15s ease',
                         }}
                       >
-                        {playingTrack.artist || 'Artist'}
+                        {playingTrack?.artist || 'Artist'}
                       </Typography>
+
+                      {/* Audio Quality Pill */}
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          px: 0.65,
+                          py: 0.1,
+                          borderRadius: 9999,
+                          fontSize: '0.625rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          lineHeight: 1.1,
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                          color: 'text.secondary',
+                          border: '1px solid',
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+                          width: 'fit-content',
+                          userSelect: 'none',
+                          mt: 0.15,
+                        }}
+                      >
+                        {audioQualityLabel}
+                      </Box>
                     </Stack>
                   </Box>
                 </Tooltip>
@@ -505,10 +1058,20 @@ export default function AudioPlayerBar({
                   minWidth: 0,
                   width: '100%',
                   px: { xs: 0, sm: 1.5, md: 2.5 },
+                  justifyContent: 'center',
                 }}
               >
-                {/* Row 1: Controls */}
-                <Stack direction="row" spacing={{ xs: 1, sm: 1.5 }} sx={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                {/* Row 1: Controls (Height: 40px) */}
+                <Stack
+                  direction="row"
+                  spacing={{ xs: 1, sm: 1.5 }}
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: 40,
+                  }}
+                >
                   {/* Shuffle */}
                   <Tooltip title={isShuffle ? 'Shuffle On' : 'Shuffle Off'} arrow>
                     <IconButton
@@ -516,8 +1079,7 @@ export default function AudioPlayerBar({
                       onClick={onToggleShuffle}
                       sx={{
                         color: isShuffle ? 'primary.main' : 'text.primary',
-                        opacity: 1,
-                        p: 0.9,
+                        p: 0.8,
                       }}
                     >
                       <ShuffleRoundedIcon fontSize="small" />
@@ -538,7 +1100,7 @@ export default function AudioPlayerBar({
                           onSkipPrev()
                         }
                       }}
-                      sx={{ color: 'text.primary', p: 0.9 }}
+                      sx={{ color: 'text.primary', p: 0.8 }}
                     >
                       <SkipPreviousRoundedIcon fontSize="small" />
                     </IconButton>
@@ -577,7 +1139,7 @@ export default function AudioPlayerBar({
                           onSkipNext()
                         }
                       }}
-                      sx={{ color: 'text.primary', p: 0.9 }}
+                      sx={{ color: 'text.primary', p: 0.8 }}
                     >
                       <SkipNextRoundedIcon fontSize="small" />
                     </IconButton>
@@ -599,8 +1161,7 @@ export default function AudioPlayerBar({
                       onClick={handleCycleRepeat}
                       sx={{
                         color: repeatMode !== 'off' ? 'primary.main' : 'text.primary',
-                        opacity: 1,
-                        p: 0.9,
+                        p: 0.8,
                       }}
                     >
                       {repeatMode === 'one' ? (
@@ -612,12 +1173,27 @@ export default function AudioPlayerBar({
                   </Tooltip>
                 </Stack>
 
-                {/* Row 2: Playback Scrubber Bar */}
-                <Stack direction="row" spacing={1} sx={{ width: '100%', alignItems: 'center' }}>
+                {/* Row 2: Playback Scrubber Bar (Height: 24px) */}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    width: '100%',
+                    alignItems: 'center',
+                    height: 24,
+                  }}
+                >
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 36, textAlign: 'right', px: 0.75 }}
+                    sx={{
+                      fontSize: '0.725rem',
+                      fontFamily: 'monospace',
+                      minWidth: 36,
+                      textAlign: 'right',
+                      px: 0.75,
+                      lineHeight: 1,
+                    }}
                   >
                     {formatTime(currentTime)}
                   </Typography>
@@ -634,7 +1210,7 @@ export default function AudioPlayerBar({
                       }
                     }}
                     sx={{
-                      py: 0.75,
+                      py: 0,
                       flexGrow: 1,
                       height: 4,
                       '& .MuiSlider-thumb': {
@@ -656,126 +1232,211 @@ export default function AudioPlayerBar({
                   <Typography
                     variant="caption"
                     color="text.secondary"
-                    sx={{ fontSize: '0.725rem', fontFamily: 'monospace', minWidth: 36, px: 0.75 }}
+                    sx={{
+                      fontSize: '0.725rem',
+                      fontFamily: 'monospace',
+                      minWidth: 36,
+                      px: 0.75,
+                      lineHeight: 1,
+                    }}
                   >
                     {formatTime(duration)}
                   </Typography>
                 </Stack>
               </Stack>
 
-              {/* === RIGHT GROUP === */}
-              {/* Col 1: View Queue | Col 2: Dynamic Volume Icon | Col 3: Volume Scrubber | Col 4: Exit */}
+              {/* === RIGHT GROUP (Desktop / Tablet) === */}
+              {/* Row 1 (top): Queue, Fullscreen Modal Link, Close / Stop Playback (Height: 40px) */}
+              {/* Row 2 (bottom): Dynamic Volume Icon + Volume Scrubber (Height: 24px) */}
               <Stack
-                direction="row"
                 spacing={0.5}
                 sx={{
-                  alignItems: 'center',
-                  width: { xs: '100%', sm: 'auto' },
-                  justifyContent: 'flex-end',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
                   flexShrink: 0,
+                  minWidth: { sm: 110, md: 130 },
                 }}
               >
-                {/* Col 1: View Queue */}
-                <Tooltip title={manualQueue.length > 0 ? `Queue (${manualQueue.length} manual)` : 'View Queue (Autoplay active)'} arrow>
-                  <IconButton
-                    size="small"
-                    onClick={() => setQueueOpen(true)}
-                    sx={{ color: queueOpen ? 'primary.main' : 'text.secondary', p: 0.9 }}
+                {/* Row 1: Action Icons (Queue, Fullscreen, Close) */}
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    height: 40,
+                    width: '100%',
+                  }}
+                >
+                  {/* 1. View Queue */}
+                  <Tooltip
+                    title={manualQueue.length > 0 ? `Queue (${manualQueue.length} manual)` : 'View Queue (Autoplay active)'}
+                    arrow
                   >
-                    <Badge badgeContent={manualQueue.length > 0 ? manualQueue.length : null} color="primary">
-                      <QueueMusicRoundedIcon fontSize="small" />
-                    </Badge>
-                  </IconButton>
-                </Tooltip>
-
-                <PlaybackQueueDialog
-                  open={queueOpen}
-                  onClose={() => setQueueOpen(false)}
-                  manualQueue={manualQueue}
-                  autoplayTracks={autoplayTracks}
-                  onQueueDragDrop={onQueueDragDrop}
-                  onRemoveFromManualQueue={onRemoveFromManualQueue}
-                  onRemoveFromAutoplay={onRemoveFromAutoplay}
-                  onPlayQueuedTrack={onPlayQueuedTrack}
-                />
-
-                {/* Col 2: Dynamic Volume Icon */}
-                <Tooltip title={isMuted ? 'Unmute' : 'Mute'} arrow>
-                  <IconButton
-                    size="small"
-                    onClick={handleToggleMute}
-                    sx={{
-                      color: isMuted ? 'error.main' : 'text.secondary',
-                      p: 0.9,
-                      position: 'relative',
-                      zIndex: 2,
-                    }}
-                  >
-                    <VolumeIconComponent fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-
-                {/* Col 3: Volume Scrubber Input */}
-                <Box sx={{ width: { xs: 60, sm: 70, md: 90 }, display: 'flex', alignItems: 'center', px: 0.5, ml: 0.25, position: 'relative', zIndex: 1 }}>
-                  <Slider
-                    size="small"
-                    value={effectiveVolume}
-                    min={0}
-                    max={100}
-                    onChange={handleVolumeChange}
-                    sx={{
-                      py: 0.75,
-                      height: 4,
-                      color: isMuted ? 'text.disabled' : 'primary.main',
-                      '& .MuiSlider-thumb': {
-                        width: 10,
-                        height: 10,
-                        '&:hover, &.Mui-focused, &.Mui-active': {
-                          boxShadow: 'none',
+                    <IconButton
+                      size="small"
+                      onClick={() => setQueueOpen(true)}
+                      sx={{
+                        color: queueOpen ? 'primary.main' : 'text.secondary',
+                        p: 0.8,
+                        '&:hover': {
+                          color: 'text.primary',
                         },
-                      },
-                    }}
-                  />
-                </Box>
+                      }}
+                    >
+                      <Badge
+                        badgeContent={manualQueue.length > 0 ? manualQueue.length : null}
+                        color="primary"
+                      >
+                        <QueueMusicRoundedIcon fontSize="small" />
+                      </Badge>
+                    </IconButton>
+                  </Tooltip>
 
-                {/* Col 4: Exit / Stop Playback */}
-                <Tooltip title="Close Player" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={onClosePlayer}
-                    sx={{ color: 'text.secondary', ml: 0.25, p: 0.9 }}
+                  <PlaybackQueueDialog
+                    open={queueOpen}
+                    onClose={() => setQueueOpen(false)}
+                    manualQueue={manualQueue}
+                    autoplayTracks={autoplayTracks}
+                    onQueueDragDrop={onQueueDragDrop}
+                    onRemoveFromManualQueue={onRemoveFromManualQueue}
+                    onRemoveFromAutoplay={onRemoveFromAutoplay}
+                    onPlayQueuedTrack={onPlayQueuedTrack}
+                  />
+
+                  {/* 2. Fullscreen Button (links to fullscreen modal) */}
+                  <Tooltip title="Full screen player" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => setMobileFullScreenOpen(true)}
+                      sx={{
+                        color: 'text.secondary',
+                        p: 0.8,
+                        '&:hover': {
+                          color: 'text.primary',
+                        },
+                      }}
+                    >
+                      <FullscreenRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+
+                  {/* 3. Close Player / Stop Playback */}
+                  <Tooltip title="Close Player" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={onClosePlayer}
+                      sx={{
+                        color: 'text.secondary',
+                        p: 0.8,
+                        '&:hover': {
+                          color: 'error.main',
+                        },
+                      }}
+                    >
+                      <CloseRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+
+                {/* Row 2: Volume Icon + Slider */}
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    height: 24,
+                    width: '100%',
+                  }}
+                >
+                  <Tooltip title={isMuted ? 'Unmute' : 'Mute'} arrow>
+                    <IconButton
+                      size="small"
+                      onClick={handleToggleMute}
+                      sx={{
+                        color: isMuted ? 'error.main' : 'text.secondary',
+                        p: 0.25,
+                      }}
+                    >
+                      <VolumeIconComponent sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+
+                  <Box
+                    sx={{
+                      width: { sm: 75, md: 95 },
+                      display: 'flex',
+                      alignItems: 'center',
+                      px: 0.25,
+                    }}
                   >
-                    <CloseRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                    <Slider
+                      size="small"
+                      value={effectiveVolume}
+                      min={0}
+                      max={100}
+                      onChange={handleVolumeChange}
+                      sx={{
+                        py: 0,
+                        height: 4,
+                        color: isMuted ? 'text.disabled' : 'primary.main',
+                        '& .MuiSlider-thumb': {
+                          width: 10,
+                          height: 10,
+                          '&:hover, &.Mui-focused, &.Mui-active': {
+                            boxShadow: 'none',
+                          },
+                        },
+                        '& .MuiSlider-track': {
+                          border: 'none',
+                        },
+                        '& .MuiSlider-rail': {
+                          opacity: 0.25,
+                        },
+                      }}
+                    />
+                  </Box>
+                </Stack>
               </Stack>
             </Stack>
 
-            {/* Hidden HTML5 Audio Element */}
+            {/* Hidden HTML5 Audio Element with Dynamic Adaptive Bitrate */}
             <audio
               ref={audioRef}
-              src={playingTrack?.audioUrl || undefined}
+              src={activeAudioSrc || undefined}
               preload="auto"
               onPlay={(e) => {
                 const volVal = isMuted ? 0 : volume
                 e.currentTarget.volume = Math.min(1, Math.max(0, volVal / 100))
                 e.currentTarget.muted = isMuted
+                mediaPreloader.setAudioBuffering(false)
               }}
+              onPlaying={handleCanPlayOrPlaying}
+              onCanPlay={handleCanPlayOrPlaying}
+              onWaiting={handleBufferingStall}
+              onStalled={handleBufferingStall}
+              onProgress={handleBufferProgress}
               onLoadedMetadata={(e) => {
                 const d = e.currentTarget.duration
                 if (d && !isNaN(d)) setRealDuration(d)
                 const volVal = isMuted ? 0 : volume
                 e.currentTarget.volume = Math.min(1, Math.max(0, volVal / 100))
                 e.currentTarget.muted = isMuted
+                handleCanPlayOrPlaying()
               }}
               onTimeUpdate={(e) => {
-                setCurrentTime(e.currentTarget.currentTime)
+                if (pendingResumeTimeRef.current === null) {
+                  setCurrentTime(e.currentTarget.currentTime)
+                }
+                handleBufferProgress()
               }}
               onEnded={() => {
+                mediaPreloader.setAudioBuffering(false)
                 if (repeatMode === 'one') {
                   if (audioRef.current) {
                     audioRef.current.currentTime = 0
-                    audioRef.current.play()
+                    audioRef.current.play().catch(() => {})
                   }
                 } else if (repeatMode === 'all' || manualQueue.length > 0 || autoplayTracks.length > 0) {
                   if (onSkipNext) onSkipNext()
@@ -788,15 +1449,520 @@ export default function AudioPlayerBar({
                 }
               }}
               onError={() => {
-                if (isPlaying && onShowToast) {
-                  onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
+                mediaPreloader.setAudioBuffering(false)
+                if (isPlaying) {
+                  if (activeTier !== '128k') {
+                    switchQualityTier('128k')
+                  } else {
+                    if (onShowToast) onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
+                    if (onTogglePlay) onTogglePlay()
+                  }
                 }
-                if (onTogglePlay) onTogglePlay()
               }}
             />
           </Paper>
         </Container>
       </Box>
     </Collapse>
+
+    {/* Full-Screen Mobile Audio Player Modal */}
+    <Dialog
+      fullScreen
+      keepMounted
+      open={Boolean(mobileFullScreenOpen && playingTrack)}
+      onClose={() => setMobileFullScreenOpen(false)}
+      slots={{ transition: FullScreenSlideTransition }}
+      sx={{
+        overflow: 'hidden',
+        touchAction: 'manipulation',
+        '& .MuiDialog-container': {
+          overflow: 'hidden',
+          height: '100dvh',
+          maxHeight: '100dvh',
+        },
+      }}
+      slotProps={{
+        backdrop: {
+          sx: {
+            bgcolor: 'rgba(0, 0, 0, 0.7)',
+            transition: 'opacity 225ms cubic-bezier(0.4, 0, 0.2, 1) !important',
+          },
+        },
+        paper: {
+          sx: {
+            bgcolor: playerBgColor,
+            backgroundImage: 'none',
+            color: 'text.primary',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            p: { xs: 1.5, sm: 2.5 },
+            height: '100dvh',
+            maxHeight: '100dvh',
+            position: 'relative',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            touchAction: 'manipulation',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            willChange: 'transform',
+          },
+        },
+      }}
+    >
+      {/* Ambient background glow matching artwork */}
+      {coverArt && (
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${coverArt})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(40px)',
+            opacity: 0.18,
+            transform: 'translateZ(0) scale(1.2)',
+            pointerEvents: 'none',
+            zIndex: 0,
+            willChange: 'opacity',
+          }}
+        />
+      )}
+
+      {/* Top Header Bar */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          pt: { xs: 0.25, sm: 0.5 },
+          position: 'relative',
+          zIndex: 1,
+          flexShrink: 0,
+        }}
+      >
+        {/* Left: Close player & completely stop playback button */}
+        <Tooltip title="Close Player" arrow>
+          <IconButton
+            onClick={() => {
+              setMobileFullScreenOpen(false)
+              if (onClosePlayer) onClosePlayer()
+            }}
+            size="small"
+            sx={{
+              color: 'text.secondary',
+              bgcolor: 'action.hover',
+              p: { xs: 0.75, sm: 1 },
+              '&:hover': {
+                bgcolor: 'action.selected',
+              },
+            }}
+          >
+            <CloseRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+          </IconButton>
+        </Tooltip>
+
+        {/* Center: Track Context Title */}
+        <Box sx={{ textAlign: 'center', minWidth: 0, px: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 700,
+              letterSpacing: 1.1,
+              textTransform: 'uppercase',
+              fontSize: { xs: '0.6rem', sm: '0.65rem' },
+              display: 'block',
+              lineHeight: 1.1,
+            }}
+          >
+            Playing from project
+          </Typography>
+          <Typography
+            variant="subtitle2"
+            fontWeight={700}
+            sx={{
+              color: 'text.primary',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: { xs: 180, sm: 240 },
+              fontSize: { xs: '0.8rem', sm: '0.875rem' },
+              lineHeight: 1.3,
+            }}
+          >
+            {playingTrack?.project || 'Discography'}
+          </Typography>
+        </Box>
+
+        {/* Right: Down chevron collapse/minimize modal button */}
+        <Tooltip title="Minimize Player" arrow>
+          <IconButton
+            onClick={() => setMobileFullScreenOpen(false)}
+            size="small"
+            sx={{
+              color: 'text.primary',
+              bgcolor: 'action.hover',
+              p: { xs: 0.75, sm: 1 },
+              '&:hover': {
+                bgcolor: 'action.selected',
+              },
+            }}
+          >
+            <KeyboardArrowDownRoundedIcon sx={{ fontSize: { xs: 22, sm: 26 } }} />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Center Artwork Hero (Dynamically scaled by viewport width AND height) */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          py: { xs: 1, sm: 2 },
+          my: 'auto',
+          width: '100%',
+          position: 'relative',
+          zIndex: 1,
+          flexShrink: 1,
+          minHeight: 0,
+        }}
+      >
+        <Box
+          sx={{
+            width: { xs: 'min(62vw, 30vh, 260px)', sm: 'min(72vw, 38vh, 330px)' },
+            height: { xs: 'min(62vw, 30vh, 260px)', sm: 'min(72vw, 38vh, 330px)' },
+            aspectRatio: '1 / 1',
+            borderRadius: { xs: 3, sm: 4 },
+            overflow: 'hidden',
+            boxShadow: '0 16px 44px rgba(0,0,0,0.6)',
+            bgcolor: 'primary.main',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'primary.contrastText',
+            flexShrink: 0,
+          }}
+        >
+          {coverArt ? (
+            <ProgressiveImage
+              src={coverArt}
+              alt={playingTrack?.name || 'Cover'}
+              targetWidth={400}
+              placeholderWidth={48}
+              priority
+              sx={{ width: '100%', height: '100%' }}
+            />
+          ) : (
+            <MusicNoteRoundedIcon sx={{ fontSize: { xs: 44, sm: 64 } }} />
+          )}
+        </Box>
+      </Box>
+
+      {/* Bottom Control Area */}
+      <Box
+        sx={{
+          width: '100%',
+          position: 'relative',
+          zIndex: 1,
+          pb: { xs: 0.5, sm: 1.5 },
+          flexShrink: 0,
+        }}
+      >
+        {/* Track Info & Share Row */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            mb: { xs: 1, sm: 1.75 },
+          }}
+        >
+          <Box sx={{ minWidth: 0, flexGrow: 1, pr: 1.5 }}>
+            <Typography
+              variant="h5"
+              fontWeight={800}
+              sx={{
+                color: 'text.primary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontSize: { xs: '1.05rem', sm: '1.35rem' },
+                lineHeight: 1.2,
+              }}
+            >
+              {playingTrack?.name || 'Untitled Track'}
+            </Typography>
+            <Typography
+              variant="subtitle1"
+              sx={{
+                color: 'text.secondary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontWeight: 500,
+                fontSize: { xs: '0.8rem', sm: '0.95rem' },
+                lineHeight: 1.2,
+                mt: 0.25,
+              }}
+            >
+              {playingTrack?.artist || 'Artist'}
+            </Typography>
+
+            {/* Audio Quality Pill */}
+            <Box
+              component="span"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                px: 0.75,
+                py: 0.15,
+                borderRadius: 9999,
+                fontSize: '0.625rem',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                lineHeight: 1.2,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                color: 'text.secondary',
+                border: '1px solid',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                width: 'fit-content',
+                userSelect: 'none',
+                mt: 0.5,
+              }}
+            >
+              {audioQualityLabel}
+            </Box>
+          </Box>
+
+          <Tooltip title={copiedShare ? 'Copied!' : 'Copy track link'} arrow>
+            <IconButton
+              onClick={handleShareTrack}
+              size="small"
+              sx={{
+                color: copiedShare ? 'success.main' : 'text.secondary',
+                bgcolor: 'action.hover',
+                p: { xs: 0.8, sm: 1.1 },
+                '&:hover': {
+                  bgcolor: 'action.selected',
+                },
+              }}
+            >
+              {copiedShare ? (
+                <CheckRoundedIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              ) : (
+                <ShareRoundedIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {/* Scrubber Slider & Timers */}
+        <Box sx={{ width: '100%', mb: { xs: 1, sm: 1.5 } }}>
+          <Slider
+            value={currentTime}
+            min={0}
+            max={duration}
+            onChange={(_, val) => {
+              setCurrentTime(val)
+              if (audioRef.current) {
+                audioRef.current.currentTime = val
+              }
+            }}
+            sx={{
+              py: { xs: 0.75, sm: 1 },
+              height: 3,
+              '& .MuiSlider-thumb': {
+                width: { xs: 12, sm: 14 },
+                height: { xs: 12, sm: 14 },
+                '&:hover, &.Mui-focused, &.Mui-active': {
+                  boxShadow: '0 0 0 8px rgba(144, 202, 249, 0.2)',
+                },
+              },
+              '& .MuiSlider-track': {
+                border: 'none',
+              },
+              '& .MuiSlider-rail': {
+                opacity: 0.25,
+              },
+            }}
+          />
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              mt: 0.25,
+            }}
+          >
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: { xs: '0.675rem', sm: '0.75rem' } }}>
+              {formatTime(currentTime)}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', fontSize: { xs: '0.675rem', sm: '0.75rem' } }}>
+              {formatTime(duration)}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Main Playback Control Row */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            px: { xs: 0, sm: 1.5 },
+            mb: { xs: 1.25, sm: 2 },
+          }}
+        >
+          {/* Shuffle */}
+          <IconButton
+            onClick={onToggleShuffle}
+            size="small"
+            sx={{
+              color: isShuffle ? 'primary.main' : 'text.secondary',
+              p: { xs: 0.6, sm: 1 },
+            }}
+          >
+            <ShuffleRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+          </IconButton>
+
+          {/* Skip Prev */}
+          <IconButton
+            onClick={() => {
+              const activeTime = audioRef.current ? audioRef.current.currentTime : currentTime
+              if (audioRef.current) {
+                audioRef.current.currentTime = 0
+              }
+              setCurrentTime(0)
+              if (activeTime <= 3 && onSkipPrev) {
+                onSkipPrev()
+              }
+            }}
+            size="small"
+            sx={{ color: 'text.primary', p: { xs: 0.6, sm: 1 } }}
+          >
+            <SkipPreviousRoundedIcon sx={{ fontSize: { xs: 28, sm: 36 } }} />
+          </IconButton>
+
+          {/* Play / Pause */}
+          <IconButton
+            color="primary"
+            onClick={handleDirectTogglePlay}
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              p: { xs: 1.25, sm: 1.75 },
+              boxShadow: '0 6px 20px rgba(144, 202, 249, 0.45)',
+              '&:hover': {
+                bgcolor: 'primary.dark',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isPlaying ? (
+              <PauseRoundedIcon sx={{ fontSize: { xs: 28, sm: 38 } }} />
+            ) : (
+              <PlayArrowRoundedIcon sx={{ fontSize: { xs: 28, sm: 38 } }} />
+            )}
+          </IconButton>
+
+          {/* Skip Next */}
+          <IconButton
+            onClick={() => {
+              if (audioRef.current) {
+                audioRef.current.currentTime = 0
+              }
+              setCurrentTime(0)
+              if (onSkipNext) {
+                onSkipNext()
+              }
+            }}
+            size="small"
+            sx={{ color: 'text.primary', p: { xs: 0.6, sm: 1 } }}
+          >
+            <SkipNextRoundedIcon sx={{ fontSize: { xs: 28, sm: 36 } }} />
+          </IconButton>
+
+          {/* Repeat */}
+          <IconButton
+            onClick={handleCycleRepeat}
+            size="small"
+            sx={{
+              color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
+              p: { xs: 0.6, sm: 1 },
+            }}
+          >
+            {repeatMode === 'one' ? (
+              <RepeatOneRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+            ) : (
+              <RepeatRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+            )}
+          </IconButton>
+        </Box>
+
+        {/* Volume + Queue Auxiliary Row */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            pt: { xs: 0.25, sm: 0.5 },
+          }}
+        >
+          {/* Volume slider */}
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexGrow: 1, mr: 2 }}>
+            <IconButton
+              size="small"
+              onClick={handleToggleMute}
+              sx={{ color: isMuted ? 'error.main' : 'text.secondary', p: { xs: 0.5, sm: 0.75 } }}
+            >
+              <VolumeIconComponent sx={{ fontSize: { xs: 18, sm: 20 } }} />
+            </IconButton>
+            <Slider
+              size="small"
+              value={effectiveVolume}
+              min={0}
+              max={100}
+              onChange={handleVolumeChange}
+              sx={{
+                flexGrow: 1,
+                height: 3,
+                '& .MuiSlider-thumb': {
+                  width: { xs: 8, sm: 10 },
+                  height: { xs: 8, sm: 10 },
+                },
+              }}
+            />
+          </Stack>
+
+          {/* Queue Button */}
+          <IconButton
+            size="small"
+            onClick={() => setQueueOpen(true)}
+            sx={{
+              color: queueOpen ? 'primary.main' : 'text.secondary',
+              bgcolor: 'action.hover',
+              p: { xs: 0.75, sm: 1 },
+              '&:hover': {
+                bgcolor: 'action.selected',
+              },
+            }}
+          >
+            <Badge badgeContent={manualQueue.length > 0 ? manualQueue.length : null} color="primary">
+              <QueueMusicRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+            </Badge>
+          </IconButton>
+        </Box>
+      </Box>
+    </Dialog>
+    </>
   )
 }

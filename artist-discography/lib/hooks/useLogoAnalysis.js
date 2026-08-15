@@ -2,21 +2,61 @@
 
 import { useState, useEffect } from 'react'
 
+const LOGO_ANALYSIS_CACHE = new Map()
+
+const DEFAULT_LOGO_ANALYSIS = {
+  isMonochrome: false,
+  isLight: false,
+  isDark: false,
+  aspectRatio: null,
+  loaded: false,
+}
+
+function getCachedLogoAnalysis(imageSrc) {
+  if (!imageSrc) return DEFAULT_LOGO_ANALYSIS
+  if (LOGO_ANALYSIS_CACHE.has(imageSrc)) {
+    return LOGO_ANALYSIS_CACHE.get(imageSrc)
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(`logo_analysis_${imageSrc}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed && typeof parsed === 'object' && parsed.loaded) {
+          LOGO_ANALYSIS_CACHE.set(imageSrc, parsed)
+          return parsed
+        }
+      }
+    } catch {}
+  }
+  return DEFAULT_LOGO_ANALYSIS
+}
+
+function saveCachedLogoAnalysis(imageSrc, data) {
+  if (!imageSrc || !data) return
+  LOGO_ANALYSIS_CACHE.set(imageSrc, data)
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(`logo_analysis_${imageSrc}`, JSON.stringify(data))
+    } catch {}
+  }
+}
+
 /**
  * Custom hook to analyze an image (like an artist logo) for luminance, color saturation, and aspect ratio.
  * Determines if an image is monochrome (flat black/white) and light vs dark.
  */
 export function useLogoAnalysis(imageSrc) {
-  const [analysis, setAnalysis] = useState({
-    isMonochrome: false,
-    isLight: false,
-    isDark: false,
-    aspectRatio: null,
-    loaded: false,
-  })
+  const [analysis, setAnalysis] = useState(() => getCachedLogoAnalysis(imageSrc))
 
   useEffect(() => {
     if (!imageSrc) return
+
+    const cached = getCachedLogoAnalysis(imageSrc)
+    if (cached.loaded) {
+      setAnalysis(cached)
+      return
+    }
 
     let isMounted = true
     const img = new Image()
@@ -31,7 +71,9 @@ export function useLogoAnalysis(imageSrc) {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          if (isMounted) setAnalysis(a => ({ ...a, aspectRatio, loaded: true }))
+          const fallbackData = { isMonochrome: false, isLight: false, isDark: false, aspectRatio, loaded: true }
+          saveCachedLogoAnalysis(imageSrc, fallbackData)
+          if (isMounted) setAnalysis(fallbackData)
           return
         }
 
@@ -65,7 +107,9 @@ export function useLogoAnalysis(imageSrc) {
         }
 
         if (opaquePixelCount === 0) {
-          if (isMounted) setAnalysis(a => ({ ...a, aspectRatio, loaded: true }))
+          const fallbackData = { isMonochrome: false, isLight: false, isDark: false, aspectRatio, loaded: true }
+          saveCachedLogoAnalysis(imageSrc, fallbackData)
+          if (isMounted) setAnalysis(fallbackData)
           return
         }
 
@@ -76,25 +120,32 @@ export function useLogoAnalysis(imageSrc) {
         const isLight = isMonochrome && avgLuminance > 140
         const isDark = isMonochrome && avgLuminance <= 140
 
+        const result = {
+          isMonochrome,
+          isLight,
+          isDark,
+          aspectRatio,
+          loaded: true,
+        }
+
+        saveCachedLogoAnalysis(imageSrc, result)
         if (isMounted) {
-          setAnalysis({
-            isMonochrome,
-            isLight,
-            isDark,
-            aspectRatio,
-            loaded: true,
-          })
+          setAnalysis(result)
         }
       } catch (err) {
+        const errorResult = { isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true }
+        saveCachedLogoAnalysis(imageSrc, errorResult)
         if (isMounted) {
-          setAnalysis({ isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true })
+          setAnalysis(errorResult)
         }
       }
     }
 
     img.onerror = () => {
+      const errorResult = { isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true }
+      saveCachedLogoAnalysis(imageSrc, errorResult)
       if (isMounted) {
-        setAnalysis({ isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true })
+        setAnalysis(errorResult)
       }
     }
 

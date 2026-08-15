@@ -21,8 +21,8 @@ export default function CompactArtistHeader({
 }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
-  const logoAnalysis = useLogoAnalysis('/api/logo')
-  const coverSrc = ambientImage || '/api/logo'
+  const logoAnalysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
+  const coverSrc = ambientImage || '/api/logo?w=640&fmt=webp'
   const { primaryTextSx, secondaryTextSx, logoGradientSx, getLogoFilter: getDynamicLogoFilter } = useDynamicThemeGradients(coverSrc, isDarkMode)
 
   const name = artist?.name ?? ''

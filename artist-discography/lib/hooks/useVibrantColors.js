@@ -10,27 +10,75 @@ const DEFAULT_FALLBACK_COLORS = [
   'hsl(220, 10%, 45%)',
 ]
 
+const VIBRANT_PALETTE_CACHE = new Map()
+
+const DEFAULT_PALETTE_STATE = {
+  colors: DEFAULT_FALLBACK_COLORS,
+  isMonochrome: false,
+  avgSaturation: 0,
+  isLoaded: false,
+}
+
+function getCachedVibrantPalette(imageSrc) {
+  if (!imageSrc) {
+    return {
+      colors: DEFAULT_FALLBACK_COLORS,
+      isMonochrome: false,
+      avgSaturation: 0,
+      isLoaded: true,
+    }
+  }
+  if (VIBRANT_PALETTE_CACHE.has(imageSrc)) {
+    return VIBRANT_PALETTE_CACHE.get(imageSrc)
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(`vibrant_palette_${imageSrc}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed && Array.isArray(parsed.colors) && parsed.isLoaded) {
+          VIBRANT_PALETTE_CACHE.set(imageSrc, parsed)
+          return parsed
+        }
+      }
+    } catch {}
+  }
+  return DEFAULT_PALETTE_STATE
+}
+
+function saveCachedVibrantPalette(imageSrc, data) {
+  if (!imageSrc || !data) return
+  VIBRANT_PALETTE_CACHE.set(imageSrc, data)
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(`vibrant_palette_${imageSrc}`, JSON.stringify(data))
+    } catch {}
+  }
+}
+
 /**
  * Custom hook to analyze an image and sample its true color palette.
  * Accurately handles monochromatic/black & white images by preserving low saturation
  * and true image hues rather than forcing artificial bright colors.
  */
 export function useVibrantColors(imageSrc) {
-  const [palette, setPalette] = useState({
-    colors: DEFAULT_FALLBACK_COLORS,
-    isMonochrome: false,
-    avgSaturation: 0,
-    isLoaded: false,
-  })
+  const [palette, setPalette] = useState(() => getCachedVibrantPalette(imageSrc))
 
   useEffect(() => {
     if (!imageSrc) {
-      setPalette({
+      const emptyState = {
         colors: DEFAULT_FALLBACK_COLORS,
         isMonochrome: false,
         avgSaturation: 0,
         isLoaded: true,
-      })
+      }
+      setPalette(emptyState)
+      return
+    }
+
+    const cached = getCachedVibrantPalette(imageSrc)
+    if (cached.isLoaded) {
+      setPalette(cached)
       return
     }
 
@@ -186,40 +234,48 @@ export function useVibrantColors(imageSrc) {
           ? selected.slice(0, 5).map(c => `hsl(${c.h}, ${c.s}%, ${c.l}%)`)
           : DEFAULT_FALLBACK_COLORS
 
+        const result = {
+          colors: finalColors,
+          isMonochrome,
+          avgSaturation: avgSat,
+          isLoaded: true,
+        }
+
+        saveCachedVibrantPalette(imageSrc, result)
+
         if (isMounted) {
           setPalette(prev => {
             const sameColors = prev.colors.length === finalColors.length && prev.colors.every((col, i) => col === finalColors[i])
             if (sameColors && prev.isMonochrome === isMonochrome && prev.avgSaturation === avgSat) {
               return prev
             }
-            return {
-              colors: finalColors,
-              isMonochrome,
-              avgSaturation: avgSat,
-              isLoaded: true,
-            }
+            return result
           })
         }
       } catch {
+        const fallbackData = {
+          colors: DEFAULT_FALLBACK_COLORS,
+          isMonochrome: false,
+          avgSaturation: 0,
+          isLoaded: true,
+        }
+        saveCachedVibrantPalette(imageSrc, fallbackData)
         if (isMounted) {
-          setPalette({
-            colors: DEFAULT_FALLBACK_COLORS,
-            isMonochrome: false,
-            avgSaturation: 0,
-            isLoaded: true,
-          })
+          setPalette(fallbackData)
         }
       }
     }
 
     img.onerror = () => {
+      const fallbackData = {
+        colors: DEFAULT_FALLBACK_COLORS,
+        isMonochrome: false,
+        avgSaturation: 0,
+        isLoaded: true,
+      }
+      saveCachedVibrantPalette(imageSrc, fallbackData)
       if (isMounted) {
-        setPalette({
-          colors: DEFAULT_FALLBACK_COLORS,
-          isMonochrome: false,
-          avgSaturation: 0,
-          isLoaded: true,
-        })
+        setPalette(fallbackData)
       }
     }
 

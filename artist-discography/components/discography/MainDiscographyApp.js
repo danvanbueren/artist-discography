@@ -16,12 +16,13 @@ import {
   Paper,
   IconButton,
   Tooltip,
+  Badge,
 } from '@mui/material'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import BugReportIcon from '@mui/icons-material/BugReport'
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import ArtistHero from '../artist/ArtistHero'
+import ArtistHero, { getSortedActiveLinks } from '../artist/ArtistHero'
 import CompactArtistHeader from '../layout/CompactArtistHeader'
 import FloatingNavBar from '../layout/FloatingNavBar'
 import PlatformSelectorModal, { STREAMING_PLATFORMS } from './PlatformSelectorModal'
@@ -33,6 +34,7 @@ import AmbientBackground from '../layout/AmbientBackground'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../../lib/slugs'
 import { useLogoAnalysis, getLogoFilter } from '../../lib/hooks/useLogoAnalysis'
 import { getCookie, setCookie } from '../../lib/cookies'
+import { mediaPreloader } from '../../lib/mediaPreloader'
 
 function shuffleArray(array) {
   const arr = [...array]
@@ -66,7 +68,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   // System Theme Preference Detection
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
   const [darkMode, setDarkMode] = useState(true)
-  const logoAnalysis = useLogoAnalysis('/api/logo')
+  const logoAnalysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
 
   // On mount: read saved theme cookie/localStorage; if none, default to system preference
   useEffect(() => {
@@ -135,6 +137,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   const [playingTrack, setPlayingTrack] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [manualQueue, setManualQueue] = useState([])
+  const [devDrawerOpen, setDevDrawerOpen] = useState(false)
+  const [restartCount, setRestartCount] = useState(0)
 
   // Toast / Notification State
   const [toastMessage, setToastMessage] = useState('')
@@ -284,6 +288,21 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     } catch {}
   }, [availablePlatformIds])
 
+  // Preload top project cover artwork and initial audio chunk during idle browser time
+  useEffect(() => {
+    if (!projects || projects.length === 0) return
+    const topProjects = projects.slice(0, 4)
+    for (const proj of topProjects) {
+      if (proj?.cover && typeof proj.cover === 'string' && proj.cover.startsWith('/api/media')) {
+        mediaPreloader.preloadImage(`${proj.cover}${proj.cover.includes('?') ? '&' : '?'}w=400&q=80&fmt=webp`)
+      }
+    }
+    const firstAudioTrack = projects.flatMap(p => p.tracks || []).find(t => t?.audioUrl)
+    if (firstAudioTrack?.audioUrl) {
+      mediaPreloader.preloadAudioChunk(firstAudioTrack.audioUrl)
+    }
+  }, [projects])
+
   const handleSelectPlatform = (platformId) => {
     setSelectedPlatform(platformId)
     try {
@@ -342,17 +361,66 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     }
   }, [projects])
 
-  // Sync route on mount and browser back/forward popstate
+  // Preload essential visual assets (logo & active platform/social icons) before revealing main page
   useEffect(() => {
     syncStateFromLocation()
-    setMounted(true)
+
+    let isMounted = true
+
+    const preloadImagePromise = (src) => {
+      if (!src || typeof window === 'undefined') return Promise.resolve()
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.src = src
+        if (img.decode) {
+          img.decode().then(resolve).catch(resolve)
+        } else {
+          img.onload = resolve
+          img.onerror = resolve
+        }
+      })
+    }
+
+    // Collect essential initial images
+    const essentialImages = [
+      '/api/logo?w=240&fmt=webp',
+      '/api/logo?w=96&fmt=webp',
+    ]
+
+    // Add active platform & social icons
+    const activeLinks = getSortedActiveLinks(artist)
+    for (const link of activeLinks) {
+      if (link?.icon && !essentialImages.includes(link.icon)) {
+        essentialImages.push(link.icon)
+      }
+    }
+
+    // Include icons for available project platforms
+    for (const pId of (availablePlatformIds || [])) {
+      const iconPath = `/platforms/${pId}.webp`
+      if (!essentialImages.includes(iconPath)) {
+        essentialImages.push(iconPath)
+      }
+    }
+
+    const loadAllEssential = Promise.allSettled(essentialImages.map(preloadImagePromise))
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000)) // Max 1s timeout to ensure no hanging
+
+    Promise.race([loadAllEssential, timeoutPromise]).then(() => {
+      if (isMounted) {
+        setMounted(true)
+      }
+    })
 
     const handlePopState = () => {
       syncStateFromLocation()
     }
     window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [syncStateFromLocation])
+    return () => {
+      isMounted = false
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [syncStateFromLocation, artist, availablePlatformIds])
 
   // Sync document.title dynamically (highest priority: playing track)
   useEffect(() => {
@@ -549,7 +617,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
   }, [displayedDiscographyTracks, showToast])
 
   // Audio Playback Handler (Invoked when user physically clicks PLAY on a track)
-  const handlePlayTrack = useCallback((track, proj) => {
+  const handlePlayTrack = useCallback((track, proj, options = {}) => {
     if (!track) return
     if (!track.hasAudio || !track.audioUrl) {
       showToast(`No audio available for "${track.name || 'this track'}"`)
@@ -559,10 +627,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
     const projName = parentProj?.name || track.project || ''
     const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
 
-    if (playingTrack?.name === track.name && isPlaying) {
-      setIsPlaying(false)
-    } else if (playingTrack?.name === track.name && !isPlaying) {
-      setIsPlaying(true)
+    const isSameTrack = playingTrack?.name === track.name
+
+    if (isSameTrack) {
+      if (options?.restart || options?.restartIfSame) {
+        setIsPlaying(true)
+        setRestartCount(c => c + 1)
+      } else {
+        setIsPlaying(prev => !prev)
+      }
     } else {
       const trackWithProject = {
         ...track,
@@ -587,7 +660,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         setAutoplayTracks([])
       }
     }
-  }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
+  }, [playingTrack, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
 
   // Compute the most contextually relevant cover art to use as the full-page ambient background
   const ambientImage = useMemo(() => {
@@ -731,7 +804,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       >
         <Box
           component="img"
-          src="/api/logo"
+          src="/api/logo?w=240&fmt=webp"
           alt="Loading"
           draggable={false}
           sx={{
@@ -780,31 +853,65 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             msUserSelect: 'text !important',
             pointerEvents: 'auto',
           },
-          // Modern custom scrollbars
+          // High-contrast custom scrollbars with transparent track and visible thumb & arrows
           '*::-webkit-scrollbar': {
-            width: '6px',
-            height: '6px',
+            width: '8px',
+            height: '8px',
           },
           '*::-webkit-scrollbar-track': {
-            background: 'transparent',
+            background: 'transparent !important',
+          },
+          '*::-webkit-scrollbar-track-piece': {
+            background: 'transparent !important',
+          },
+          '*::-webkit-scrollbar-corner': {
+            background: 'transparent !important',
           },
           '*::-webkit-scrollbar-thumb': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.18)',
+            background: darkMode ? 'rgba(255, 255, 255, 0.42)' : 'rgba(0, 0, 0, 0.42)',
             borderRadius: '99px',
             transition: 'background 0.2s ease',
           },
           '*::-webkit-scrollbar-thumb:hover': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.32)',
+            background: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)',
           },
-          '*::-webkit-scrollbar-corner': {
-            background: 'transparent',
+          '*::-webkit-scrollbar-thumb:active': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.85)',
+          },
+          '*::-webkit-scrollbar-button': {
+            display: 'block',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundSize: '7px 7px',
+            backgroundColor: 'transparent',
+            opacity: 0.75,
+            transition: 'opacity 0.15s ease',
+          },
+          '*::-webkit-scrollbar-button:hover': {
+            opacity: 1,
+          },
+          '*::-webkit-scrollbar-button:single-button:vertical:decrement': {
+            height: '12px',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E")`,
+          },
+          '*::-webkit-scrollbar-button:single-button:vertical:increment': {
+            height: '12px',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+          },
+          '*::-webkit-scrollbar-button:single-button:horizontal:decrement': {
+            width: '12px',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E")`,
+          },
+          '*::-webkit-scrollbar-button:single-button:horizontal:increment': {
+            width: '12px',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E")`,
           },
           // Firefox scrollbar
           '*': {
             scrollbarWidth: 'thin',
             scrollbarColor: darkMode
-              ? 'rgba(255,255,255,0.15) transparent'
-              : 'rgba(0,0,0,0.18) transparent',
+              ? 'rgba(255,255,255,0.42) transparent'
+              : 'rgba(0,0,0,0.42) transparent',
           },
         }}
       />
@@ -842,8 +949,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 sx={{
                   pointerEvents: 'auto',
                   borderRadius: 3,
-                  px: 2,
-                  py: 1.25,
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.75, sm: 1.25 },
                   bgcolor: '#b71c1c',
                   color: '#ffffff',
                   backdropFilter: 'blur(16px)',
@@ -851,7 +958,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                   boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1.5,
+                  gap: { xs: 0.75, sm: 1.5 },
                   animation: 'pulseAdminAlert 2s infinite ease-in-out',
                   '@keyframes pulseAdminAlert': {
                     '0%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
@@ -860,8 +967,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                   },
                 }}
               >
-                <LockOpenIcon sx={{ fontSize: 20, color: '#ffffff', flexShrink: 0 }} />
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                <LockOpenIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }} />
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
                     Admin Access Open
                   </Typography>
@@ -879,7 +986,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     sx={{
                       color: '#ffffff',
                       backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      p: 0.75,
+                      p: { xs: 0.5, sm: 0.75 },
+                      ml: 'auto',
                       flexShrink: 0,
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.35)',
@@ -900,8 +1008,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                 sx={{
                   pointerEvents: 'auto',
                   borderRadius: 3,
-                  px: 2,
-                  py: 1.25,
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.75, sm: 1.25 },
                   bgcolor: '#e65100',
                   color: '#ffffff',
                   backdropFilter: 'blur(16px)',
@@ -909,7 +1017,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                   boxShadow: '0 8px 24px rgba(230, 81, 0, 0.45)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1.5,
+                  gap: { xs: 0.75, sm: 1.5 },
                   animation: 'pulseDevAlert 2s infinite ease-in-out',
                   '@keyframes pulseDevAlert': {
                     '0%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
@@ -918,8 +1026,40 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                   },
                 }}
               >
-                <BugReportIcon sx={{ fontSize: 20, color: '#ffffff', flexShrink: 0 }} />
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                {/* Clickable Bug Icon which opens the Dev Data Health Report Drawer */}
+                <Tooltip title="View Dev Data Health Report" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={() => setDevDrawerOpen(true)}
+                    sx={{
+                      color: '#ffffff',
+                      p: 0.5,
+                      flexShrink: 0,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                        transform: 'scale(1.1)',
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Badge
+                      badgeContent={health?.issues?.length || null}
+                      color="error"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          fontSize: '0.65rem',
+                          height: 16,
+                          minWidth: 16,
+                          padding: '0 4px',
+                        },
+                      }}
+                    >
+                      <BugReportIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff' }} />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
                   <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
                     Dev Mode Enabled
                   </Typography>
@@ -927,6 +1067,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     Set devAccess: false for prod
                   </Typography>
                 </Box>
+
                 <Tooltip title="Open Dev Tool" arrow>
                   <IconButton
                     component="a"
@@ -937,7 +1078,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
                     sx={{
                       color: '#ffffff',
                       backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      p: 0.75,
+                      p: { xs: 0.5, sm: 0.75 },
+                      ml: 'auto',
                       flexShrink: 0,
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.35)',
@@ -953,8 +1095,14 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             )}
           </Stack>
         )}
-        {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
-        {Boolean(data?.devAccess) && <DevHealthDrawer health={health} />}
+        {/* Dev Data Health Drawer (Triggered by clicking bug icon) */}
+        {Boolean(data?.devAccess) && (
+          <DevHealthDrawer
+            health={health}
+            open={devDrawerOpen}
+            onClose={() => setDevDrawerOpen(false)}
+          />
+        )}
         {/* Top Screen-Height Hero Section (Only on main discography view) */}
         {currentView !== 'SINGLE_PROJECT' && (
           <ArtistHero
@@ -1077,6 +1225,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         <AudioPlayerBar
           playingTrack={playingTrack}
           isPlaying={isPlaying}
+          restartCount={restartCount}
           onTogglePlay={() => setIsPlaying(prev => !prev)}
           onClosePlayer={() => {
             setPlayingTrack(null)
