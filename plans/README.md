@@ -10,7 +10,7 @@ This directory contains the comprehensive, technical implementation plans for op
 | :--- | :--- | :---: | :--- |
 | **[01-playback-queue-and-autoplay.md](./01-playback-queue-and-autoplay.md)** | Playback Queue & Autoplay Engine | ✅ **COMPLETED** | Reset manual queue on direct track play; dynamically populate autoplay queue; support drag-and-drop into inter-track padding space; add dedicated play button for queue tracks (no auto-play on row click). |
 | **[02-repeat-and-shuffle-modes.md](./02-repeat-and-shuffle-modes.md)** | Repeat, Shuffle, Volume & Hit Targets | ✅ **COMPLETED** | Robust Repeat OFF/ONCE/ALL modes; visual shuffle sync; persistent volume bar loading, mute toggle restoration, and `MIN_LISTENABLE_VOLUME = 10%` guard; bulletproof global Spacebar play/pause keybindings; z-index elevation for mute icon above slider thumb; expanded `IconButton` clickable hit target areas app-wide (`theme.js`, `AudioPlayerBar.js`, `TrackRow.js`). |
-| **[03-media-caching-and-adaptive-streaming.md](./03-media-caching-and-adaptive-streaming.md)** | Media Caching & Adaptive Streaming | ⏳ **PENDING** | ETag/MD5 hash validation (HTTP 304), range-based initial audio chunk preloading (LRU capped), YouTube-style progressive quality, adaptive WebP/AVIF image sizing, and immediate vs. background media prioritization. |
+| **[03-media-caching-and-adaptive-streaming.md](./03-media-caching-and-adaptive-streaming.md)** | Media Caching & Adaptive Streaming | ✅ **COMPLETED** | ETag/MD5 hash validation (HTTP 304), range-based initial audio chunk preloading (LRU capped), YouTube-style progressive quality, adaptive WebP/AVIF image sizing, dynamic media optimizer, and immediate vs. background media prioritization. |
 | **[04-spa-routing-and-history-navigation.md](./04-spa-routing-and-history-navigation.md)** | SPA Routing & Namespaced System Routes | ✅ **COMPLETED** | Virtualized SPA history navigation without page reloads; track background click selection (no selection on main page vs. URL update on project page); namespaced system routes (`/_sys/_admin` and `/_sys/_dev` via Next.js rewrites to `/sys/admin` and `/sys/dev`) to prevent collisions with music projects named `admin` or `dev`; warning chips open portal links in a new tab (`target="_blank"`); instant `redirect('/')` when system routes are disabled in config. |
 
 ---
@@ -30,10 +30,12 @@ This directory contains the comprehensive, technical implementation plans for op
 4. **Optimized Queue & Inter-Track Dragging** ✅ **COMPLETED**:
    - Inter-track padding space recognised as drop targets so dragging queued songs requires no precise aiming.
    - Dedicated play button on queue rows prevents accidental playback on generic row clicks.
-5. **High-Performance Media Delivery** ⏳ **PENDING (Phase 3)**:
-   - Server-side ETag/hash generation for instant HTTP 304 validation on unchanged audio and images.
-   - Progressive audio streaming: Initial 256KB-512KB chunks preloaded for next 2-3 tracks in queue using LRU cache.
-   - Smart image delivery: WebP/AVIF compression with resolution sizing query parameters (`?w=...&q=...`) to optimize bandwidth.
+5. **High-Performance Media Delivery & Progressive Streaming** ✅ **COMPLETED**:
+   - Server-side ETag/hash generation for instant HTTP 304 validation on unchanged audio and images (`/api/audio`, `/api/media`, `/api/logo`).
+   - Lossless audio chunking and partial content streaming via HTTP 206 `Range` requests with `If-Range` header validation.
+   - Smart dynamic image delivery via Sharp (`mediaOptimizer.js`) supporting WebP/AVIF compression with resolution sizing query parameters (`?w=...&q=...&fmt=...`).
+   - Client-side LRU cache media preloader engine (`mediaPreloader.js`) prefetching initial 256KB-512KB chunks during browser idle time (`requestIdleCallback`).
+   - Progressive image loading component (`ProgressiveImage.js`) with responsive blur-up placeholders and intersection observer detection.
 6. **Virtualized SPA & Namespaced System Routes** ✅ **COMPLETED**:
    - Track background clicks do not trigger selection on the main page (`onSelectTrackRow={null}`), preserving clean browsing.
    - On single project pages, clicking any part of the track updates the URL state without changing page views.

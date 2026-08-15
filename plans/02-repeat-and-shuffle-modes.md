@@ -4,7 +4,7 @@
 
 ---
 
-## 6. Verification Checklist & Status Log
+## 1. Verification Checklist & Status Log
 
 - [x] ✅ Set volume slider to 40%, refresh page, and play a track. Confirm actual audio volume level matches 40% immediately.
 - [x] ✅ Click Mute icon (volume becomes 0, icon changes to muted). Click Mute icon again; confirm volume restores to 40% (or enforces `MIN_LISTENABLE_VOLUME = 10%` floor).
@@ -19,7 +19,11 @@
 - [x] ✅ Toggle **Shuffle ON**: Open Queue Dialog and verify autoplay tracks list visually rearranges.
 - [x] ✅ Toggle **Shuffle OFF**: Open Queue Dialog and verify autoplay tracks list restores to discography order.
 
-This plan outlines the architecture for managing audio playback loop modes (`off`, `one`, `all`) and shuffle state in `MainDiscographyApp.js` and `AudioPlayerBar.js`.
+---
+
+## 2. Executive Summary & Behavioral Matrix
+
+This plan outlines the architecture for managing audio playback loop modes (`off`, `one`, `all`) and shuffle state in [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js) and [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js).
 
 ### Behavioral Matrix
 
@@ -158,7 +162,7 @@ onEnded={() => {
 
 ## 5. Spacebar Shortcut Reliability & Focus Handling
 
-### Target File: [`AudioPlayerBar.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js)
+### Target File: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js)
 
 - **Problem**: Spacebar shortcut for Play/Pause is occasionally ignored or triggers default element behaviors when interactive UI elements have browser focus.
 - **Solution**:
@@ -168,19 +172,4 @@ onEnded={() => {
     - Allow spacebar play/pause even when non-editable elements (such as buttons, sliders, links, or modal wrappers) hold focus by invoking `e.preventDefault()` and `e.stopPropagation()`.
   - Check both `e.code === 'Space'` and fallback keys (`e.key === ' '`, `e.key === 'Spacebar'`, `e.keyCode === 32`).
   - Guarantee `handleDirectTogglePlay()` executes synchronously to control the `<audio>` element immediately.
-
----
-
-## 6. Verification Checklist
-
-- [ ] Set volume slider to 40%, refresh page, and play a track. Confirm actual audio volume level matches 40% immediately.
-- [ ] Click Mute icon (volume becomes 0, icon changes to muted). Click Mute icon again; confirm volume restores to 40% (the originally visually loaded level).
-- [ ] Refresh page while muted. Click Mute icon; confirm volume restores to the pre-muted saved level.
-- [ ] Press Spacebar while focus is on a button or slider in the UI; verify audio toggles play/pause reliably without triggering unintended button clicks or page scrolls.
-- [ ] Press Spacebar while typing in a text field or search input; verify space character is inserted normally without pausing playback.
-- [ ] Enable **Repeat ONCE**: Verify track restarts when finishing. Click Next / Prev and verify track restarts without popping items from queue or autoplay.
-- [ ] Enable **Repeat ALL**: Play through to end of project/discography. Verify autoplay queue auto-replenishes without creating infinite arrays.
-- [ ] Disable Repeat (set to **OFF**): Verify playback stops at the end of the current displayed tracks.
-- [ ] Toggle **Shuffle ON**: Open Queue Dialog and verify autoplay tracks list visually rearranges.
-- [ ] Toggle **Shuffle OFF**: Open Queue Dialog and verify autoplay tracks list restores to discography order.
 

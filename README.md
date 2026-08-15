@@ -8,18 +8,35 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
 
 - **Full Catalog Showcase**: Browse an artist's complete discography categorized by albums (`LP`), EPs, singles, remixes, bootlegs, and features.
 - **Multi-Platform Streaming Links**: Direct links to listen on all major platforms (Spotify, Apple Music, YouTube, SoundCloud, Bandcamp, Tidal, Deezer, Pandora, Amazon Music, iTunes).
-- **Contained Audio Player Bar**: Stream track audio previews directly within the app with play/pause, seek scrubber, volume control, manual queueing, autoplay derivation, shuffle, and repeat modes.
-- **Unified Interactive Player Controls**:
+- **Contained Audio Player Bar & Progressive Streaming**:
+  - Direct in-app streaming with play/pause, seek scrubber, volume control, manual queueing, autoplay derivation, shuffle, and repeat modes.
+  - **Progressive Buffer Visualization & Lossless ABR**: Real-time buffer range indicator, adaptive streaming bitrate badges, and lossless audio support.
   - **Unified Hover & Click Container**: Cover art, song title, and artist name scale and highlight together; clicking anywhere navigates directly to the track page.
   - **Volume Persistence & 10% Floor Guard**: Storage-backed volume settings (`MIN_LISTENABLE_VOLUME = 10%`) ensure unmuting always restores audio to a listenable level.
   - **Elevated Button Z-Index & Expanded Hit Targets**: Mute icon button (`zIndex: 2`) is elevated above the volume slider thumb (`zIndex: 1`), and expanded hit targets (`theme.js`) make icon buttons effortless to click.
   - **Spacebar Play/Pause Shortcut**: Global capture-phase Spacebar listener toggles playback reliably without scroll or button accidental clicks while preserving text input fields.
   - **Loop Modes (`off`, `one`, `all`) & Shuffle**: `Repeat ALL` auto-replenishes autoplay queues for continuous playback; `Shuffle` visually reorganizes the queue list in real time.
 - **Manual Queue & Inter-Track Drag-and-Drop**: Reorder queue tracks in `PlaybackQueueDialog` by dragging items directly into inter-track padding gaps with visual insertion indicators. Dedicated play buttons prevent accidental auto-play on row clicks.
+- **Progressive Media Delivery & Caching**:
+  - **Server-Side Dynamic Image Optimization**: Sharp-powered on-the-fly image transcoding (`/api/media/[...path]` and `/api/logo`) supporting WebP/AVIF formatting, responsive sizing (`?w=...&q=...`), and in-memory LRU caching.
+  - **HTTP 304 ETags & Partial Content Streaming**: Fast HTTP 304 cache validation for unchanged assets, plus full HTTP 206 `Range` byte-range audio streaming with `If-Range` header handling.
+  - **Background Chunk Preloader**: Client `mediaPreloader` fetches initial 256KB-512KB audio chunks during idle time (`requestIdleCallback`) to deliver instant playback for upcoming queue tracks without UI lag.
+  - **Progressive Image Delivery**: `ProgressiveImage` component with blur-up placeholders, intersection-observer lazy loading, and smooth transitions.
 - **Virtualized SPA Routing & History**:
   - **Main Discography Page (`/`)**: Row background clicks do not trigger track selection (`onSelectTrackRow={null}`), keeping browsing clean. Song title / artist links open single project pages (`/[project-slug]/[track-slug]`).
   - **Single Project Page (`/[project-slug]`)**: Row clicks highlight tracks and update URL state (`/[project-slug]/[track-slug]`) without reloading the page or stopping audio.
   - **Uninterrupted Audio Playback**: Navigating across pages or using browser Back/Forward arrows (`popstate`) preserves active audio playback seamlessly.
+- **Developer Preview Suite & OpenAPI Explorer (`/_sys/_dev`)**:
+  - **OpenAPI 3.1 Live Tester (`DevApiExplorer`)**: Interactive API sandbox testing GET, POST, PUT, and DELETE endpoints with syntax-highlighted response payloads and high-contrast HTTP method badges.
+  - **Discography Audit Matrix (`DevDiscographyAuditView`)**: Comprehensive audit matrix displaying all 10 streaming platform links per track, project accordions defaulted to expanded, and density switcher (compact vs. comfortable).
+  - **Platforms & Socials View (`DevPlatformsSocialsView`)**: Real-time validation of all artist-level platform and social media links.
+  - **Dummy Data Seeder**: Action button to generate rich randomized dummy discography data (`/api/dev/seed-dummy`) for instant testing and layout benchmarking.
+  - **System Health Drawer (`DevHealthDrawer`)**: Real-time telemetry monitoring media cache size, active preloads, and response latency.
+- **Admin Management Portal (`/_sys/_admin`)**:
+  - **Fast Authentication**: Auto-authenticates and hides lock controls when `adminPassword` is unconfigured for effortless local setup.
+  - **Track Cloning / Duplication**: Copy tracks between projects (`/api/admin/copy-track`) with automatic slug sanitization.
+  - **Deletion Safeguards & Artist Inheritance**: Confirmation modals for destructive actions and automatic artist credit inheritance from parent projects.
+  - **Asset Management**: Real-time file uploads with support for FLAC, WAV, MP3, AAC, OGG, WebM, WebP, PNG, JPG, and AVIF.
 - **Collision-Free System Routes (`/_sys/_admin` & `/_sys/_dev`)**:
   - System tools are namespaced under **`/_sys/_admin`** (Admin Portal) and **`/_sys/_dev`** (Dev Preview Dashboard) using Next.js rewrites.
   - Prevents URL routing collisions with music projects titled "admin" or "dev".
@@ -42,13 +59,21 @@ artist-discography/
 ├── artist-discography/
 │   ├── app/                            # Next.js App Router pages & global theme
 │   │   ├── [[...slug]]/page.js         # Single Page App dynamic route handler
+│   │   ├── api/                        # Next.js Server Route Handlers
+│   │   │   ├── admin/                  # Admin APIs (project, upload, copy-track)
+│   │   │   ├── audio/[...path]/route.js# Byte-range audio streaming & ETag validator
+│   │   │   ├── dev/                    # Dev APIs (openapi, seed-dummy)
+│   │   │   ├── logo/route.js           # Dynamic logo optimizer & fallback handler
+│   │   │   └── media/[...path]/route.js# Sharp dynamic image resizer & transcoder
 │   │   ├── sys/admin/page.js           # Admin Portal route (rewritten from /_sys/_admin)
 │   │   ├── sys/dev/page.js             # Dev Preview Dashboard route (rewritten from /_sys/_dev)
+│   │   ├── layout.js                   # Root layout, fonts, & metadata
 │   │   └── theme.js                    # Material UI theme & expanded hit target overrides
 │   ├── components/                     # Modular React UI components
 │   │   ├── admin/                      # Admin Portal management dashboard
 │   │   ├── artist/                     # Artist hero banner & social links
-│   │   ├── dev/                        # Developer preview tools & health audit
+│   │   ├── common/                     # Shared progressive media & asset loaders
+│   │   ├── dev/                        # Developer preview tools, OpenAPI, & health drawer
 │   │   ├── discography/                # Main app container, catalog grid, & track lists
 │   │   ├── layout/                     # Sticky headers, navbar, logos, & background ambience
 │   │   ├── player/                     # Audio player bar & queue dialog
@@ -58,7 +83,13 @@ artist-discography/
 │   │   ├── logo.png                    # Optional custom artist logo override
 │   │   └── projects/                   # Project folders organized by project slug
 │   ├── lib/                            # Core data & utility functions
-│   │   └── hooks/                      # Custom React hooks (dynamic color & logo analysis)
+│   │   ├── hooks/                      # Custom React hooks (dynamic colors, touch, logo analysis)
+│   │   ├── apiSpec.js                  # OpenAPI 3.1 endpoint specification schema
+│   │   ├── artistData.js               # Data loading, sanitization, & disk persistence
+│   │   ├── audioOptimizer.js           # Audio chunking, ABR streaming, & range validation
+│   │   ├── mediaOptimizer.js           # Sharp dynamic image resizing & format conversion
+│   │   ├── mediaPreloader.js           # Client-side LRU cache media preloader engine
+│   │   └── slugs.js                    # URL slug generation & matching utilities
 │   ├── next.config.mjs                 # Next.js configuration & route rewrites
 │   └── package.json
 ├── AGENTS.md                           # Development rules & core code standards

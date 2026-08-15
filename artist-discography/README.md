@@ -1,8 +1,28 @@
 # Artist Discography App
 
-This directory contains the Next.js application source code and content data for **Artist Discography**.
+This directory contains the Next.js application source code, API routes, and content data for **Artist Discography**.
 
-For full project documentation, technology stack, and user content guide, please refer to the main [Root README](../README.md).
+For full project documentation, technology stack, and comprehensive operator content guides, please refer to the main [Root README](../README.md).
+
+## 🗂️ App Architecture & Subdirectories
+
+- **`app/`**: Next.js App Router root layout, dynamic SPA route `[[...slug]]/page.js`, theme configuration (`theme.js`), and server API routes (`app/api/` for admin, dev, audio streaming, and media optimization).
+- **`components/`**: Modular UI components organized by domain:
+  - `components/admin/`: Operator administration dashboard & project manager.
+  - `components/artist/`: Artist hero header, biography, and social links.
+  - `components/common/`: Responsive progressive image loaders & media utilities.
+  - `components/dev/`: Developer preview suite, OpenAPI 3.1 explorer, platform link audit matrix, and system health drawer.
+  - `components/discography/`: Catalog grid, filter bar, project cards, and track lists.
+  - `components/layout/`: Sticky headers, floating navigation bar, ambient dynamic background, and responsive logo.
+  - `components/player/`: Continuous audio player bar with progressive buffer indicator, volume persistence, and drag-and-drop queue dialog.
+  - `components/ui/`: Shared primitive components.
+- **`lib/`**: Business logic, data parsing (`artistData.js`), URL slugs (`slugs.js`), Sharp image pipeline (`mediaOptimizer.js`), audio chunking (`audioOptimizer.js`), client LRU preloader (`mediaPreloader.js`), OpenAPI schema (`apiSpec.js`), and custom React hooks (`lib/hooks/`).
+- **`data/`**: Operator content directory containing `artist-data.json`, project covers, and track audio files.
+
+## 🔐 System Routes
+
+- **Admin Portal**: `/_sys/_admin` (rewritten internally to `/sys/admin`)
+- **Developer Preview & OpenAPI**: `/_sys/_dev` (rewritten internally to `/sys/dev`)
 
 ## Managing Artist Content (`data/`)
 
@@ -28,3 +48,4 @@ Or from the repository root:
 cd artist-discography
 bun dev
 ```
+

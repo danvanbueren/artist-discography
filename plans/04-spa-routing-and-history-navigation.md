@@ -4,7 +4,7 @@
 
 ---
 
-## 7. Verification Checklist & Status Log
+## 1. Verification Checklist & Status Log
 
 - [x] ✅ On Main Page (`/`): Click any track background. Confirm track row background does NOT select track, and the URL does NOT change.
 - [x] ✅ On Main Page (`/`): Click song name or artist text. Confirm view transitions to Project Page (`/[project-slug]/[track-slug]`), URL updates, and track is highlighted.
@@ -18,6 +18,10 @@
 - [x] ✅ Click the browser **Back** button. Verify URL returns to `/[project-slug]`, view updates to project page, and audio continues playing uninterrupted.
 - [x] ✅ Click the browser **Forward** button. Verify URL returns to `/[project-slug]/[track-slug]`, track highlights, and audio continues playing.
 - [x] ✅ Click the logo to return home (`/`). Verify smooth transition to main discography view without page reload.
+
+---
+
+## 2. Executive Summary & Core Objectives
 
 This plan addresses client-side SPA routing and browser history navigation (back/forward arrows) in the application.
 
@@ -125,7 +129,7 @@ const syncStateFromLocation = useCallback(() => {
 
 ## 5. Track Row Click & Selection Routing Rules
 
-### Target Files: [`TrackRow.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/TrackRow.js), [`ProjectCard.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/ProjectCard.js), [`MainDiscographyApp.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js)
+### Target Files: [`TrackRow.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/discography/TrackRow.js), [`ProjectCard.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/discography/ProjectCard.js), [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js)
 
 #### A. Main Discography View (`/`) Behavior
 - **Track Row Background Click**:
@@ -154,18 +158,4 @@ const syncStateFromLocation = useCallback(() => {
     - Eliminates unauthorized error landing pages and redirects users directly back to the main discography view home page (`/`).
   - Alert warning chips open system portal links in a **new browser tab** (`target="_blank" rel="noopener noreferrer"`).
 
----
-
-## 7. Verification Checklist
-
-- [ ] On Main Page (`/`): Click any track background. Confirm track row background does NOT select track, and the URL does NOT change.
-- [ ] On Main Page (`/`): Click song name or artist text. Confirm view transitions to Project Page (`/[project-slug]/[track-slug]`), URL updates, and track is highlighted.
-- [ ] On Project Page (`/[project-slug]`): Click any part of a track row background or title. Confirm track is selected, URL updates to `/[project-slug]/[track-slug]`, and page does not reload or switch views.
-- [ ] Set `"adminAccess": false` in `data/artist-data.json` and navigate to `/_sys/_admin`. Verify user is automatically redirected back to `/` without showing unauthorized page.
-- [ ] Set `"devAccess": false` in `data/artist-data.json` and navigate to `/_sys/_dev`. Verify user is automatically redirected back to `/` without showing unauthorized page.
-- [ ] Start audio playback on main discography page.
-- [ ] Click a project card to navigate to `/[project-slug]`. Verify audio continues playing without interruption and no page reload occurs.
-- [ ] Click the browser **Back** button. Verify URL returns to `/[project-slug]`, view updates to project page, and audio continues playing uninterrupted.
-- [ ] Click the browser **Forward** button. Verify URL returns to `/[project-slug]/[track-slug]`, track highlights, and audio continues playing.
-- [ ] Click the logo to return home (`/`). Verify smooth transition to main discography view without page reload.
 

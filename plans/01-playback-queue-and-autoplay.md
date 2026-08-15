@@ -4,7 +4,7 @@
 
 ---
 
-## 8. Verification Plan & Status Log
+## 1. Verification Checklist & Status Log
 
 - [x] ✅ Click play on track 2 of a 5-track project. Verify manual queue is `[]` and autoplay has tracks 3, 4, 5.
 - [x] ✅ Add 2 tracks to manual queue, then click play on another track. Verify manual queue clears instantly.
@@ -14,7 +14,11 @@
 - [x] ✅ Verify that single project view limits autoplay strictly to that project's tracks.
 - [x] ✅ Verify that main discography view autoplays across projects according to active sort settings.
 
-This plan details the restructuring of track playback initialization, manual queue management, and autoplay list derivation in `MainDiscographyApp.js` and `AudioPlayerBar.js`.
+---
+
+## 2. Executive Summary & Overview
+
+This plan details the restructuring of track playback initialization, manual queue management, and autoplay list derivation in [`MainDiscographyApp.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/discography/MainDiscographyApp.js) and [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js).
 
 When a user initiates playback by clicking "Play" on any track:
 1. The **manual immediate queue** is immediately cleared (`setManualQueue([])`).
@@ -123,7 +127,7 @@ const handlePlayTrack = useCallback((track, proj) => {
 
 ## 7. Queue Dialog Interaction & Drag/Drop Enhancements
 
-### Target File: [`PlaybackQueueDialog.js`](file:///Users/danvanbueren/App%20Dev/artist-discography/artist-discography/components/player/PlaybackQueueDialog.js)
+### Target File: [`PlaybackQueueDialog.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/player/PlaybackQueueDialog.js)
 
 #### A. Inter-Track Drag & Drop Padding Target Recognition
 - **Problem**: Dragging items requires precise mouse cursor targeting directly over pre-existing track row elements. Dropping onto the padding gaps between tracks fails to reorder items.
@@ -138,16 +142,4 @@ const handlePlayTrack = useCallback((track, proj) => {
   - Disable automatic playback on generic row/cover/text clicks in `PlaybackQueueDialog.js`.
   - Add a dedicated `<IconButton>` featuring `<PlayArrowRoundedIcon>` to each queue row in both the **Manual Queue** and **Autoplay** sections.
   - Clicking this dedicated play button triggers `onPlayQueuedTrack(item, idx, isManual)`, while clicking row text or background performs item selection or remains passive without forcing playback.
-
----
-
-## 8. Verification Plan
-
-- [ ] Click play on track 2 of a 5-track project. Verify manual queue is `[]` and autoplay has tracks 3, 4, 5.
-- [ ] Add 2 tracks to manual queue, then click play on another track. Verify manual queue clears instantly.
-- [ ] Drag a track in the Queue Dialog into the padding space between two tracks. Verify the insertion line highlights and dropping moves the track to that exact position.
-- [ ] Click on a queue item row or cover art in the Queue Dialog; verify audio does NOT start playing.
-- [ ] Click the dedicated Play button on a queued track; verify playback starts immediately for that track.
-- [ ] Verify that single project view limits autoplay strictly to that project's tracks.
-- [ ] Verify that main discography view autoplays across projects according to active sort settings.
 
