@@ -119,7 +119,6 @@ const DIRTY_FIELD_SX = {
   '& .MuiOutlinedInput-root': {
     transition: 'all 0.3s ease',
     '& fieldset': { borderColor: '#ff9800 !important', borderWidth: 2 },
-    boxShadow: '0 0 0 3px rgba(255, 152, 0, 0.4)',
   },
 }
 
@@ -127,7 +126,6 @@ const SAVED_FIELD_SX = {
   '& .MuiOutlinedInput-root': {
     transition: 'all 0.3s ease',
     '& fieldset': { borderColor: '#4caf50 !important', borderWidth: 2 },
-    boxShadow: '0 0 0 3px rgba(76, 175, 80, 0.5)',
   },
 }
 
@@ -197,7 +195,6 @@ const AdminTextInput = memo(function AdminTextInput({
         ...fieldSx,
         '& .MuiOutlinedInput-root': {
           '& fieldset': { borderColor: '#f44336 !important', borderWidth: 2 },
-          boxShadow: '0 0 0 3px rgba(244, 67, 54, 0.4)',
         },
         ...sx,
       }
@@ -2514,7 +2511,12 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 4 }}>
-                            <FormControl fullWidth required sx={getFieldSx('new_type')}>
+                            <FormControl
+                              fullWidth
+                              size="small"
+                              required
+                              sx={getFieldSx('new_type')}
+                            >
                               <InputLabel id="new-type-label">Release Type</InputLabel>
                               <Select
                                 labelId="new-type-label"
@@ -2681,7 +2683,12 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 4 }}>
-                            <FormControl fullWidth required sx={getFieldSx('edit_type')}>
+                            <FormControl
+                              fullWidth
+                              size="small"
+                              required
+                              sx={getFieldSx('edit_type')}
+                            >
                               <InputLabel id="edit-type-label">Release Type</InputLabel>
                               <Select
                                 labelId="edit-type-label"
