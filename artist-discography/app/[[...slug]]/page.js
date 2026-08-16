@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { loadArtistData } from '../../lib/artistData'
 import MainDiscographyApp from '../../components/discography/MainDiscographyApp'
 import { slugify } from '../../lib/slugs'
+import { ensureAllMediaReadyFallback } from '../../lib/mediaWarmer'
 
 export async function generateMetadata({ params }) {
   let resolvedParams = {}
@@ -75,6 +76,13 @@ export default async function Page({ params }) {
 
   const data = dataResult?.data ?? {}
   const health = dataResult?.health ?? { isHealthy: false, createdNewFile: false, issues: ['Failed to load data'] }
+
+  // Background fallback check: verifies and warms any missing optimized media assets
+  try {
+    ensureAllMediaReadyFallback(data)
+  } catch (err) {
+    console.warn('Fallback media readiness check warning:', err)
+  }
 
   return (
     <MainDiscographyApp

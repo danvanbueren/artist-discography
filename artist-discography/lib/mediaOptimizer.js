@@ -204,3 +204,119 @@ export async function getOptimizedImage(sourceFilePath, options = {}) {
     }
   }
 }
+
+/**
+ * Standard preset variations used across the frontend UI.
+ */
+export const STANDARD_IMAGE_VARIANTS = [
+  // Low-resolution blurred placeholders (LQIP)
+  { width: 40, quality: 30, blur: 6, format: 'webp' },
+  { width: 32, quality: 30, blur: 6, format: 'webp' },
+  { width: 48, quality: 20, blur: 8, format: 'webp' },
+  // UI Thumbnail / Player bar sizes
+  { width: 80, quality: 80, format: 'webp' },
+  { width: 100, quality: 80, format: 'webp' },
+  { width: 120, quality: 80, format: 'webp' },
+  { width: 120, quality: 75, format: 'webp' },
+  // Card, Header, and Modal sizes
+  { width: 400, quality: 80, format: 'webp' },
+  { width: 600, quality: 80, format: 'webp' },
+  { width: 600, quality: 85, format: 'webp' },
+  { width: 800, quality: 80, format: 'webp' },
+  // Full original dimensions in WebP
+  { width: null, quality: 80, format: 'webp' },
+]
+
+/**
+ * Checks if a specific image transformation variant is already generated and cached on disk.
+ *
+ * @param {string} sourceFilePath
+ * @param {Object} options
+ * @returns {boolean}
+ */
+export function isImageVariantCached(sourceFilePath, options = {}) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) return false
+    const stat = fs.statSync(sourceFilePath)
+    if (!stat.isFile()) return false
+
+    const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
+    const {
+      width = null,
+      quality = null,
+      format = 'webp',
+      blur = null,
+    } = options
+
+    if (['svg', 'ico', 'gif'].includes(ext) && !width && !blur) return true
+
+    const targetFormat = format === 'original' ? (ext === 'jpg' ? 'jpeg' : ext) : format
+    const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : (blur ? 30 : 80)
+    const targetWidth = width ? Math.min(3840, Math.max(16, parseInt(width, 10))) : null
+    const targetBlur = blur ? Math.min(50, Math.max(0.3, parseFloat(blur))) : null
+
+    const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:w=${targetWidth}:q=${targetQuality}:fmt=${targetFormat}:b=${targetBlur}`
+    const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
+    const cacheFileName = `${cacheHash}.${targetFormat}`
+    const cacheFilePath = path.join(CACHE_DIR, cacheFileName)
+
+    return fs.existsSync(cacheFilePath) && fs.statSync(cacheFilePath).size > 0
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Checks whether all standard image transformation variants are present in the disk cache.
+ *
+ * @param {string} sourceFilePath
+ * @returns {boolean}
+ */
+export function isImageFullyCached(sourceFilePath) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) return false
+    const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
+    if (['svg', 'ico'].includes(ext)) return true
+
+    return STANDARD_IMAGE_VARIANTS.every(variant => isImageVariantCached(sourceFilePath, variant))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Pre-generates and caches all standard image variations for immediate zero-latency serving.
+ *
+ * @param {string} sourceFilePath
+ * @param {Array<Object>} [variants=STANDARD_IMAGE_VARIANTS]
+ * @returns {Promise<{ total: number, generated: number, cached: number }>}
+ */
+export async function optimizeAndCacheImage(sourceFilePath, variants = STANDARD_IMAGE_VARIANTS) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) {
+      return { total: 0, generated: 0, cached: 0 }
+    }
+
+    const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
+    if (['svg', 'ico'].includes(ext)) {
+      return { total: 1, generated: 0, cached: 1 }
+    }
+
+    let generated = 0
+    let cached = 0
+
+    for (const variant of variants) {
+      if (isImageVariantCached(sourceFilePath, variant)) {
+        cached++
+      } else {
+        await getOptimizedImage(sourceFilePath, variant)
+        generated++
+      }
+    }
+
+    return { total: variants.length, generated, cached }
+  } catch (err) {
+    console.error(`Failed to pre-cache image variants for ${sourceFilePath}:`, err)
+    return { total: variants.length, generated: 0, cached: 0 }
+  }
+}

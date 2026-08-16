@@ -16,8 +16,8 @@ For full project documentation, technology stack, and comprehensive operator con
   - `components/layout/`: Sticky headers, floating navigation bar, ambient dynamic background, and responsive logo.
   - `components/player/`: Continuous audio player bar with progressive buffer indicator, volume persistence, and drag-and-drop queue dialog.
   - `components/ui/`: Shared primitive components.
-- **`lib/`**: Business logic, data parsing (`artistData.js`), URL slugs (`slugs.js`), Sharp image pipeline (`mediaOptimizer.js`), audio chunking (`audioOptimizer.js`), client LRU preloader (`mediaPreloader.js`), OpenAPI schema (`apiSpec.js`), and custom React hooks (`lib/hooks/`).
-- **`data/`**: Operator content directory containing `artist-data.json`, project covers, and track audio files.
+- **`lib/`**: Business logic, data parsing (`artistData.js`), URL slugs (`slugs.js`), Sharp image pipeline (`mediaOptimizer.js`), audio transcoding (`audioOptimizer.js`), media cache warmer coordinator (`mediaWarmer.js`), client LRU preloader (`mediaPreloader.js`), OpenAPI schema (`apiSpec.js`), and custom React hooks (`lib/hooks/`).
+- **`data/`**: Operator content directory containing `artist-data.json`, project covers, track audio files, and cached media variants (`data/cache/images/` and `data/cache/audio/`). All media files uploaded via admin are immediately pre-compressed and cached on disk, and verified via an automatic fallback check when users load the site.
 
 ## 🔐 System Routes
 

@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
+import { warmMediaFiles } from '../../../../lib/mediaWarmer'
 
 const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
 
@@ -111,6 +112,7 @@ export async function POST(request) {
     }
 
     // Find physical audio file of source track
+    const filesToWarm = []
     let copiedAudioExt = null
     if (fs.existsSync(sourceProjDir) && sourceTrackSlug) {
       for (const ext of SUPPORTED_AUDIO_EXTS) {
@@ -120,6 +122,7 @@ export async function POST(request) {
           try {
             fs.copyFileSync(candidateSourceFile, destinationFile)
             copiedAudioExt = ext
+            filesToWarm.push(destinationFile)
             break
           } catch (copyErr) {
             console.error('Failed to copy physical audio file:', copyErr)
@@ -139,6 +142,7 @@ export async function POST(request) {
         try {
           fs.copyFileSync(sourceCoverFile, destCoverFile)
           clonedCover = targetCoverFilename
+          filesToWarm.push(destCoverFile)
         } catch (coverErr) {
           console.error('Failed to copy track cover art file:', coverErr)
         }
@@ -175,6 +179,15 @@ export async function POST(request) {
         { success: false, error: `Failed to save copied track: ${saveResult.error}` },
         { status: 500 }
       )
+    }
+
+    // Immediately pre-compress and cache any copied audio and artwork
+    if (filesToWarm.length > 0) {
+      try {
+        await warmMediaFiles(filesToWarm)
+      } catch (warmErr) {
+        console.warn('Post-copy media warming error:', warmErr)
+      }
     }
 
     const timestamp = Date.now()

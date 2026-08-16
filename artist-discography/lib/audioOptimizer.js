@@ -133,7 +133,7 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
   ensureAudioCacheDir()
 
   // Generate deterministic cache hash based on source mtime, size, and transcode parameters
-  const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:q=${quality}:b=${targetBitrate || 'lossless'}:fmt=${targetFormat}`
+  const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:fmt=${targetFormat}:b=${targetBitrate || 'lossless'}`
   const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
   const cacheFileName = `${cacheHash}.${targetFormat}`
   const cacheFilePath = path.join(AUDIO_CACHE_DIR, cacheFileName)
@@ -273,4 +273,133 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
 
   ACTIVE_TRANSCODE_PROMISES.set(cacheHash, transcodePromise)
   return transcodePromise
+}
+
+/**
+ * Standard audio quality tiers supported across the application.
+ */
+export const STANDARD_AUDIO_VARIANTS = [
+  { quality: 'high', bitrate: '320k', format: 'mp3' },
+  { quality: 'fast', bitrate: '128k', format: 'mp3' },
+  { quality: 'medium', bitrate: '192k', format: 'mp3' },
+  { quality: 'lossless', format: 'flac' },
+]
+
+/**
+ * Checks if a specific audio quality tier variant is already transcoded and cached on disk.
+ *
+ * @param {string} sourceFilePath
+ * @param {Object} options
+ * @returns {boolean}
+ */
+export function isAudioVariantCached(sourceFilePath, options = {}) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) return false
+    const stat = fs.statSync(sourceFilePath)
+    if (!stat.isFile()) return false
+
+    const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
+    const isUncompressedSource = ext === 'wav' || ext === 'aiff' || ext === 'aif' || ext === 'pcm'
+
+    const {
+      quality = 'high',
+      bitrate = null,
+      format = 'mp3',
+    } = options
+
+    const isLosslessRequested =
+      quality === 'original' ||
+      quality === 'lossless' ||
+      bitrate === 'original' ||
+      bitrate === 'lossless' ||
+      format === 'flac'
+
+    // If source is already compressed e.g. MP3/FLAC master and lossless is requested, served directly
+    if (isLosslessRequested && !isUncompressedSource) {
+      return true
+    }
+
+    let targetFormat = 'mp3'
+    let targetBitrate = bitrate
+
+    if (isLosslessRequested) {
+      targetFormat = 'flac'
+      targetBitrate = null
+    } else if (format === 'm4a' || format === 'aac') {
+      targetFormat = 'm4a'
+    } else if (format === 'flac') {
+      targetFormat = 'flac'
+      targetBitrate = null
+    } else {
+      targetFormat = 'mp3'
+    }
+
+    if (targetFormat !== 'flac') {
+      if (targetBitrate) {
+        targetBitrate = targetBitrate.endsWith('k') ? targetBitrate : `${targetBitrate}k`
+      } else if (quality === 'fast' || quality === 'low' || quality === 'preview') {
+        targetBitrate = '128k'
+      } else if (quality === 'medium' || quality === 'standard') {
+        targetBitrate = '192k'
+      } else {
+        targetBitrate = '320k'
+      }
+    }
+
+    const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:fmt=${targetFormat}:b=${targetBitrate || 'lossless'}`
+    const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
+    const cacheFileName = `${cacheHash}.${targetFormat}`
+    const cacheFilePath = path.join(AUDIO_CACHE_DIR, cacheFileName)
+
+    return fs.existsSync(cacheFilePath) && fs.statSync(cacheFilePath).size > 0
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Checks whether all standard audio stream variants are present in the disk cache.
+ *
+ * @param {string} sourceFilePath
+ * @returns {boolean}
+ */
+export function isAudioFullyCached(sourceFilePath) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) return false
+    return STANDARD_AUDIO_VARIANTS.every(variant => isAudioVariantCached(sourceFilePath, variant))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Pre-transcodes and caches all standard audio stream variations for instant zero-latency playback.
+ *
+ * @param {string} sourceFilePath
+ * @param {Array<Object>} [variants=STANDARD_AUDIO_VARIANTS]
+ * @returns {Promise<{ total: number, generated: number, cached: number }>}
+ */
+export async function optimizeAndCacheAudio(sourceFilePath, variants = STANDARD_AUDIO_VARIANTS) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) {
+      return { total: 0, generated: 0, cached: 0 }
+    }
+
+    let generated = 0
+    let cached = 0
+
+    for (const variant of variants) {
+      if (isAudioVariantCached(sourceFilePath, variant)) {
+        cached++
+      } else {
+        await getOptimizedAudio(sourceFilePath, variant)
+        generated++
+      }
+    }
+
+    return { total: variants.length, generated, cached }
+  } catch (err) {
+    console.error(`Failed to pre-cache audio variants for ${sourceFilePath}:`, err)
+    return { total: variants.length, generated: 0, cached: 0 }
+  }
 }

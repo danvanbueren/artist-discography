@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
+import { warmMediaFiles } from '../../../../lib/mediaWarmer'
 
 export async function POST(request) {
   try {
@@ -161,6 +162,8 @@ export async function POST(request) {
       fs.mkdirSync(targetProjectDir, { recursive: true })
     }
 
+    const filesToWarm = []
+
     // Process Cover File
     let coverProp = coverUrl || oldProject.cover || ''
     const coverFile = formData.get('coverFile')
@@ -171,6 +174,7 @@ export async function POST(request) {
       const buffer = Buffer.from(await coverFile.arrayBuffer())
       fs.writeFileSync(artPath, buffer)
       coverProp = `art${ext}`
+      filesToWarm.push(artPath)
     }
 
     // Process Tracks
@@ -200,10 +204,12 @@ export async function POST(request) {
         const buffer = Buffer.from(await audioFile.arrayBuffer())
         fs.writeFileSync(audioPath, buffer)
         writtenAudioFilename = `${trackSlug}${ext}`
+        filesToWarm.push(audioPath)
       } else {
         // 1. Check if an existing audio file matches this track slug
         for (const ext of audioExtensions) {
-          if (fs.existsSync(path.join(targetProjectDir, `${trackSlug}${ext}`))) {
+          const checkPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
+          if (fs.existsSync(checkPath)) {
             writtenAudioFilename = `${trackSlug}${ext}`
             break
           }
@@ -222,6 +228,7 @@ export async function POST(request) {
                 try {
                   fs.renameSync(oldAudioPath, newAudioPath)
                   writtenAudioFilename = `${trackSlug}${ext}`
+                  filesToWarm.push(newAudioPath)
                 } catch (renameErr) {
                   console.error(`Failed to rename audio file from ${oldCandidateSlug}${ext} to ${trackSlug}${ext}:`, renameErr)
                 }
@@ -245,6 +252,7 @@ export async function POST(request) {
               const newArtPath = path.join(targetProjectDir, `${trackSlug}-art${imgExt}`)
               try {
                 fs.renameSync(oldArtPath, newArtPath)
+                filesToWarm.push(newArtPath)
               } catch (artErr) {
                 console.error(`Failed to rename track art file:`, artErr)
               }
@@ -321,6 +329,15 @@ export async function POST(request) {
         { success: false, error: `Failed to update project: ${saveResult.error}` },
         { status: 500 }
       )
+    }
+
+    // Immediately pre-compress and cache any uploaded or renamed media files
+    if (filesToWarm.length > 0) {
+      try {
+        await warmMediaFiles(filesToWarm)
+      } catch (warmErr) {
+        console.warn('Post-update media warming error:', warmErr)
+      }
     }
 
     const timestamp = Date.now()

@@ -18,6 +18,8 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
   - **Loop Modes (`off`, `one`, `all`) & Shuffle**: `Repeat ALL` auto-replenishes autoplay queues for continuous playback; `Shuffle` visually reorganizes the queue list in real time.
 - **Manual Queue & Inter-Track Drag-and-Drop**: Reorder queue tracks in `PlaybackQueueDialog` by dragging items directly into inter-track padding gaps with visual insertion indicators. Dedicated play buttons prevent accidental auto-play on row clicks.
 - **Progressive Media Delivery & Caching**:
+  - **Immediate Post-Upload Media Compression & Pre-Caching**: All uploaded covers and audio tracks are immediately pre-compressed into standard WebP resolutions and audio quality tiers (320k, 192k, 128k, Lossless FLAC) upon upload/edit/copy, ready to serve with zero latency.
+  - **Automatic Site-Load Cache Readiness Fallback**: Background readiness coordinator (`mediaWarmer.js`) verifies all catalog media on site load, auto-generating any missing cache variants as a seamless fallback.
   - **Server-Side Dynamic Image Optimization**: Sharp-powered on-the-fly image transcoding (`/api/media/[...path]` and `/api/logo`) supporting WebP/AVIF formatting, responsive sizing (`?w=...&q=...`), and in-memory LRU caching.
   - **HTTP 304 ETags & Partial Content Streaming**: Fast HTTP 304 cache validation for unchanged assets, plus full HTTP 206 `Range` byte-range audio streaming with `If-Range` header handling.
   - **Background Chunk Preloader**: Client `mediaPreloader` fetches initial 256KB-512KB audio chunks during idle time (`requestIdleCallback`) to deliver instant playback for upcoming queue tracks without UI lag.
@@ -86,9 +88,10 @@ artist-discography/
 │   │   ├── hooks/                      # Custom React hooks (dynamic colors, touch, logo analysis)
 │   │   ├── apiSpec.js                  # OpenAPI 3.1 endpoint specification schema
 │   │   ├── artistData.js               # Data loading, sanitization, & disk persistence
-│   │   ├── audioOptimizer.js           # Audio chunking, ABR streaming, & range validation
+│   │   ├── audioOptimizer.js           # Audio transcoding, quality tiers, & range validation
 │   │   ├── mediaOptimizer.js           # Sharp dynamic image resizing & format conversion
 │   │   ├── mediaPreloader.js           # Client-side LRU cache media preloader engine
+│   │   ├── mediaWarmer.js              # Media pre-caching & site-load fallback readiness coordinator
 │   │   └── slugs.js                    # URL slug generation & matching utilities
 │   ├── next.config.mjs                 # Next.js configuration & route rewrites
 │   └── package.json

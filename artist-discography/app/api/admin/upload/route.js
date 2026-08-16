@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
+import { warmMediaFiles } from '../../../../lib/mediaWarmer'
 
 export async function POST(request) {
   try {
@@ -90,6 +91,8 @@ export async function POST(request) {
       fs.mkdirSync(targetProjectDir, { recursive: true })
     }
 
+    const filesToWarm = []
+
     // Process Cover File
     let coverProp = coverUrl
     const coverFile = formData.get('coverFile')
@@ -101,6 +104,7 @@ export async function POST(request) {
       fs.writeFileSync(artPath, buffer)
       // When art.<ext> exists in projects/<projectSlug>, artistData auto-resolves it. Leaving cover empty or set to art.<ext>
       coverProp = `art${ext}`
+      filesToWarm.push(artPath)
     }
 
     // Process Tracks
@@ -122,6 +126,7 @@ export async function POST(request) {
         const buffer = Buffer.from(await audioFile.arrayBuffer())
         fs.writeFileSync(audioPath, buffer)
         writtenAudioFilename = `${trackSlug}${ext}`
+        filesToWarm.push(audioPath)
       }
 
       const defaultLinks = {
@@ -185,6 +190,15 @@ export async function POST(request) {
         { success: false, error: `Failed to update artist-data.json: ${saveResult.error}` },
         { status: 500 }
       )
+    }
+
+    // Immediately pre-compress and cache all uploaded artwork and audio streams
+    if (filesToWarm.length > 0) {
+      try {
+        await warmMediaFiles(filesToWarm)
+      } catch (warmErr) {
+        console.warn('Post-upload media warming error:', warmErr)
+      }
     }
 
     const timestamp = Date.now()
