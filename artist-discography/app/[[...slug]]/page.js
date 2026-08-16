@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { loadArtistData } from '../../lib/artistData'
 import MainDiscographyApp from '../../components/discography/MainDiscographyApp'
 import { slugify } from '../../lib/slugs'
@@ -59,6 +60,12 @@ export default async function Page({ params }) {
     console.error('Failed to resolve page params:', err)
   }
 
+  let initialThemeMode = null
+  try {
+    const cookieStore = await cookies()
+    initialThemeMode = cookieStore.get('theme_mode')?.value || null
+  } catch (err) {}
+
   let dataResult = null
   try {
     dataResult = loadArtistData()
@@ -74,6 +81,7 @@ export default async function Page({ params }) {
       data={data}
       health={health}
       initialSlug={resolvedParams?.slug ?? []}
+      initialThemeMode={initialThemeMode}
     />
   )
 }

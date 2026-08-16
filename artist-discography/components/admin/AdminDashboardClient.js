@@ -36,6 +36,61 @@ import {
   Stack,
   InputAdornment,
 } from '@mui/material'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+
+const adminTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#90caf9',
+    },
+    secondary: {
+      main: '#f48fb1',
+    },
+    background: {
+      default: '#0a0a0f',
+      paper: '#13131c',
+    },
+  },
+  typography: {
+    fontFamily: 'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  components: {
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          position: 'relative',
+          padding: '8px',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: -6,
+            left: -6,
+            right: -6,
+            bottom: -6,
+          },
+        },
+        sizeSmall: {
+          padding: '7px',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: -5,
+            left: -5,
+            right: -5,
+            bottom: -5,
+          },
+        },
+      },
+    },
+    MuiModal: {
+      defaultProps: {
+        disableScrollLock: true,
+      },
+    },
+  },
+})
 
 import LockIcon from '@mui/icons-material/Lock'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
@@ -983,112 +1038,146 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   // 1. Admin access disabled view
   if (!adminAccess) {
     return (
-      <Container maxWidth="md" sx={{ py: 8 }}>
-        <Paper
-          elevation={4}
+      <ThemeProvider theme={adminTheme}>
+        <CssBaseline />
+        <Box
           sx={{
-            p: 4,
-            borderRadius: 3,
-            backgroundColor: 'rgba(20, 20, 25, 0.85)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
+            minHeight: '100vh',
+            width: '100%',
+            bgcolor: 'background.default',
+            color: 'text.primary',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 2,
+            boxSizing: 'border-box',
           }}
         >
-          <LockIcon sx={{ fontSize: 56, color: 'error.main', mb: 2 }} />
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
-            Admin Access Disabled
-          </Typography>
-          <Alert severity="warning" sx={{ mb: 4, textAlign: 'left' }}>
-            Access to the admin portal is currently disabled. To enable access, set <code>"adminAccess": true</code> in <code>data/artist-data.json</code>.
-          </Alert>
-          <Button
-            variant="contained"
-            startIcon={<HomeIcon />}
-            href="/"
-            sx={{ borderRadius: 2, px: 3, py: 1 }}
-          >
-            Return to Discography
-          </Button>
-        </Paper>
-      </Container>
+          <Container maxWidth="md" sx={{ py: 8 }}>
+            <Paper
+              elevation={4}
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                backgroundColor: 'rgba(20, 20, 25, 0.85)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                textAlign: 'center',
+              }}
+            >
+              <LockIcon sx={{ fontSize: 56, color: 'error.main', mb: 2 }} />
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
+                Admin Access Disabled
+              </Typography>
+              <Alert severity="warning" sx={{ mb: 4, textAlign: 'left' }}>
+                Access to the admin portal is currently disabled. To enable access, set <code>"adminAccess": true</code> in <code>data/artist-data.json</code>.
+              </Alert>
+              <Button
+                variant="contained"
+                startIcon={<HomeIcon />}
+                href="/"
+                sx={{ borderRadius: 2, px: 3, py: 1 }}
+              >
+                Return to Discography
+              </Button>
+            </Paper>
+          </Container>
+        </Box>
+      </ThemeProvider>
     )
   }
 
   // 2. Authentication view (inaccessible if adminPassword is empty)
   if (!isAuthenticated && initialData?.adminPassword !== '') {
     return (
-      <Container maxWidth="sm" sx={{ py: 10 }}>
-        <Paper
-          elevation={6}
+      <ThemeProvider theme={adminTheme}>
+        <CssBaseline />
+        <Box
           sx={{
-            p: 4,
-            borderRadius: 3,
-            backgroundColor: 'rgba(20, 20, 28, 0.9)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            minHeight: '100vh',
+            width: '100%',
+            bgcolor: 'background.default',
+            color: 'text.primary',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 2,
+            boxSizing: 'border-box',
           }}
         >
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-            <Box
+          <Container maxWidth="sm" sx={{ py: 10 }}>
+            <Paper
+              elevation={6}
               sx={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                backgroundColor: 'primary.dark',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
+                p: 4,
+                borderRadius: 3,
+                backgroundColor: 'rgba(20, 20, 28, 0.9)',
+                backdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
               }}
             >
-              <LockIcon sx={{ fontSize: 32, color: 'primary.contrastText' }} />
-            </Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              Site Owner Portal
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-              Enter password to unlock site management tools
-            </Typography>
-          </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                <Box
+                  sx={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    backgroundColor: 'primary.dark',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: 2,
+                  }}
+                >
+                  <LockIcon sx={{ fontSize: 32, color: 'primary.contrastText' }} />
+                </Box>
+                <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
+                  Site Owner Portal
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  Enter password to unlock site management tools
+                </Typography>
+              </Box>
 
-          {authError && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {authError}
-            </Alert>
-          )}
+              {authError && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {authError}
+                </Alert>
+              )}
 
-          <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            <TextField
-              label="Admin Password"
-              type="password"
-              variant="outlined"
-              fullWidth
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoFocus
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={isAuthLoading || !password}
-              sx={{ py: 1.4, borderRadius: 2, fontWeight: 600 }}
-            >
-              {isAuthLoading ? <CircularProgress size={24} /> : 'Unlock Admin Panel'}
-            </Button>
-            <Button
-              variant="text"
-              startIcon={<HomeIcon />}
-              href="/"
-              sx={{ color: 'text.secondary', textTransform: 'none' }}
-            >
-              Back to Discography
-            </Button>
-          </Box>
-        </Paper>
-      </Container>
+              <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                <TextField
+                  label="Admin Password"
+                  type="password"
+                  variant="outlined"
+                  fullWidth
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoFocus
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={isAuthLoading || !password}
+                  sx={{ py: 1.4, borderRadius: 2, fontWeight: 600 }}
+                >
+                  {isAuthLoading ? <CircularProgress size={24} /> : 'Unlock Admin Panel'}
+                </Button>
+                <Button
+                  variant="text"
+                  startIcon={<HomeIcon />}
+                  href="/"
+                  sx={{ color: 'text.secondary', textTransform: 'none' }}
+                >
+                  Back to Discography
+                </Button>
+              </Box>
+            </Paper>
+          </Container>
+        </Box>
+      </ThemeProvider>
     )
   }
 
@@ -1100,18 +1189,33 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
   // 3. Admin Full Widescreen Dashboard with Auto-Save
   return (
-    <Container
-      maxWidth="xl"
-      sx={{
-        py: { xs: 2, md: 2.5 },
-        height: { md: '100vh' },
-        maxHeight: { md: '100vh' },
-        display: { md: 'flex' },
-        flexDirection: { md: 'column' },
-        overflow: { md: 'hidden' },
-        boxSizing: 'border-box',
-      }}
-    >
+    <ThemeProvider theme={adminTheme}>
+      <CssBaseline />
+      <Box
+        sx={{
+          minHeight: '100vh',
+          height: { md: '100vh' },
+          width: '100%',
+          bgcolor: 'background.default',
+          color: 'text.primary',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: { xs: 'auto', md: 'hidden' },
+          boxSizing: 'border-box',
+        }}
+      >
+        <Container
+          maxWidth="xl"
+          sx={{
+            py: { xs: 2, md: 2.5 },
+            height: '100%',
+            maxHeight: { md: '100vh' },
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: { xs: 'visible', md: 'hidden' },
+            boxSizing: 'border-box',
+          }}
+        >
       {/* Top Header Bar */}
       <Paper
         elevation={3}
@@ -2399,5 +2503,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         </DialogActions>
       </Dialog>
     </Container>
+  </Box>
+</ThemeProvider>
   )
 }

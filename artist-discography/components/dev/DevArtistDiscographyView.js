@@ -185,7 +185,16 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
   const coverCoveragePct = projects.length > 0 ? Math.round((projectsWithCoverCount / projects.length) * 100) : 0
 
   return (
-    <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 }, py: 5 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        width: '100%',
+        bgcolor: '#0a0a0f',
+        color: 'text.primary',
+        overflowY: 'auto',
+      }}
+    >
+      <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 }, py: 5 }}>
       {/* Top Header Bar with Navigation & Actions */}
       <Paper
         elevation={4}
@@ -550,5 +559,6 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
         </Box>
       </Paper>
     </Container>
+  </Box>
   )
 }

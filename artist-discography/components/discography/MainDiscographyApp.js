@@ -61,13 +61,17 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
   })
 }
 
-export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
+export default function MainDiscographyApp({ data, health, initialSlug = [], initialThemeMode = null }) {
   // Mounting & Hydration state
   const [mounted, setMounted] = useState(false)
 
   // System Theme Preference Detection
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
-  const [darkMode, setDarkMode] = useState(true)
+  const [darkMode, setDarkMode] = useState(() => {
+    if (initialThemeMode === 'dark') return true
+    if (initialThemeMode === 'light') return false
+    return true
+  })
   const logoAnalysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
 
   // On mount: read saved theme cookie/localStorage; if none, default to system preference
@@ -77,7 +81,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       setDarkMode(true)
     } else if (savedTheme === 'light') {
       setDarkMode(false)
-    } else {
+    } else if (typeof systemPrefersDark === 'boolean') {
       setDarkMode(systemPrefersDark)
     }
   }, [systemPrefersDark])
