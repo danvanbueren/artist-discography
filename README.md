@@ -76,7 +76,7 @@ artist-discography/
 │   │   ├── dev/                        # Developer preview tools, OpenAPI, & health drawer
 │   │   ├── discography/                # Main app container, catalog grid, & track lists
 │   │   ├── layout/                     # Sticky headers, navbar, logos, & background ambience
-│   │   ├── player/                     # Audio player bar & queue dialog
+│   │   ├── player/                     # Audio player bar, queue dialog, fullscreen modal, & modular controls
 │   │   └── ui/                         # Shared primitive UI components
 │   ├── data/                           # Operator content directory (JSON, audio, covers)
 │   │   ├── artist-data.json            # Central discography configuration

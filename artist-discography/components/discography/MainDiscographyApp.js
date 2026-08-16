@@ -1050,7 +1050,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             display: 'flex',
             flexDirection: 'column',
             zIndex: 1,
-            color: 'text.primary',
             pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
           }}
         >
