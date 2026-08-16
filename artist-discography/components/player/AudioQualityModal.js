@@ -21,20 +21,20 @@ import { QUALITY_TIER_CONFIG } from '../../lib/networkProbe'
 
 const QUALITY_OPTIONS = [
   {
-    id: '320k',
-    title: 'High Quality (320 kbps)',
-    tag: 'Recommended',
-    tagColor: 'primary',
-    desc: 'Crystal-clear perceptual fidelity with instant buffering and fast seek times.',
-    icon: HighQualityRoundedIcon,
-  },
-  {
     id: 'lossless',
     title: 'Lossless FLAC',
     tag: 'Studio Master',
     tagColor: 'secondary',
     desc: 'Bit-perfect uncompressed audio fidelity. Recommended for high-speed Wi-Fi / broadband.',
     icon: GraphicEqRoundedIcon,
+  },
+  {
+    id: '320k',
+    title: 'High Quality (320 kbps)',
+    tag: 'Recommended',
+    tagColor: 'primary',
+    desc: 'Crystal-clear perceptual fidelity with instant buffering and fast seek times.',
+    icon: HighQualityRoundedIcon,
   },
   {
     id: '128k',
