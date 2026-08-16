@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import {
   Box,
   Paper,
@@ -75,7 +75,7 @@ const DENSITY_SETTINGS = {
   },
 }
 
-export default function DevDiscographyAuditView({
+function DevDiscographyAuditView({
   projects = [],
   artistName = '',
   health = {},
@@ -253,6 +253,7 @@ export default function DevDiscographyAuditView({
               key={idx}
               expanded={isExpanded}
               onChange={() => handleAccordionToggle(idx)}
+              slotProps={{ transition: { unmountOnExit: true } }}
               sx={{
                 backgroundColor: 'rgba(22, 22, 32, 0.75)',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -347,11 +348,11 @@ export default function DevDiscographyAuditView({
                   <Table size={viewDensity === 'compact' ? 'small' : 'medium'}>
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize }}>#</TableCell>
-                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize }}>Track Title</TableCell>
-                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize }}>Audio File Status</TableCell>
-                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize }}>Streaming Links</TableCell>
-                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize }} align="right">Preview</TableCell>
+                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize, width: '1%', whiteSpace: 'nowrap' }}>#</TableCell>
+                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize, width: '100%' }}>Track Title</TableCell>
+                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize, width: '1%', whiteSpace: 'nowrap' }}>Audio File Status</TableCell>
+                        <TableCell sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize, width: '1%', minWidth: { xs: 340, sm: 390 }, whiteSpace: 'nowrap' }}>Streaming Links</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, padding: density.tablePadding, fontSize: density.tableFontSize, width: '1%', whiteSpace: 'nowrap' }}>Preview</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -364,15 +365,15 @@ export default function DevDiscographyAuditView({
 
                         return (
                           <TableRow key={tIdx} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                            <TableCell sx={{ color: 'text.secondary', padding: density.tablePadding, fontSize: density.tableFontSize }}>
+                            <TableCell sx={{ color: 'text.secondary', padding: density.tablePadding, fontSize: density.tableFontSize, width: '1%', whiteSpace: 'nowrap' }}>
                               {tIdx + 1}
                             </TableCell>
 
-                            <TableCell sx={{ fontWeight: 600, padding: density.tablePadding, fontSize: density.tableFontSize }}>
+                            <TableCell sx={{ fontWeight: 600, padding: density.tablePadding, fontSize: density.tableFontSize, width: '100%' }}>
                               {trk.name || 'Untitled'}
                             </TableCell>
 
-                            <TableCell sx={{ padding: density.tablePadding }}>
+                            <TableCell sx={{ padding: density.tablePadding, width: '1%', whiteSpace: 'nowrap' }}>
                               <Chip
                                 icon={<AudioFileIcon fontSize="small" />}
                                 label={hasAudio ? 'Audio Available' : 'Missing Audio'}
@@ -383,8 +384,8 @@ export default function DevDiscographyAuditView({
                               />
                             </TableCell>
 
-                            <TableCell sx={{ padding: density.tablePadding }}>
-                              <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <TableCell sx={{ padding: density.tablePadding, width: '1%', minWidth: { xs: 340, sm: 390 }, whiteSpace: 'nowrap' }}>
+                              <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'nowrap', alignItems: 'center' }}>
                                 {(() => {
                                   const trackLinks = trk.links ?? {}
                                   const standardKeys = [
@@ -416,59 +417,57 @@ export default function DevDiscographyAuditView({
                                       : `${platformName}: Unconfigured / Missing Link`
 
                                     return (
-                                      <Tooltip key={pKey} title={tooltipText} arrow placement="top">
-                                        <span>
-                                          <IconButton
-                                            size="small"
-                                            component={hasLink ? 'a' : 'div'}
-                                            href={hasLink ? linkUrl : undefined}
-                                            target={hasLink ? '_blank' : undefined}
-                                            rel={hasLink ? 'noopener noreferrer' : undefined}
-                                            disabled={!hasLink}
-                                            sx={{
-                                              p: 0.5,
-                                              borderRadius: 1.5,
-                                              backgroundColor: hasLink ? 'rgba(46, 125, 50, 0.3)' : 'rgba(211, 47, 47, 0.22)',
-                                              border: hasLink ? '1px solid rgba(76, 175, 80, 0.6)' : '1px solid rgba(244, 67, 54, 0.5)',
-                                              boxShadow: hasLink ? '0 0 6px rgba(76, 175, 80, 0.25)' : 'none',
-                                              opacity: hasLink ? 1 : 0.6,
-                                              transition: 'all 0.15s ease-in-out',
-                                              '&:hover': hasLink
-                                                ? {
-                                                    backgroundColor: 'rgba(46, 125, 50, 0.5)',
-                                                    borderColor: '#4caf50',
-                                                    transform: 'scale(1.15)',
-                                                  }
-                                                : {
-                                                    backgroundColor: 'rgba(211, 47, 47, 0.35)',
-                                                  },
-                                            }}
-                                          >
-                                            <Box
-                                              component="img"
-                                              src={iconPath}
-                                              alt={platformName}
-                                              onError={(e) => {
-                                                e.target.style.display = 'none'
-                                              }}
-                                              sx={{
-                                                width: iconSize,
-                                                height: iconSize,
-                                                borderRadius: 0.8,
-                                                objectFit: 'contain',
-                                                filter: hasLink ? 'none' : 'grayscale(40%)',
-                                              }}
-                                            />
-                                          </IconButton>
-                                        </span>
-                                      </Tooltip>
+                                      <IconButton
+                                        key={pKey}
+                                        size="small"
+                                        component={hasLink ? 'a' : 'div'}
+                                        href={hasLink ? linkUrl : undefined}
+                                        target={hasLink ? '_blank' : undefined}
+                                        rel={hasLink ? 'noopener noreferrer' : undefined}
+                                        disabled={!hasLink}
+                                        title={tooltipText}
+                                        sx={{
+                                          p: 0.5,
+                                          borderRadius: 1.5,
+                                          backgroundColor: hasLink ? 'rgba(46, 125, 50, 0.3)' : 'rgba(211, 47, 47, 0.22)',
+                                          border: hasLink ? '1px solid rgba(76, 175, 80, 0.6)' : '1px solid rgba(244, 67, 54, 0.5)',
+                                          boxShadow: hasLink ? '0 0 6px rgba(76, 175, 80, 0.25)' : 'none',
+                                          opacity: hasLink ? 1 : 0.6,
+                                          transition: 'all 0.15s ease-in-out',
+                                          '&:hover': hasLink
+                                            ? {
+                                                backgroundColor: 'rgba(46, 125, 50, 0.5)',
+                                                borderColor: '#4caf50',
+                                                transform: 'scale(1.15)',
+                                              }
+                                            : {
+                                                backgroundColor: 'rgba(211, 47, 47, 0.35)',
+                                              },
+                                        }}
+                                      >
+                                        <Box
+                                          component="img"
+                                          src={iconPath}
+                                          alt={platformName}
+                                          onError={(e) => {
+                                            e.target.style.display = 'none'
+                                          }}
+                                          sx={{
+                                            width: iconSize,
+                                            height: iconSize,
+                                            borderRadius: 0.8,
+                                            objectFit: 'contain',
+                                            filter: hasLink ? 'none' : 'grayscale(40%)',
+                                          }}
+                                        />
+                                      </IconButton>
                                     )
                                   })
                                 })()}
                               </Box>
                             </TableCell>
 
-                            <TableCell align="right" sx={{ padding: density.tablePadding }}>
+                            <TableCell align="right" sx={{ padding: density.tablePadding, width: '1%', whiteSpace: 'nowrap' }}>
                               {hasAudio && trkAudio ? (
                                 <IconButton
                                   size="small"
@@ -495,3 +494,5 @@ export default function DevDiscographyAuditView({
     </Stack>
   )
 }
+
+export default memo(DevDiscographyAuditView)

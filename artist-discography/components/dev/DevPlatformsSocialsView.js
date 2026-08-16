@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import {
   Box,
   Paper,
@@ -45,7 +45,7 @@ const BRAND_CONFIG = {
   snapchat: { name: 'Snapchat', color: '#FFFC00', bg: 'rgba(255, 252, 0, 0.12)', border: 'rgba(255, 252, 0, 0.3)', category: 'Social Account' },
 }
 
-export default function DevPlatformsSocialsView({ platforms = {}, socials = {} }) {
+function DevPlatformsSocialsView({ platforms = {}, socials = {} }) {
   const [copiedKey, setCopiedKey] = useState(null)
 
   const handleCopyLink = (url, key) => {
@@ -352,3 +352,5 @@ export default function DevPlatformsSocialsView({ platforms = {}, socials = {} }
     </Stack>
   )
 }
+
+export default memo(DevPlatformsSocialsView)

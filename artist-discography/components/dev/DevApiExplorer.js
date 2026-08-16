@@ -791,10 +791,12 @@ function DevApiExplorerInner() {
   )
 }
 
-export default function DevApiExplorer(props) {
+function DevApiExplorer(props) {
   return (
     <ApiExplorerErrorBoundary>
       <DevApiExplorerInner {...props} />
     </ApiExplorerErrorBoundary>
   )
 }
+
+export default React.memo(DevApiExplorer)

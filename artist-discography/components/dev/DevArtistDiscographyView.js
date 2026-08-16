@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Box,
   Container,
@@ -11,37 +11,22 @@ import {
   CardContent,
   Chip,
   Button,
-  IconButton,
-  Divider,
   Alert,
   AlertTitle,
   Tabs,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   LinearProgress,
   Grid,
   CircularProgress,
 } from '@mui/material'
 
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import HomeIcon from '@mui/icons-material/Home'
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
-import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded'
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import AlbumIcon from '@mui/icons-material/Album'
-import LaunchIcon from '@mui/icons-material/Launch'
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import PauseIcon from '@mui/icons-material/Pause'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import AudioFileIcon from '@mui/icons-material/AudioFile'
-import ImageIcon from '@mui/icons-material/Image'
 import LinkIcon from '@mui/icons-material/Link'
 import EqualizerIcon from '@mui/icons-material/Equalizer'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -49,7 +34,6 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import CodeIcon from '@mui/icons-material/Code'
 import { useRouter } from 'next/navigation'
 import DashboardIcon from '@mui/icons-material/Dashboard'
-import { formatProjectDate } from '../../lib/dateUtils'
 import DevApiExplorer from './DevApiExplorer'
 import DevPlatformsSocialsView from './DevPlatformsSocialsView'
 import DevDiscographyAuditView from './DevDiscographyAuditView'
@@ -66,6 +50,11 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
   const [seedMessage, setSeedMessage] = useState('')
   const [seedError, setSeedError] = useState('')
 
+  const playingAudioUrlRef = useRef(playingAudioUrl)
+  playingAudioUrlRef.current = playingAudioUrl
+  const audioObjRef = useRef(audioObj)
+  audioObjRef.current = audioObj
+
   useEffect(() => {
     setMounted(true)
     try {
@@ -76,7 +65,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
           setActiveTab(parsed)
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }, [])
 
   useEffect(() => {
@@ -89,25 +78,25 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
     setActiveTab(val)
     try {
       sessionStorage.setItem('dev_active_tab', String(val))
-    } catch (e) {}
+    } catch (e) { }
   }
 
-  // Audio preview playback handler
-  const handleToggleAudio = (url) => {
+  // Audio preview playback handler (stable callback to prevent child re-renders)
+  const handleToggleAudio = useCallback((url) => {
     if (!url) return
 
-    if (playingAudioUrl === url) {
-      if (audioObj) {
-        audioObj.pause()
+    if (playingAudioUrlRef.current === url) {
+      if (audioObjRef.current) {
+        audioObjRef.current.pause()
       }
       setPlayingAudioUrl(null)
       setAudioObj(null)
     } else {
-      if (audioObj) {
-        audioObj.pause()
+      if (audioObjRef.current) {
+        audioObjRef.current.pause()
       }
       const newAudio = new Audio(url)
-      newAudio.play().catch(() => {})
+      newAudio.play().catch(() => { })
       newAudio.onended = () => {
         setPlayingAudioUrl(null)
         setAudioObj(null)
@@ -115,7 +104,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
       setAudioObj(newAudio)
       setPlayingAudioUrl(url)
     }
-  }
+  }, [])
 
   // Copy raw JSON to clipboard
   const handleCopyJson = () => {
@@ -123,7 +112,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
       navigator.clipboard.writeText(JSON.stringify(dataState, null, 2))
       setCopiedJson(true)
       setTimeout(() => setCopiedJson(false), 2000)
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // Generate randomized dummy data seamlessly without forcing page reload
@@ -144,7 +133,7 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
         }
         try {
           router.refresh()
-        } catch (e) {}
+        } catch (e) { }
       } else {
         setSeedError(result?.error || 'Failed to generate dummy data.')
       }
@@ -156,7 +145,6 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
   }
 
   const artistName = dataState?.artist?.name ?? ''
-  const artistBio = dataState?.artist?.bio ?? ''
   const isArtistNameEmpty = !artistName || artistName.trim() === ''
   const platforms = dataState?.artist?.links?.platforms ?? {}
   const socials = dataState?.artist?.links?.socials ?? {}
@@ -187,378 +175,385 @@ export default function DevArtistDiscographyView({ data: initialData, health }) 
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        height: '100vh',
+        maxHeight: '100vh',
         width: '100%',
         bgcolor: '#0a0a0f',
         color: 'text.primary',
         overflowY: 'auto',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 }, py: 5 }}>
-      {/* Top Header Bar with Navigation & Actions */}
-      <Paper
-        elevation={4}
-        sx={{
-          p: 2.5,
-          mb: 4,
-          borderRadius: 3,
-          backgroundColor: 'rgba(22, 22, 30, 0.9)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<ArrowBackIcon />}
-            href="/"
-            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-          >
-            Home
-          </Button>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-              Developer & System Control Center
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              System metrics, OpenAPI interactive explorer, asset coverage, and data health console
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Seed Status & Warnings Alerts */}
-      {seedMessage && (
-        <Alert severity="success" onClose={() => setSeedMessage('')} sx={{ mb: 3, borderRadius: 2.5 }}>
-          {seedMessage}
-        </Alert>
-      )}
-      {seedError && (
-        <Alert severity="error" onClose={() => setSeedError('')} sx={{ mb: 3, borderRadius: 2.5 }}>
-          {seedError}
-        </Alert>
-      )}
-
-      {/* Reorganized Tab Navigation */}
-      <Paper
-        elevation={2}
-        sx={{
-          borderRadius: 3,
-          backgroundColor: 'rgba(20, 20, 28, 0.85)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          mb: 4,
-        }}
-      >
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', px: 2, pt: 1 }}
+        {/* Top Header Bar with Navigation & Actions */}
+        <Paper
+          elevation={4}
+          sx={{
+            p: 2.5,
+            mb: 4,
+            borderRadius: 3,
+            backgroundColor: 'rgba(22, 22, 30, 0.9)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
         >
-          <Tab icon={<DashboardIcon />} iconPosition="start" label="Overview & Health" sx={{ textTransform: 'none', fontWeight: 700 }} />
-          <Tab icon={<CodeIcon />} iconPosition="start" label="API Explorer" sx={{ textTransform: 'none', fontWeight: 700 }} />
-          <Tab icon={<AlbumIcon />} iconPosition="start" label="Discography & Media Audit" sx={{ textTransform: 'none', fontWeight: 700 }} />
-          <Tab icon={<EqualizerIcon />} iconPosition="start" label="Platforms & Socials" sx={{ textTransform: 'none', fontWeight: 700 }} />
-          <Tab icon={<InfoOutlinedIcon />} iconPosition="start" label="Raw JSON Inspector" sx={{ textTransform: 'none', fontWeight: 700 }} />
-        </Tabs>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<ArrowBackIcon />}
+              href="/"
+              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+            >
+              Home
+            </Button>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                Developer & System Control Center
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                System metrics, OpenAPI interactive explorer, asset coverage, and data health console
+              </Typography>
+            </Box>
+          </Box>
+        </Paper>
 
-        <Box sx={{ p: 3 }}>
-          {/* TAB 0: System Overview & Health */}
-          {activeTab === 0 && (
-            <Stack spacing={3}>
-              {/* Warnings & Alerts */}
-              {isArtistNameEmpty && (
-                <Alert
-                  severity="warning"
-                  icon={<WarningAmberRoundedIcon />}
-                  sx={{ borderRadius: 2.5 }}
-                >
-                  <AlertTitle sx={{ fontWeight: 700 }}>Site Operator Alert</AlertTitle>
-                  Artist name is currently empty. Update <code>data/artist-data.json</code> with the artist name.
-                </Alert>
-              )}
+        {/* Seed Status & Warnings Alerts */}
+        {seedMessage && (
+          <Alert severity="success" onClose={() => setSeedMessage('')} sx={{ mb: 3, borderRadius: 2.5 }}>
+            {seedMessage}
+          </Alert>
+        )}
+        {seedError && (
+          <Alert severity="error" onClose={() => setSeedError('')} sx={{ mb: 3, borderRadius: 2.5 }}>
+            {seedError}
+          </Alert>
+        )}
 
-              {health?.issues?.length > 0 && (
-                <Alert
-                  severity="info"
-                  icon={<InfoOutlinedIcon />}
-                  sx={{ borderRadius: 2.5 }}
-                >
-                  <AlertTitle sx={{ fontWeight: 700 }}>Data File Health Log ({health.issues.length} notes)</AlertTitle>
-                  <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                    {health.issues.map((issue, idx) => (
-                      <li key={idx}>{issue}</li>
-                    ))}
-                  </Box>
-                </Alert>
-              )}
+        {/* Reorganized Tab Navigation */}
+        <Paper
+          elevation={2}
+          sx={{
+            borderRadius: 3,
+            backgroundColor: 'rgba(20, 20, 28, 0.85)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            mb: 4,
+          }}
+        >
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', px: 2, pt: 1 }}
+          >
+            <Tab icon={<DashboardIcon />} iconPosition="start" label="Overview & Health" sx={{ textTransform: 'none', fontWeight: 700 }} />
+            <Tab icon={<CodeIcon />} iconPosition="start" label="API Explorer" sx={{ textTransform: 'none', fontWeight: 700 }} />
+            <Tab icon={<AlbumIcon />} iconPosition="start" label="Discography & Media Audit" sx={{ textTransform: 'none', fontWeight: 700 }} />
+            <Tab icon={<EqualizerIcon />} iconPosition="start" label="Platforms & Socials" sx={{ textTransform: 'none', fontWeight: 700 }} />
+            <Tab icon={<InfoOutlinedIcon />} iconPosition="start" label="Raw JSON Inspector" sx={{ textTransform: 'none', fontWeight: 700 }} />
+          </Tabs>
 
-              {/* High Level Stats Summary Row */}
-              <Grid container spacing={2.5}>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Paper
-                    elevation={2}
-                    sx={{
-                      p: 2.5,
-                      height: '100%',
-                      borderRadius: 3,
-                      backgroundColor: 'rgba(25, 25, 35, 0.75)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    }}
+          <Box sx={{ p: 3 }}>
+            {/* TAB 0: System Overview & Health */}
+            <Box sx={{ display: activeTab === 0 ? 'block' : 'none' }}>
+              <Stack spacing={3}>
+                {/* Warnings & Alerts */}
+                {isArtistNameEmpty && (
+                  <Alert
+                    severity="warning"
+                    icon={<WarningAmberRoundedIcon />}
+                    sx={{ borderRadius: 2.5 }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        Total Projects
-                      </Typography>
-                      <AlbumIcon color="primary" />
-                    </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
-                      {projects.length}
-                    </Typography>
-                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LinearProgress
-                        variant="determinate"
-                        value={coverCoveragePct}
-                        sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
-                      />
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {coverCoveragePct}% covers
-                      </Typography>
-                    </Box>
-                  </Paper>
-                </Grid>
+                    <AlertTitle sx={{ fontWeight: 700 }}>Site Operator Alert</AlertTitle>
+                    Artist name is currently empty. Update <code>data/artist-data.json</code> with the artist name.
+                  </Alert>
+                )}
 
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Paper
-                    elevation={2}
-                    sx={{
-                      p: 2.5,
-                      height: '100%',
-                      borderRadius: 3,
-                      backgroundColor: 'rgba(25, 25, 35, 0.75)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    }}
+                {health?.issues?.length > 0 && (
+                  <Alert
+                    severity="info"
+                    icon={<InfoOutlinedIcon />}
+                    sx={{ borderRadius: 2.5 }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        Total Tracks
-                      </Typography>
-                      <MusicNoteIcon color="secondary" />
+                    <AlertTitle sx={{ fontWeight: 700 }}>Data File Health Log ({health.issues.length} notes)</AlertTitle>
+                    <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                      {health.issues.map((issue, idx) => (
+                        <li key={idx}>{issue}</li>
+                      ))}
                     </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
-                      {totalTracksCount}
-                    </Typography>
-                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LinearProgress
-                        variant="determinate"
-                        color="secondary"
-                        value={audioCoveragePct}
-                        sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
-                      />
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {audioCoveragePct}% audio
-                      </Typography>
-                    </Box>
-                  </Paper>
-                </Grid>
+                  </Alert>
+                )}
 
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Paper
-                    elevation={2}
-                    sx={{
-                      p: 2.5,
-                      height: '100%',
-                      borderRadius: 3,
-                      backgroundColor: 'rgba(25, 25, 35, 0.75)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        Streaming Links
-                      </Typography>
-                      <LinkIcon color="info" />
-                    </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
-                      {totalPlatformLinksCount}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-                      Active platform URLs configured
-                    </Typography>
-                  </Paper>
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                  <Paper
-                    elevation={2}
-                    sx={{
-                      p: 2.5,
-                      height: '100%',
-                      borderRadius: 3,
-                      backgroundColor: 'rgba(25, 25, 35, 0.75)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        System Access
-                      </Typography>
-                      <SecurityIcon color={dataState?.adminAccess ? 'warning' : 'success'} />
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 0.5 }}>
-                      <Chip
-                        label={`Admin: ${dataState?.adminAccess ? 'OPEN' : 'LOCKED'}`}
-                        color={dataState?.adminAccess ? 'error' : 'default'}
-                        size="small"
-                        sx={{ fontWeight: 700 }}
-                      />
-                      <Chip
-                        label={`Dev: ${Boolean(dataState?.devAccess) ? 'OPEN' : 'LOCKED'}`}
-                        color={Boolean(dataState?.devAccess) ? 'warning' : 'default'}
-                        size="small"
-                        sx={{ fontWeight: 700 }}
-                      />
-                    </Box>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-                      Access status in artist-data.json
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-
-              {/* Quick Actions Panel */}
-              <Card
-                variant="outlined"
-                sx={{
-                  backgroundColor: 'rgba(26, 26, 36, 0.6)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: 2.5,
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                    Quick Developer Controls
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
-                    Seed sample data for testing responsive views or access administrative controls
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Button
-                      variant="contained"
-                      color="warning"
-                      startIcon={isGeneratingDummy ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
-                      onClick={handleGenerateDummyData}
-                      disabled={isGeneratingDummy}
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                {/* High Level Stats Summary Row */}
+                <Grid container spacing={2.5}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        p: 2.5,
+                        height: '100%',
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(25, 25, 35, 0.75)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
                     >
-                      {isGeneratingDummy ? 'Generating Data...' : 'Randomize Dummy Data'}
-                    </Button>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                          Total Projects
+                        </Typography>
+                        <AlbumIcon color="primary" />
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
+                        {projects.length}
+                      </Typography>
+                      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={coverCoveragePct}
+                          sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
+                        />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {coverCoveragePct}% covers
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
 
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      startIcon={<AdminPanelSettingsIcon />}
-                      href="/sys/admin"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        p: 2.5,
+                        height: '100%',
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(25, 25, 35, 0.75)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
                     >
-                      Open Admin Portal
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Stack>
-          )}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                          Total Tracks
+                        </Typography>
+                        <MusicNoteIcon color="secondary" />
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
+                        {totalTracksCount}
+                      </Typography>
+                      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          color="secondary"
+                          value={audioCoveragePct}
+                          sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
+                        />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {audioCoveragePct}% audio
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
 
-          {/* TAB 1: API Explorer */}
-          {activeTab === 1 && <DevApiExplorer />}
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        p: 2.5,
+                        height: '100%',
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(25, 25, 35, 0.75)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                          Streaming Links
+                        </Typography>
+                        <LinkIcon color="info" />
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
+                        {totalPlatformLinksCount}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                        Active platform URLs configured
+                      </Typography>
+                    </Paper>
+                  </Grid>
 
-          {/* TAB 2: Discography & Media Audit */}
-          {activeTab === 2 && (
-            <DevDiscographyAuditView
-              projects={projects}
-              artistName={artistName}
-              health={health}
-              mounted={mounted}
-              playingAudioUrl={playingAudioUrl}
-              handleToggleAudio={handleToggleAudio}
-            />
-          )}
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Paper
+                      elevation={2}
+                      sx={{
+                        p: 2.5,
+                        height: '100%',
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(25, 25, 35, 0.75)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                          System Access
+                        </Typography>
+                        <SecurityIcon color={dataState?.adminAccess ? 'warning' : 'success'} />
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', my: 0.5 }}>
+                        <Chip
+                          label={`Admin: ${dataState?.adminAccess ? 'OPEN' : 'LOCKED'}`}
+                          color={dataState?.adminAccess ? 'error' : 'default'}
+                          size="small"
+                          sx={{ fontWeight: 700 }}
+                        />
+                        <Chip
+                          label={`Dev: ${Boolean(dataState?.devAccess) ? 'OPEN' : 'LOCKED'}`}
+                          color={Boolean(dataState?.devAccess) ? 'warning' : 'default'}
+                          size="small"
+                          sx={{ fontWeight: 700 }}
+                        />
+                      </Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                        Access status in artist-data.json
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
 
-          {/* TAB 3: Platforms & Socials */}
-          {activeTab === 3 && <DevPlatformsSocialsView platforms={platforms} socials={socials} />}
-
-          {/* TAB 4: Raw JSON Inspector */}
-          {activeTab === 4 && (
-            <Stack spacing={3}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  Raw artist-data.json Inspector
-                </Typography>
-                <Button
+                {/* Quick Actions Panel */}
+                <Card
                   variant="outlined"
-                  size="small"
-                  startIcon={<ContentCopyIcon />}
-                  onClick={handleCopyJson}
-                  sx={{ borderRadius: 2 }}
-                >
-                  {copiedJson ? 'Copied to Clipboard!' : 'Copy JSON'}
-                </Button>
-              </Box>
-
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2.5,
-                  backgroundColor: '#0d0d12',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: 2.5,
-                  maxHeight: 550,
-                  overflowY: 'auto',
-                }}
-              >
-                <Typography
-                  component="pre"
                   sx={{
-                    fontFamily: 'monospace',
-                    fontSize: '0.85rem',
-                    color: '#81d4fa',
-                    margin: 0,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
+                    backgroundColor: 'rgba(26, 26, 36, 0.6)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: 2.5,
                   }}
                 >
-                  {JSON.stringify(dataState, null, 2)}
-                </Typography>
-              </Paper>
-            </Stack>
-          )}
-        </Box>
-      </Paper>
-    </Container>
-  </Box>
+                  <CardContent sx={{ p: 3 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                      Quick Developer Controls
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
+                      Seed sample data for testing responsive views or access administrative controls
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        startIcon={isGeneratingDummy ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon />}
+                        onClick={handleGenerateDummyData}
+                        disabled={isGeneratingDummy}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                      >
+                        {isGeneratingDummy ? 'Generating Data...' : 'Randomize Dummy Data'}
+                      </Button>
+
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        startIcon={<AdminPanelSettingsIcon />}
+                        href="/sys/admin"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                      >
+                        Open Admin Portal
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Stack>
+            </Box>
+
+            {/* TAB 1: API Explorer */}
+            <Box sx={{ display: activeTab === 1 ? 'block' : 'none' }}>
+              <DevApiExplorer />
+            </Box>
+
+            {/* TAB 2: Discography & Media Audit */}
+            <Box sx={{ display: activeTab === 2 ? 'block' : 'none' }}>
+              <DevDiscographyAuditView
+                projects={projects}
+                artistName={artistName}
+                health={health}
+                mounted={mounted}
+                playingAudioUrl={playingAudioUrl}
+                handleToggleAudio={handleToggleAudio}
+              />
+            </Box>
+
+            {/* TAB 3: Platforms & Socials */}
+            <Box sx={{ display: activeTab === 3 ? 'block' : 'none' }}>
+              <DevPlatformsSocialsView platforms={platforms} socials={socials} />
+            </Box>
+
+            {/* TAB 4: Raw JSON Inspector */}
+            <Box sx={{ display: activeTab === 4 ? 'block' : 'none' }}>
+              <Stack spacing={3}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Raw artist-data.json Inspector
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<ContentCopyIcon />}
+                    onClick={handleCopyJson}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    {copiedJson ? 'Copied to Clipboard!' : 'Copy JSON'}
+                  </Button>
+                </Box>
+
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    backgroundColor: '#0d0d12',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: 2.5,
+                    maxHeight: 550,
+                    overflowY: 'auto',
+                  }}
+                >
+                  <Typography
+                    component="pre"
+                    sx={{
+                      fontFamily: 'monospace',
+                      fontSize: '0.85rem',
+                      color: '#81d4fa',
+                      margin: 0,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {JSON.stringify(dataState, null, 2)}
+                  </Typography>
+                </Paper>
+              </Stack>
+            </Box>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   )
 }
