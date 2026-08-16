@@ -35,6 +35,7 @@ import {
   ListItemIcon,
   Stack,
   InputAdornment,
+  Tooltip,
 } from '@mui/material'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
@@ -149,7 +150,6 @@ const AdminTextInput = memo(function AdminTextInput({
   label,
   value,
   onChange,
-  onCommit,
   placeholder,
   required,
   type,
@@ -165,28 +165,8 @@ const AdminTextInput = memo(function AdminTextInput({
   sx,
   ...rest
 }) {
-  const [localValue, setLocalValue] = useState(value ?? '')
-  const isFocusedRef = useRef(false)
-
-  useEffect(() => {
-    if (!isFocusedRef.current) {
-      setLocalValue(value ?? '')
-    }
-  }, [value])
-
   const handleChange = (e) => {
-    const next = e.target.value
-    setLocalValue(next)
-    onChange?.(next)
-  }
-
-  const handleBlur = () => {
-    isFocusedRef.current = false
-    if (onCommit) onCommit(localValue)
-  }
-
-  const handleFocus = () => {
-    isFocusedRef.current = true
+    onChange?.(e.target.value)
   }
 
   const fieldSx = isDirty ? DIRTY_FIELD_SX : isSaved ? SAVED_FIELD_SX : DEFAULT_FIELD_SX
@@ -203,10 +183,8 @@ const AdminTextInput = memo(function AdminTextInput({
   return (
     <TextField
       label={label}
-      value={localValue}
+      value={value ?? ''}
       onChange={handleChange}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
       placeholder={placeholder}
       required={required}
       type={type}
@@ -222,6 +200,27 @@ const AdminTextInput = memo(function AdminTextInput({
     />
   )
 })
+
+const formatMediaPath = (urlOrFilename, defaultProjectSlug = '', mediaType = 'media') => {
+  if (!urlOrFilename || typeof urlOrFilename !== 'string') return ''
+  const trimmed = urlOrFilename.trim()
+  if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return 'Local preview (staged)'
+  }
+  if (trimmed.startsWith('/api/media/')) {
+    return `data/${trimmed.replace(/^\/api\/media\//, '')}`
+  }
+  if (trimmed.startsWith('/api/audio/')) {
+    return `data/${trimmed.replace(/^\/api\/audio\//, '')}`
+  }
+  if (trimmed.startsWith('data/')) {
+    return trimmed
+  }
+  if (defaultProjectSlug) {
+    return `data/projects/${defaultProjectSlug}/${trimmed}`
+  }
+  return `data/${trimmed}`
+}
 
 const isProjectSlugDuplicate = (name, projectsList, excludeIndex = -1) => {
   const targetSlug = slugify(name)
@@ -431,7 +430,7 @@ const TrackCreateCard = memo(function TrackCreateCard({
                   startIcon={<CloudUploadIcon />}
                   sx={{ borderRadius: 1.5, textTransform: 'none' }}
                 >
-                  Upload Audio File (.flac, .mp3, .wav)
+                  {track.audioFileName || track.audioFile ? 'Replace Audio File' : 'Upload Audio File'}
                   <input
                     type="file"
                     accept="audio/*"
@@ -461,6 +460,112 @@ const TrackCreateCard = memo(function TrackCreateCard({
                     sx={{ fontWeight: 600 }}
                   />
                 )}
+              </Box>
+
+              <Box
+                sx={{
+                  mt: 1.5,
+                  pt: 1.5,
+                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.75,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      color: 'text.secondary',
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Audio Cache & Streaming State
+                  </Typography>
+                  {track.audioFileName || track.audioFile ? (
+                    <Chip
+                      label="Staged for Project Creation"
+                      color="warning"
+                      size="small"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                    />
+                  ) : (
+                    <Chip
+                      label="No Audio Staged"
+                      color="default"
+                      size="small"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: '0.7rem' }}
+                    />
+                  )}
+                </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                    p: 1,
+                    borderRadius: 1,
+                    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  {track.audioFileName || track.audioFile ? (
+                    <>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'warning.light',
+                          fontSize: '0.72rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Staged Source:</strong> {track.audioFileName || track.audioFile?.name}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                          fontSize: '0.7rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Target Cache Path:</strong> data/cache/audio/ (*.flac lossless & *.mp3 adaptive tiers)
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'text.disabled',
+                        fontSize: '0.72rem',
+                      }}
+                    >
+                      No audio file staged for caching.
+                    </Typography>
+                  )}
+                </Box>
+
+                <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                  {track.audioFileName || track.audioFile
+                    ? `Staged file "${track.audioFileName || track.audioFile?.name}" will be uploaded and transcoded into Lossless FLAC & adaptive MP3 tiers upon project creation.`
+                    : 'No audio source file selected. Listeners will only be able to play this track if external streaming links are provided.'}
+                </Typography>
               </Box>
             </Paper>
           </Grid>
@@ -550,6 +655,7 @@ const TrackEditCard = memo(function TrackEditCard({
   isSavedArtist,
   dirtyFields,
   savedFields,
+  projectSlug = '',
   onUpdateName,
   onUpdateArtist,
   onUpdateLink,
@@ -560,6 +666,8 @@ const TrackEditCard = memo(function TrackEditCard({
   onDelete,
   onCopy,
 }) {
+  const detectedAudioPath = formatMediaPath(track.audioUrl || track.audio, projectSlug, 'audio')
+
   return (
     <Card
       variant="outlined"
@@ -585,35 +693,44 @@ const TrackEditCard = memo(function TrackEditCard({
             sx={{ fontWeight: 700 }}
           />
           <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <IconButton
-              size="small"
-              title="Copy Track to Another Project"
-              onClick={() => onCopy(track, index)}
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              disabled={index === 0}
-              onClick={() => onMoveUp(index)}
-            >
-              <ArrowUpwardIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              disabled={index === totalTracks - 1}
-              onClick={() => onMoveDown(index)}
-            >
-              <ArrowDownwardIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              color="error"
-              disabled={totalTracks <= 1}
-              onClick={() => onDelete(track, index)}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title="Copy Track Data">
+              <IconButton size="small" onClick={() => onCopy(track, index)}>
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Move Up">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={index === 0}
+                  onClick={() => onMoveUp(index)}
+                >
+                  <ArrowUpwardIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Move Down">
+              <span>
+                <IconButton
+                  size="small"
+                  disabled={index === totalTracks - 1}
+                  onClick={() => onMoveDown(index)}
+                >
+                  <ArrowDownwardIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            {totalTracks > 1 && (
+              <Tooltip title="Delete Track">
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => onDelete(track, index)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         </Box>
 
@@ -668,7 +785,7 @@ const TrackEditCard = memo(function TrackEditCard({
                   startIcon={<CloudUploadIcon />}
                   sx={{ borderRadius: 1.5, textTransform: 'none' }}
                 >
-                  Replace Audio File
+                  {track.audioFileName || track.hasAudio || track.audio ? 'Replace Audio File' : 'Upload Audio File'}
                   <input
                     type="file"
                     accept="audio/*"
@@ -691,7 +808,7 @@ const TrackEditCard = memo(function TrackEditCard({
                 ) : track.hasAudio || track.audio ? (
                   <Chip
                     icon={<CheckCircleIcon />}
-                    label={`Audio file attached (${track.audio || 'Local audio'})`}
+                    label={`Audio file attached (${detectedAudioPath || track.audio || 'Local audio'})`}
                     color="success"
                     variant="outlined"
                     size="small"
@@ -707,6 +824,144 @@ const TrackEditCard = memo(function TrackEditCard({
                     sx={{ fontWeight: 600 }}
                   />
                 )}
+              </Box>
+
+              <Box
+                sx={{
+                  mt: 1.5,
+                  pt: 1.5,
+                  borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.75,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      color: 'text.secondary',
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Audio Cache & Streaming State
+                  </Typography>
+                  {track.audioFileName ? (
+                    <Chip
+                      label="Staged (Pending Transcode & Save)"
+                      color="warning"
+                      size="small"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                    />
+                  ) : track.hasAudio || track.audio ? (
+                    <Chip
+                      label="Cached on Server & Browser"
+                      color="success"
+                      size="small"
+                      sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                    />
+                  ) : (
+                    <Chip
+                      label="Uncached (No Audio)"
+                      color="default"
+                      size="small"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: '0.7rem' }}
+                    />
+                  )}
+                </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                    p: 1,
+                    borderRadius: 1,
+                    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  {track.audioFileName ? (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'warning.light',
+                        fontSize: '0.72rem',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      <strong>Staged Source:</strong> {track.audioFileName}
+                    </Typography>
+                  ) : (track.hasAudio || track.audio || track.audioUrl) && detectedAudioPath ? (
+                    <>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'primary.light',
+                          fontSize: '0.72rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Base Source:</strong> {detectedAudioPath}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                          fontSize: '0.7rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Cached Tiers:</strong> data/cache/audio/ (*.flac lossless, *.mp3 320k/192k/128k/64k)
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                          fontSize: '0.7rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Stream Endpoint:</strong> {track.audioUrl || (track.audio ? `/api/audio/projects/${projectSlug}/${track.audio}` : 'Not assigned')}
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'text.disabled',
+                        fontSize: '0.72rem',
+                      }}
+                    >
+                      No media cached on disk.
+                    </Typography>
+                  )}
+                </Box>
+
+                <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                  {track.audioFileName
+                    ? `Staged file "${track.audioFileName}" will be transcoded into Lossless FLAC & adaptive MP3 tiers (320k, 192k, 128k, 64k) upon auto-save.`
+                    : track.hasAudio || track.audio
+                    ? 'Transcoded multi-bitrate streams (Lossless FLAC, 320k, 192k, 128k, 64k) cached on disk with HTTP 206 byte-range streaming and browser preloading enabled.'
+                    : 'No audio source file attached to this track. Listeners will only be able to play this track if external streaming links are provided.'}
+                </Typography>
               </Box>
             </Paper>
           </Grid>
@@ -882,7 +1137,16 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   const [dirtyFields, setDirtyFields] = useState(new Set())
   const [savedFields, setSavedFields] = useState(new Set())
   const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const [autoSaveActionText, setAutoSaveActionText] = useState('Auto-saving changes...')
   const [lastSavedTime, setLastSavedTime] = useState(null)
+  const [loadedTime, setLoadedTime] = useState(null)
+
+  useEffect(() => {
+    setLoadedTime(new Date().toLocaleTimeString())
+  }, [])
+
+  const dirtyFieldsRef = useRef(dirtyFields)
+  useEffect(() => { dirtyFieldsRef.current = dirtyFields }, [dirtyFields])
 
   const autoSaveDebounceRef = useRef(null)
   const savedHighlightTimeoutRef = useRef(null)
@@ -890,6 +1154,31 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   // Global Status Messages
   const [statusMessage, setStatusMessage] = useState(null)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // Auto-dismiss transient alerts
+  useEffect(() => {
+    if (!statusMessage) return
+    const timer = setTimeout(() => {
+      setStatusMessage(null)
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [statusMessage])
+
+  useEffect(() => {
+    if (!errorMessage) return
+    const timer = setTimeout(() => {
+      setErrorMessage('')
+    }, 6000)
+    return () => clearTimeout(timer)
+  }, [errorMessage])
+
+  useEffect(() => {
+    if (!authError) return
+    const timer = setTimeout(() => {
+      setAuthError('')
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [authError])
 
   // Check stored auth session or auto-authenticate if password is empty
   useEffect(() => {
@@ -938,6 +1227,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     if (autoSaveDebounceRef.current) {
       clearTimeout(autoSaveDebounceRef.current)
     }
+    dirtyFieldsRef.current = new Set()
     setDirtyFields(new Set())
     setSavedFields(new Set())
     setIsCreatingNew(false)
@@ -991,6 +1281,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     if (autoSaveDebounceRef.current) {
       clearTimeout(autoSaveDebounceRef.current)
     }
+    dirtyFieldsRef.current = new Set()
     setDirtyFields(new Set())
     setSavedFields(new Set())
     setSelectedProjIndex(-1)
@@ -1072,6 +1363,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
   // Helper to mark a field dirty and trigger debounced auto-save
   const markFieldDirty = useCallback((fieldKey, saveCallback, delayMs = 1000) => {
+    if (fieldKey) {
+      dirtyFieldsRef.current.add(fieldKey)
+    }
     setDirtyFields((prev) => {
       if (prev.has(fieldKey)) return prev
       const next = new Set(prev)
@@ -1090,8 +1384,21 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     }
 
     autoSaveDebounceRef.current = setTimeout(async () => {
+      const snapshotKeys = Array.from(dirtyFieldsRef.current)
+      let actionLabel = 'Auto-saving changes...'
+      if (snapshotKeys.some((k) => k.includes('audio'))) {
+        actionLabel = 'Uploading & saving audio...'
+      } else if (snapshotKeys.some((k) => k.includes('cover'))) {
+        actionLabel = 'Uploading & saving cover...'
+      } else if (snapshotKeys.some((k) => k.startsWith('new_'))) {
+        actionLabel = 'Saving new project...'
+      } else if (snapshotKeys.some((k) => k === 'artistName' || k === 'artistBio' || k.startsWith('platform_') || k.startsWith('social_'))) {
+        actionLabel = 'Saving artist profile...'
+      } else if (snapshotKeys.some((k) => k.startsWith('edit_'))) {
+        actionLabel = editNameRef.current?.trim() ? `Saving "${editNameRef.current.trim()}"...` : 'Saving project changes...'
+      }
+      setAutoSaveActionText(actionLabel)
       setIsAutoSaving(true)
-      const keysToSave = Array.from(fieldKey ? [fieldKey] : [])
       let success = false
       try {
         success = await saveCallback()
@@ -1105,12 +1412,13 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         setLastSavedTime(new Date().toLocaleTimeString())
         setDirtyFields((prev) => {
           const next = new Set(prev)
-          keysToSave.forEach((k) => next.delete(k))
+          snapshotKeys.forEach((k) => next.delete(k))
           return next
         })
+        snapshotKeys.forEach((k) => dirtyFieldsRef.current.delete(k))
         setSavedFields((prev) => {
           const next = new Set(prev)
-          keysToSave.forEach((k) => next.add(k))
+          snapshotKeys.forEach((k) => next.add(k))
           return next
         })
 
@@ -1125,9 +1433,10 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         setTimeout(() => {
           setDirtyFields((prev) => {
             const next = new Set(prev)
-            keysToSave.forEach((k) => next.delete(k))
+            snapshotKeys.forEach((k) => next.delete(k))
             return next
           })
+          snapshotKeys.forEach((k) => dirtyFieldsRef.current.delete(k))
         }, 2500)
       }
     }, delayMs)
@@ -1306,9 +1615,11 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         formData.append('coverFile', currentCoverFile)
       }
 
+      const uploadedFileMap = new Map()
       const cleanTracks = currentTracks.map((t, idx) => {
         if (t.audioFile) {
           formData.append(`track_${idx}_audioFile`, t.audioFile)
+          uploadedFileMap.set(idx, t.audioFile)
         }
         return {
           name: t.name.trim(),
@@ -1340,30 +1651,40 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           }
 
           const primaryName = (artistNameInputRef.current || artistData?.name || defaultArtistName).trim()
-          const updatedFormattedTracks = (result.updatedProject.tracks ?? []).map((t, idx) => ({
-            id: editTracksRef.current[idx]?.id || `edit-track-${idx}-${Date.now()}`,
-            name: t.name || '',
-            originalName: t.name || '',
-            artist: resolveOverrideArtist(t.artist, primaryName, result.updatedProject.artist),
-            audio: t.audio || t.audioUrl || '',
-            hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
-            audioUrl: t.audioUrl || '',
-            audioFile: null,
-            audioFileName: '',
-            links: {
-              spotify: '',
-              apple: '',
-              youtube: '',
-              soundcloud: '',
-              amazon: '',
-              bandcamp: '',
-              deezer: '',
-              itunes: '',
-              pandora: '',
-              tidal: '',
-              ...(t.links || {}),
-            },
-          }))
+          const currentLocalTracks = editTracksRef.current
+          const updatedFormattedTracks = (result.updatedProject.tracks ?? []).map((t, idx) => {
+            const local = currentLocalTracks[idx]
+            const uploadedFileForTrack = uploadedFileMap.get(idx)
+            const isSameUploadedFile = uploadedFileForTrack && local?.audioFile === uploadedFileForTrack
+            const audioFile = isSameUploadedFile ? null : (local?.audioFile || null)
+            const audioFileName = isSameUploadedFile ? '' : (local?.audioFileName || '')
+
+            return {
+              id: local?.id || `edit-track-${idx}-${Date.now()}`,
+              name: local ? local.name : (t.name || ''),
+              originalName: t.name || local?.originalName || '',
+              artist: local ? local.artist : resolveOverrideArtist(t.artist, primaryName, result.updatedProject.artist),
+              audio: t.audio || t.audioUrl || local?.audio || '',
+              hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl || local?.hasAudio),
+              audioUrl: t.audioUrl || local?.audioUrl || '',
+              audioFile,
+              audioFileName,
+              links: {
+                spotify: '',
+                apple: '',
+                youtube: '',
+                soundcloud: '',
+                amazon: '',
+                bandcamp: '',
+                deezer: '',
+                itunes: '',
+                pandora: '',
+                tidal: '',
+                ...(t.links || {}),
+                ...(local?.links || {}),
+              },
+            }
+          })
           setEditTracks(updatedFormattedTracks)
           editTracksRef.current = updatedFormattedTracks
         }
@@ -1593,6 +1914,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     setTracks((prev) => {
       const n = [...prev]
       n[index] = { ...n[index], name: val }
+      tracksRef.current = n
       return n
     })
     markFieldDirty(`new_track_${index}_title`, executeCreateProject)
@@ -1602,6 +1924,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     setTracks((prev) => {
       const n = [...prev]
       n[index] = { ...n[index], artist: val }
+      tracksRef.current = n
       return n
     })
     markFieldDirty(`new_track_${index}_artist`, executeCreateProject)
@@ -1611,6 +1934,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     setTracks((prev) => {
       const n = [...prev]
       n[index] = { ...n[index], links: { ...n[index].links, [key]: val } }
+      tracksRef.current = n
       return n
     })
     markFieldDirty(`new_track_${index}_${key}`, executeCreateProject)
@@ -1625,8 +1949,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
   const handleCreateTrackAudioRemove = useCallback((index) => {
     setTracks((prev) => {
-      const n = [...prev]
-      n[index] = { ...n[index], audioFile: null, audioFileName: '' }
+      const n = prev.map((t, i) => i === index ? { ...t, audioFile: null, audioFileName: '' } : t)
+      tracksRef.current = n
       return n
     })
   }, [])
@@ -1638,6 +1962,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       const t = n[index]
       n[index] = n[index - 1]
       n[index - 1] = t
+      tracksRef.current = n
       return n
     })
   }, [])
@@ -1649,6 +1974,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       const t = n[index]
       n[index] = n[index + 1]
       n[index + 1] = t
+      tracksRef.current = n
       return n
     })
   }, [])
@@ -1666,6 +1992,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     setEditTracks((prev) => {
       const n = [...prev]
       n[index] = { ...n[index], name: val }
+      editTracksRef.current = n
       return n
     })
     markFieldDirty(`edit_track_${index}_title`, executeUpdateProject)
@@ -1675,6 +2002,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     setEditTracks((prev) => {
       const n = [...prev]
       n[index] = { ...n[index], artist: val }
+      editTracksRef.current = n
       return n
     })
     markFieldDirty(`edit_track_${index}_artist`, executeUpdateProject)
@@ -1684,6 +2012,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     setEditTracks((prev) => {
       const n = [...prev]
       n[index] = { ...n[index], links: { ...n[index].links, [key]: val } }
+      editTracksRef.current = n
       return n
     })
     markFieldDirty(`edit_track_${index}_${key}`, executeUpdateProject)
@@ -1693,13 +2022,13 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     const n = editTracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
     setEditTracks(n)
     editTracksRef.current = n
-    markFieldDirty(`edit_track_${index}_audio`, () => executeUpdateProject(n), 100)
+    markFieldDirty(`edit_track_${index}_audio`, executeUpdateProject, 100)
   }, [executeUpdateProject, markFieldDirty])
 
   const handleEditTrackAudioRemove = useCallback((index) => {
     setEditTracks((prev) => {
-      const n = [...prev]
-      n[index] = { ...n[index], audioFile: null, audioFileName: '' }
+      const n = prev.map((t, i) => i === index ? { ...t, audioFile: null, audioFileName: '' } : t)
+      editTracksRef.current = n
       return n
     })
   }, [])
@@ -1740,9 +2069,8 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       sourceProjectIndex: selectedProjIndex,
       trackIndex: index,
     })
-    const defaultTarget = projectsList.length > 1 && selectedProjIndex === 0 ? 1 : 0
-    setCopyTargetProjectIndex(defaultTarget)
-  }, [selectedProjIndex, projectsList.length])
+    setCopyTargetProjectIndex(selectedProjIndex >= 0 ? selectedProjIndex : 0)
+  }, [selectedProjIndex])
 
   // Input Field Sx Style Helper using static references
   const getFieldSx = (fieldKey) => {
@@ -1856,7 +2184,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
               </Box>
 
               {authError && (
-                <Alert severity="error" sx={{ mb: 3 }}>
+                <Alert severity="error" onClose={() => setAuthError('')} sx={{ mb: 3 }}>
                   {authError}
                 </Alert>
               )}
@@ -1978,8 +2306,18 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           {/* Live Auto-Save Status Badge */}
           {isAutoSaving ? (
             <Chip
-              icon={<SyncIcon sx={{ animation: 'spin 1s infinite linear', '@keyframes spin': { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } } }} />}
-              label="Auto-saving changes..."
+              icon={(
+                <SyncIcon
+                  sx={{
+                    animation: 'spin 1s infinite linear',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(-360deg)' },
+                    },
+                  }}
+                />
+              )}
+              label={autoSaveActionText}
               color="warning"
               variant="outlined"
               sx={{ fontWeight: 700, py: 0.5 }}
@@ -2001,7 +2339,15 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           ) : lastSavedTime ? (
             <Chip
               icon={<CheckCircleIcon />}
-              label={`Saved at ${lastSavedTime}`}
+              label={`Saved: ${lastSavedTime}`}
+              color="default"
+              variant="outlined"
+              sx={{ color: 'text.secondary', py: 0.5 }}
+            />
+          ) : loadedTime ? (
+            <Chip
+              icon={<CheckCircleIcon />}
+              label={`Loaded: ${loadedTime}`}
               color="default"
               variant="outlined"
               sx={{ color: 'text.secondary', py: 0.5 }}
@@ -2302,7 +2648,18 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                           fontWeight: 600,
                         }}
                       >
-                        <SyncIcon sx={{ fontSize: 13 }} /> Saving…
+                        <SyncIcon
+                          sx={{
+                            fontSize: 13,
+                            animation: 'spin 1s infinite linear',
+                            '@keyframes spin': {
+                              '0%': { transform: 'rotate(0deg)' },
+                              '100%': { transform: 'rotate(-360deg)' },
+                            },
+                          }}
+                        />
+                        {' '}
+                        Saving…
                       </Typography>
                     )}
                   </Box>
@@ -2523,7 +2880,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                 label="Release Type"
                                 value={type}
                                 onChange={(e) => {
-                                  setType(e.target.value)
+                                  const val = e.target.value
+                                  setType(val)
+                                  typeRef.current = val
                                   markFieldDirty('new_type', executeCreateProject)
                                 }}
                               >
@@ -2575,7 +2934,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             <Box component="img" src={coverPreview} alt="Cover preview" sx={{ width: 64, height: 64, borderRadius: 1.5, objectFit: 'cover' }} />
                           )}
                           <Button variant="contained" component="label" startIcon={<CloudUploadIcon />} sx={{ borderRadius: 2, textTransform: 'none' }}>
-                            Upload Cover Image File (.jpg, .png)
+                            {coverPreview || coverFile ? 'Replace Cover Image' : 'Upload Cover Image File (.jpg, .png)'}
                             <input
                               type="file"
                               accept="image/*"
@@ -2590,8 +2949,116 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               }}
                             />
                           </Button>
-                          {coverFile && <Chip label={`Selected: ${coverFile.name}`} color="primary" onDelete={() => setCoverFile(null)} size="small" />}
+                          {coverFile && <Chip icon={<CheckCircleIcon />} label={`New: ${coverFile.name}`} color="success" onDelete={() => setCoverFile(null)} size="small" />}
                         </Box>
+
+                        <Box
+                          sx={{
+                            mt: 2,
+                            p: 1.5,
+                            borderRadius: 1.5,
+                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.75,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                color: 'text.secondary',
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              Artwork Cache & Optimization State
+                            </Typography>
+                            {coverFile ? (
+                              <Chip
+                                label="Staged for Project Creation"
+                                color="warning"
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
+                              />
+                            ) : (
+                              <Chip
+                                label="No Artwork Staged"
+                                color="default"
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.72rem' }}
+                              />
+                            )}
+                          </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                    p: 1,
+                    borderRadius: 1,
+                    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  {coverFile ? (
+                    <>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'warning.light',
+                          fontSize: '0.72rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Staged Source:</strong> {coverFile.name}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                          fontSize: '0.7rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Target Cache Path:</strong> data/cache/images/ (*.webp & *.avif multi-res tiers)
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'text.disabled',
+                        fontSize: '0.72rem',
+                      }}
+                    >
+                      No cover image staged for caching.
+                    </Typography>
+                  )}
+                </Box>
+
+                <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                  {coverFile
+                    ? `Cover image "${coverFile.name}" is staged. It will be pre-compressed into WebP/AVIF multi-resolution variants upon project creation.`
+                    : 'No cover image file staged. The project will use the default artwork placeholder until uploaded.'}
+                </Typography>
+              </Box>
                       </Paper>
 
                       {/* Track Builder */}
@@ -2695,7 +3162,9 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                 label="Release Type"
                                 value={editType}
                                 onChange={(e) => {
-                                  setEditType(e.target.value)
+                                  const val = e.target.value
+                                  setEditType(val)
+                                  editTypeRef.current = val
                                   markFieldDirty('edit_type', executeUpdateProject)
                                 }}
                               >
@@ -2740,14 +3209,14 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         <Divider sx={{ my: 2.5 }} />
 
                         <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
-                          Replace / Update Artwork
+                          Cover Artwork
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                           {editCoverPreview && (
                             <Box component="img" src={editCoverPreview} alt="Cover preview" sx={{ width: 64, height: 64, borderRadius: 1.5, objectFit: 'cover' }} />
                           )}
-                          <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} size="small" sx={{ borderRadius: 2 }}>
-                            Upload New Cover File
+                          <Button variant="outlined" component="label" startIcon={<CloudUploadIcon />} size="small" sx={{ borderRadius: 2, textTransform: 'none' }}>
+                            {editCoverPreview || editCoverFile ? 'Replace Cover Image' : 'Upload Cover Image File (.jpg, .png)'}
                             <input
                               type="file"
                               accept="image/*"
@@ -2762,8 +3231,168 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               }}
                             />
                           </Button>
-                          {editCoverFile && <Chip label={`Selected: ${editCoverFile.name}`} color="primary" onDelete={() => setEditCoverFile(null)} size="small" />}
+                          {editCoverFile ? (
+                            <Chip icon={<CheckCircleIcon />} label={`New: ${editCoverFile.name}`} color="success" size="small" onDelete={() => setEditCoverFile(null)} />
+                          ) : editCoverPreview ? (
+                            <Chip
+                              icon={<CheckCircleIcon />}
+                              label={`Cover art attached (${formatMediaPath(editCoverPreview, slugify(editName || projectsList[selectedProjIndex]?.name || ''), 'media')})`}
+                              color="success"
+                              variant="outlined"
+                              size="small"
+                              sx={{ fontWeight: 600 }}
+                            />
+                          ) : (
+                            <Chip
+                              icon={<ImageIcon />}
+                              label="No cover image attached"
+                              color="warning"
+                              variant="outlined"
+                              size="small"
+                              sx={{ fontWeight: 600 }}
+                            />
+                          )}
                         </Box>
+
+                        <Box
+                          sx={{
+                            mt: 2,
+                            p: 1.5,
+                            borderRadius: 1.5,
+                            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.75,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                color: 'text.secondary',
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              Artwork Cache & Optimization State
+                            </Typography>
+                            {editCoverFile ? (
+                              <Chip
+                                label="Staged (Pending Save)"
+                                color="warning"
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
+                              />
+                            ) : editCoverPreview ? (
+                              <Chip
+                                label="Active & Pre-Cached"
+                                color="success"
+                                size="small"
+                                sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
+                              />
+                            ) : (
+                              <Chip
+                                label="No Artwork"
+                                color="default"
+                                size="small"
+                                variant="outlined"
+                                sx={{ height: 22, fontSize: '0.72rem' }}
+                              />
+                            )}
+                          </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                    p: 1,
+                    borderRadius: 1,
+                    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  {editCoverFile ? (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'warning.light',
+                        fontSize: '0.72rem',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      <strong>Staged Source:</strong> {editCoverFile.name}
+                    </Typography>
+                  ) : editCoverPreview ? (
+                    <>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'primary.light',
+                          fontSize: '0.72rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Base Artwork:</strong> {formatMediaPath(editCoverPreview, slugify(editName || projectsList[selectedProjIndex]?.name || ''), 'media')}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                          fontSize: '0.7rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Cached Tiers:</strong> data/cache/images/ (*.webp & *.avif @ 1920w, 1080w, 640w, 320w + 32w blur)
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                          fontSize: '0.7rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <strong>Media Endpoint:</strong> {editCoverPreview.startsWith('/api/media/') ? editCoverPreview : `/api/media/projects/${slugify(editName || projectsList[selectedProjIndex]?.name || '')}/${editCoverPreview}`}
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: 'monospace',
+                        color: 'text.disabled',
+                        fontSize: '0.72rem',
+                      }}
+                    >
+                      No artwork cached on disk.
+                    </Typography>
+                  )}
+                </Box>
+
+                <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                  {editCoverFile
+                    ? `Staged file "${editCoverFile.name}" will be automatically converted to responsive WebP/AVIF variants (320w, 640w, 1080w, 1920w) and cached with HTTP 304 ETags.`
+                    : editCoverPreview
+                    ? 'Optimized responsive WebP & AVIF tiers (320w, 640w, 1080w, 1920w) generated. Client LRU in-memory preloading and 1-day browser HTTP caching active.'
+                    : 'No cover image file uploaded. The site will display the default vinyl disc placeholder.'}
+                </Typography>
+              </Box>
                       </Paper>
 
                       {/* Edit Tracks */}
@@ -2804,6 +3433,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                               isSavedArtist={savedFields.has(`edit_track_${index}_artist`)}
                               dirtyFields={dirtyFields}
                               savedFields={savedFields}
+                              projectSlug={slugify(editName || projectsList[selectedProjIndex]?.name || '')}
                               onUpdateName={handleUpdateEditTrackName}
                               onUpdateArtist={handleUpdateEditTrackArtist}
                               onUpdateLink={handleUpdateEditTrackLink}
