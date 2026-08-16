@@ -1,0 +1,108 @@
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: transparent !important;
+}
+
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.45) transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.45) transparent;
+}
+
+/* WebKit / Chromium scrollbars (Chrome, Edge, Brave, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+*::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.45) !important;
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  border-radius: 99px !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.45) !important;
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  border-radius: 99px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.75) !important;
+  background-color: rgba(255, 255, 255, 0.75) !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.75) !important;
+  background-color: rgba(255, 255, 255, 0.75) !important;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.95) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.95) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

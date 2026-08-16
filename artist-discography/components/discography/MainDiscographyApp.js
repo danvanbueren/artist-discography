@@ -151,6 +151,15 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
 
   // Ref for the projects container — used by the scroll-aware mask effect below
   const projectsContainerRef = useRef(null)
+  // Ref for the main scroll container
+  const mainScrollRef = useRef(null)
+
+  const scrollToTop = useCallback(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   // Dynamically apply a CSS mask-image to the projects container that fades
   // project cards only where they actually overlap with the sticky nav or fixed player.
@@ -198,11 +207,18 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       el.style.webkitMaskImage = mask
     }
 
+    const scrollEl = mainScrollRef.current
+    if (scrollEl) {
+      scrollEl.addEventListener('scroll', applyMask, { passive: true })
+    }
     window.addEventListener('scroll', applyMask, { passive: true })
     window.addEventListener('resize', applyMask, { passive: true })
     applyMask()
 
     return () => {
+      if (scrollEl) {
+        scrollEl.removeEventListener('scroll', applyMask)
+      }
       window.removeEventListener('scroll', applyMask)
       window.removeEventListener('resize', applyMask)
     }
@@ -464,7 +480,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       setSelectedProject(project)
       setHighlightedTrackSlug(null)
       setCurrentView('SINGLE_PROJECT')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     }
   }
 
@@ -478,7 +494,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
       setSelectedProject(project)
       setHighlightedTrackSlug(trkSlug)
       setCurrentView('SINGLE_PROJECT')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     }
   }
 
@@ -514,13 +530,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' })
         } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' })
+          scrollToTop()
         }
       }, 60)
     } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     }
-  }, [selectedProject])
+  }, [selectedProject, scrollToTop])
 
   const handleNavigateToCurrentTrack = useCallback(() => {
     if (!playingTrack) return
@@ -853,83 +869,136 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
             msUserSelect: 'text !important',
             pointerEvents: 'auto',
           },
-          // High-contrast custom scrollbars with transparent track and visible thumb & arrows
-          '*::-webkit-scrollbar': {
-            width: '8px',
-            height: '8px',
+          // Transparent custom scrollbars on root viewport & all containers
+          ':root': {
+            scrollbarWidth: 'thin',
+            scrollbarColor: darkMode
+              ? 'rgba(255, 255, 255, 0.45) transparent'
+              : 'rgba(0, 0, 0, 0.45) transparent',
           },
-          '*::-webkit-scrollbar-track': {
-            background: 'transparent !important',
+          html: {
+            scrollbarWidth: 'thin',
+            scrollbarColor: darkMode
+              ? 'rgba(255, 255, 255, 0.45) transparent'
+              : 'rgba(0, 0, 0, 0.45) transparent',
           },
-          '*::-webkit-scrollbar-track-piece': {
-            background: 'transparent !important',
+          body: {
+            scrollbarWidth: 'thin',
+            scrollbarColor: darkMode
+              ? 'rgba(255, 255, 255, 0.45) transparent'
+              : 'rgba(0, 0, 0, 0.45) transparent',
           },
-          '*::-webkit-scrollbar-corner': {
-            background: 'transparent !important',
-          },
-          '*::-webkit-scrollbar-thumb': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.42)' : 'rgba(0, 0, 0, 0.42)',
-            borderRadius: '99px',
-            transition: 'background 0.2s ease',
-          },
-          '*::-webkit-scrollbar-thumb:hover': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)',
-          },
-          '*::-webkit-scrollbar-thumb:active': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.85)',
-          },
-          '*::-webkit-scrollbar-button': {
-            display: 'block',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            backgroundSize: '7px 7px',
-            backgroundColor: 'transparent',
-            opacity: 0.75,
-            transition: 'opacity 0.15s ease',
-          },
-          '*::-webkit-scrollbar-button:hover': {
-            opacity: 1,
-          },
-          '*::-webkit-scrollbar-button:single-button:vertical:decrement': {
-            height: '12px',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E")`,
-          },
-          '*::-webkit-scrollbar-button:single-button:vertical:increment': {
-            height: '12px',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-          },
-          '*::-webkit-scrollbar-button:single-button:horizontal:decrement': {
-            width: '12px',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E")`,
-          },
-          '*::-webkit-scrollbar-button:single-button:horizontal:increment': {
-            width: '12px',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${darkMode ? '%23ffffff' : '%23000000'}' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E")`,
-          },
-          // Firefox scrollbar
           '*': {
             scrollbarWidth: 'thin',
             scrollbarColor: darkMode
-              ? 'rgba(255,255,255,0.42) transparent'
-              : 'rgba(0,0,0,0.42) transparent',
+              ? 'rgba(255, 255, 255, 0.45) transparent'
+              : 'rgba(0, 0, 0, 0.45) transparent',
+          },
+          '::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '*::-webkit-scrollbar': {
+            width: '8px',
+            height: '8px',
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '::-webkit-scrollbar-track': {
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '*::-webkit-scrollbar-track': {
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '::-webkit-scrollbar-track-piece': {
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '*::-webkit-scrollbar-track-piece': {
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '::-webkit-scrollbar-corner': {
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '*::-webkit-scrollbar-corner': {
+            background: 'transparent !important',
+            backgroundColor: 'transparent !important',
+          },
+          '::-webkit-scrollbar-thumb': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
+            borderRadius: '99px !important',
+            transition: 'background 0.2s ease',
+          },
+          '*::-webkit-scrollbar-thumb': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
+            borderRadius: '99px !important',
+            transition: 'background 0.2s ease',
+          },
+          '::-webkit-scrollbar-thumb:hover': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
+          },
+          '*::-webkit-scrollbar-thumb:hover': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
+          },
+          '::-webkit-scrollbar-thumb:active': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
+          },
+          '*::-webkit-scrollbar-thumb:active': {
+            background: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
+            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
+          },
+          '::-webkit-scrollbar-button': {
+            display: 'none !important',
+            width: 0,
+            height: 0,
+          },
+          '*::-webkit-scrollbar-button': {
+            display: 'none !important',
+            width: 0,
+            height: 0,
           },
         }}
       />
 
-      {/* Fixed full-viewport ambient background with dynamic adaptive blurred dots */}
-      <AmbientBackground ambientImage={ambientImage} darkMode={darkMode} />
-
+      {/* Full-viewport fixed root shell */}
       <Box
         sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'relative',
-          zIndex: 1,
-          color: 'text.primary',
-          pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
+          position: 'fixed',
+          inset: 0,
+          overflow: 'hidden',
+          bgcolor: 'background.default',
         }}
       >
+        {/* Full-viewport ambient background with dynamic adaptive blurred dots */}
+        <AmbientBackground ambientImage={ambientImage} darkMode={darkMode} />
+
+        {/* Primary in-flow scroll container with transparent floating scrollbar */}
+        <Box
+          ref={mainScrollRef}
+          sx={{
+            position: 'relative',
+            height: '100%',
+            width: '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            zIndex: 1,
+            color: 'text.primary',
+            pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
+          }}
+        >
         {/* Floating Dev & Admin Alert Cards (Top Left) */}
         {(data?.adminAccess !== false || Boolean(data?.devAccess)) && (
           <Stack
@@ -1284,6 +1353,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [] }) {
         {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
         {data?.devAccess !== false && <DevHealthDrawer health={health} />}
       </Box>
+    </Box>
     </ThemeProvider>
   )
 }

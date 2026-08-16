@@ -659,22 +659,28 @@ export default function AudioPlayerBar({
 
   return (
     <>
-      <Collapse in={Boolean(playingTrack)} unmountOnExit>
-      <Box
-        className="mui-fixed"
+      <Collapse
+        in={Boolean(playingTrack)}
+        unmountOnExit
         sx={{
-          position: 'fixed',
+          position: 'sticky',
           bottom: 0,
-          left: 0,
-          right: 0,
+          mt: 'auto',
           zIndex: 1200,
-          pb: { xs: 1.5, sm: 2 },
-          pt: { xs: 1.5, sm: 2 },
+          width: '100%',
           pointerEvents: 'none',
         }}
       >
-
-        <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 1.5, sm: 3 } }}>
+        <Box
+          className="mui-fixed"
+          sx={{
+            pb: { xs: 1.5, sm: 2 },
+            pt: { xs: 1.5, sm: 2 },
+            pointerEvents: 'none',
+            width: '100%',
+          }}
+        >
+          <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
           <Paper
             elevation={6}
             sx={{
