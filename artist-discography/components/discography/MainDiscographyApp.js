@@ -42,7 +42,7 @@ function shuffleArray(array) {
   const arr = [...array]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
   return arr
 }
@@ -95,7 +95,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       try {
         setCookie('theme_mode', nextThemeStr)
         localStorage.setItem('themeMode', nextThemeStr)
-      } catch {}
+      } catch { }
       return nextMode
     })
   }, [])
@@ -180,6 +180,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
   const projectsContainerRef = useRef(null)
   // Ref for the main scroll container
   const mainScrollRef = useRef(null)
+  const [showScrollTop, setShowScrollTop] = useState(false)
 
   const scrollToTop = useCallback(() => {
     if (mainScrollRef.current) {
@@ -187,69 +188,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
-
-  // Dynamically apply a CSS mask-image to the projects container that fades
-  // project cards only where they actually overlap with the sticky nav or fixed player.
-  // Uses direct DOM style mutation (not React state) to avoid re-renders on every scroll tick.
-  useEffect(() => {
-    // Approximate bar heights in px. Nav is only present on the main discography view.
-    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : 88
-    const PLAYER_H = playingTrack ? 92 : 0
-    const FADE = 52  // px: length of the fade gradient transition
-
-    const applyMask = () => {
-      const el = projectsContainerRef.current
-      if (!el) return
-
-      const rect = el.getBoundingClientRect()
-      const vh = window.innerHeight
-
-      // Is any content currently overlapping the nav at the top?
-      const showTop = rect.top < NAV_H && rect.bottom > NAV_H
-      // Is any content currently overlapping the player at the bottom?
-      const showBottom = rect.bottom > vh - PLAYER_H && rect.top < vh - PLAYER_H
-
-      let mask = 'none'
-
-      if (showTop || showBottom) {
-        // Convert viewport intersection points to container-relative px coordinates
-        const topFadeStart = showTop ? Math.max(0, NAV_H - rect.top) : 0
-        const topFadeEnd = showTop ? topFadeStart + FADE : 0
-
-        const bottomFadeEnd = showBottom ? (vh - PLAYER_H) - rect.top : rect.height
-        const bottomFadeStart = showBottom
-          ? Math.max(topFadeEnd, bottomFadeEnd - FADE)
-          : rect.height
-
-        if (showTop && showBottom) {
-          mask = `linear-gradient(to bottom, transparent ${topFadeStart}px, black ${topFadeEnd}px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px)`
-        } else if (showTop) {
-          mask = `linear-gradient(to bottom, transparent ${topFadeStart}px, black ${topFadeEnd}px)`
-        } else {
-          mask = `linear-gradient(to bottom, black 0, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px)`
-        }
-      }
-
-      el.style.maskImage = mask
-      el.style.webkitMaskImage = mask
-    }
-
-    const scrollEl = mainScrollRef.current
-    if (scrollEl) {
-      scrollEl.addEventListener('scroll', applyMask, { passive: true })
-    }
-    window.addEventListener('scroll', applyMask, { passive: true })
-    window.addEventListener('resize', applyMask, { passive: true })
-    applyMask()
-
-    return () => {
-      if (scrollEl) {
-        scrollEl.removeEventListener('scroll', applyMask)
-      }
-      window.removeEventListener('scroll', applyMask)
-      window.removeEventListener('resize', applyMask)
-    }
-  }, [currentView, playingTrack])
 
   // handleSkipNext, handleSkipPrev, handleQueueDragDrop, handleRemoveFromAutoplay
   // are declared below filteredProjects/displayedDiscographyTracks/autoplayTracks
@@ -328,7 +266,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       } else {
         setSelectedPlatform('')
       }
-    } catch {}
+    } catch { }
   }, [availablePlatformIds])
 
   // Preload top project cover artwork and initial audio chunk during idle browser time
@@ -351,7 +289,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     try {
       setCookie('preferred_music_platform', platformId)
       localStorage.setItem('preferred_music_platform', platformId)
-    } catch {}
+    } catch { }
   }
 
   const handleToggleType = (type) => {
@@ -616,6 +554,103 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
     return result
   }, [projects, activeTypes, searchQuery, sortOrder])
+
+  // Dynamically apply a CSS mask-image to the projects container that fades
+  // project cards only where they actually overlap with the sticky nav or fixed player.
+  // Uses direct DOM style mutation (not React state) to avoid re-renders on every scroll tick.
+  const applyMask = useCallback(() => {
+    const el = projectsContainerRef.current
+    const scrollEl = mainScrollRef.current
+    if (!el || !scrollEl) return
+
+    const rect = el.getBoundingClientRect()
+    const scrollRect = scrollEl.getBoundingClientRect()
+    const containerTop = scrollRect.top
+    const containerHeight = scrollRect.height
+
+    // Approximate bar heights in px. Nav is only present on the main discography view.
+    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : 88
+    // Player bar total height including container padding from bottom of viewport
+    const PLAYER_H = 120
+    const FADE = 50 // px: length of the fade gradient transition
+
+    // 1. Top fade: Trigger once content scrolls past the sticky nav (or top of viewport)
+    const navBottomY = containerTop + NAV_H
+    const isNavSticky = rect.top <= navBottomY + 4
+    const showTop = rect.top < navBottomY && rect.bottom > navBottomY
+
+    // 2. Sync jump-to-top button in navbar with the navbar's sticky state
+    setShowScrollTop((prev) => (prev !== isNavSticky ? isNavSticky : prev))
+
+    // 3. Bottom fade: Only active when audio player is open and content overlaps player area
+    const playerTopY = containerTop + containerHeight - PLAYER_H
+    const showBottom = Boolean(playingTrack) && rect.bottom > playerTopY && rect.top < playerTopY
+
+    let mask = 'none'
+
+    if (showTop || showBottom) {
+      // Convert viewport intersection points to container-relative px coordinates
+      const topFadeStart = showTop ? Math.max(0, navBottomY - rect.top) : 0
+      const topFadeEnd = showTop ? topFadeStart + FADE : 0
+
+      const bottomFadeEnd = showBottom
+        ? Math.min(rect.height, Math.max(topFadeEnd, playerTopY - rect.top))
+        : rect.height
+      const bottomFadeStart = showBottom
+        ? Math.max(topFadeEnd, bottomFadeEnd - FADE)
+        : rect.height
+
+      if (showTop && showBottom && bottomFadeStart > topFadeEnd) {
+        mask = `linear-gradient(to bottom, transparent 0px, transparent ${topFadeStart}px, black ${topFadeEnd}px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px, transparent 100%)`
+      } else if (showTop) {
+        mask = `linear-gradient(to bottom, transparent 0px, transparent ${topFadeStart}px, black ${topFadeEnd}px, black 100%)`
+      } else if (showBottom) {
+        mask = `linear-gradient(to bottom, black 0px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px, transparent 100%)`
+      }
+    }
+
+    el.style.maskImage = mask
+    el.style.webkitMaskImage = mask
+  }, [currentView, playingTrack])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    const scrollEl = mainScrollRef.current
+    const projectsEl = projectsContainerRef.current
+
+    const handleScroll = () => {
+      applyMask()
+    }
+
+    if (scrollEl) {
+      scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll, { passive: true })
+
+    let resizeObserver = null
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        handleScroll()
+      })
+      if (projectsEl) resizeObserver.observe(projectsEl)
+      if (scrollEl) resizeObserver.observe(scrollEl)
+    }
+
+    handleScroll()
+
+    return () => {
+      if (scrollEl) {
+        scrollEl.removeEventListener('scroll', handleScroll)
+      }
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
+    }
+  }, [mounted, applyMask, filteredProjects, selectedProject, currentView, playingTrack])
 
   // All Playable Tracks in Currently Presented Top-to-Bottom Order (factors in single project view, filters, search, & sorting)
   const displayedDiscographyTracks = useMemo(() => {
@@ -1053,366 +1088,368 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
           }}
         >
-        {/* Floating Dev & Admin Alert Cards (Top Left) */}
-        {(data?.adminAccess !== false || Boolean(data?.devAccess)) && (
-          <Stack
-            spacing={1}
-            sx={{
-              position: 'fixed',
-              top: { xs: 12, sm: 16 },
-              left: { xs: 12, sm: 16 },
-              zIndex: 3000,
-              pointerEvents: 'none',
-              maxWidth: { xs: 'calc(100vw - 24px)', sm: 380 },
-            }}
-          >
-            {data?.adminAccess !== false && (
-              <Paper
-                elevation={6}
-                sx={{
-                  pointerEvents: 'auto',
-                  borderRadius: 3,
-                  px: { xs: 1, sm: 2 },
-                  py: { xs: 0.75, sm: 1.25 },
-                  bgcolor: '#b71c1c',
-                  color: '#ffffff',
-                  backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: { xs: 0.75, sm: 1.5 },
-                  animation: 'pulseAdminAlert 2s infinite ease-in-out',
-                  '@keyframes pulseAdminAlert': {
-                    '0%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
-                    '50%': { backgroundColor: '#d32f2f', boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)' },
-                    '100%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
-                  },
-                }}
-              >
-                <LockOpenIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }} />
-                <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
-                    Admin Access Open
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
-                    Set adminAccess: false for prod
-                  </Typography>
-                </Box>
-                <Tooltip title="Open Admin Portal" arrow>
-                  <IconButton
-                    component="a"
-                    href="/_sys/_admin"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    size="small"
-                    sx={{
-                      color: '#ffffff',
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      p: { xs: 0.5, sm: 0.75 },
-                      ml: 'auto',
-                      flexShrink: 0,
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.35)',
-                        transform: 'scale(1.08)',
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <OpenInNewRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Paper>
-            )}
-
-            {Boolean(data?.devAccess) && (
-              <Paper
-                elevation={6}
-                sx={{
-                  pointerEvents: 'auto',
-                  borderRadius: 3,
-                  px: { xs: 1, sm: 2 },
-                  py: { xs: 0.75, sm: 1.25 },
-                  bgcolor: '#e65100',
-                  color: '#ffffff',
-                  backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  boxShadow: '0 8px 24px rgba(230, 81, 0, 0.45)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: { xs: 0.75, sm: 1.5 },
-                  animation: 'pulseDevAlert 2s infinite ease-in-out',
-                  '@keyframes pulseDevAlert': {
-                    '0%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
-                    '50%': { backgroundColor: '#f57c00', boxShadow: '0 10px 28px rgba(245, 124, 0, 0.65)' },
-                    '100%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
-                  },
-                }}
-              >
-                {/* Clickable Bug Icon which opens the Dev Data Health Report Drawer */}
-                <Tooltip title="View Dev Data Health Report" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={() => setDevDrawerOpen(true)}
-                    sx={{
-                      color: '#ffffff',
-                      p: 0.5,
-                      flexShrink: 0,
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                        transform: 'scale(1.1)',
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <Badge
-                      badgeContent={health?.issues?.length || null}
-                      color="error"
+          {/* Floating Dev & Admin Alert Cards (Top Left) */}
+          {(data?.adminAccess !== false || Boolean(data?.devAccess)) && (
+            <Stack
+              spacing={1}
+              sx={{
+                position: 'fixed',
+                top: { xs: 12, sm: 16 },
+                left: { xs: 12, sm: 16 },
+                zIndex: 3000,
+                pointerEvents: 'none',
+                maxWidth: { xs: 'calc(100vw - 24px)', sm: 380 },
+              }}
+            >
+              {data?.adminAccess !== false && (
+                <Paper
+                  elevation={6}
+                  sx={{
+                    pointerEvents: 'auto',
+                    borderRadius: 3,
+                    px: { xs: 1, sm: 2 },
+                    py: { xs: 0.75, sm: 1.25 },
+                    bgcolor: '#b71c1c',
+                    color: '#ffffff',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: { xs: 0.75, sm: 1.5 },
+                    animation: 'pulseAdminAlert 2s infinite ease-in-out',
+                    '@keyframes pulseAdminAlert': {
+                      '0%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
+                      '50%': { backgroundColor: '#d32f2f', boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)' },
+                      '100%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
+                    },
+                  }}
+                >
+                  <LockOpenIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }} />
+                  <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
+                      Admin Access Open
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
+                      Set adminAccess: false for prod
+                    </Typography>
+                  </Box>
+                  <Tooltip title="Open Admin Portal" arrow>
+                    <IconButton
+                      component="a"
+                      href="/_sys/_admin"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="small"
                       sx={{
-                        '& .MuiBadge-badge': {
-                          fontSize: '0.65rem',
-                          height: 16,
-                          minWidth: 16,
-                          padding: '0 4px',
+                        color: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        p: { xs: 0.5, sm: 0.75 },
+                        ml: 'auto',
+                        flexShrink: 0,
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                          transform: 'scale(1.08)',
                         },
+                        transition: 'all 0.2s ease',
                       }}
                     >
-                      <BugReportIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff' }} />
-                    </Badge>
-                  </IconButton>
-                </Tooltip>
+                      <OpenInNewRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
+              )}
 
-                <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
-                    Dev Mode Enabled
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
-                    Set devAccess: false for prod
-                  </Typography>
-                </Box>
-
-                <Tooltip title="Open Dev Tool" arrow>
-                  <IconButton
-                    component="a"
-                    href="/_sys/_dev"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    size="small"
-                    sx={{
-                      color: '#ffffff',
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      p: { xs: 0.5, sm: 0.75 },
-                      ml: 'auto',
-                      flexShrink: 0,
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.35)',
-                        transform: 'scale(1.08)',
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <OpenInNewRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Paper>
-            )}
-          </Stack>
-        )}
-        {/* Dev Data Health Drawer (Triggered by clicking bug icon) */}
-        {Boolean(data?.devAccess) && (
-          <DevHealthDrawer
-            health={health}
-            open={devDrawerOpen}
-            onClose={() => setDevDrawerOpen(false)}
-          />
-        )}
-        {/* Top Screen-Height Hero Section (Only on main discography view) */}
-        {currentView !== 'SINGLE_PROJECT' && (
-          <ArtistHero
-            artist={artist}
-            onLogoClick={undefined}
-            ambientImage={ambientImage}
-          />
-        )}
-
-        {/* Contained Floating Sticky Nav Bar (Only on main discography view) */}
-        {currentView !== 'SINGLE_PROJECT' && (
-          <FloatingNavBar
-            activeTypes={activeTypes}
-            onToggleType={handleToggleType}
-            onResetTypes={handleResetTypes}
-            sortOrder={sortOrder}
-            onSortChange={setSortOrder}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            darkMode={darkMode}
-            onToggleTheme={handleToggleTheme}
-            selectedPlatform={selectedPlatform}
-            onOpenPlatformModal={() => setPlatformModalOpen(true)}
-            hasAvailablePlatforms={availablePlatformIds.length > 0}
-            audioQuality={audioQuality}
-            onOpenQualityModal={() => setQualityModalOpen(true)}
-          />
-        )}
-
-        {/* Main Content Projects Container */}
-        <Container
-          ref={projectsContainerRef}
-          maxWidth="md"
-          sx={{
-            px: { xs: 2, sm: 3 },
-            mt: { xs: 2, sm: 3 },
-            flexGrow: 1,
-          }}
-        >
-          {currentView === 'SINGLE_PROJECT' && selectedProject ? (
-            <Stack spacing={3}>
-              {/* Single Project Page Header: Compact Artist Header */}
-              <CompactArtistHeader
-                artist={artist}
-                onNavigateHome={navigateToAllProjects}
-                darkMode={darkMode}
-                onToggleTheme={handleToggleTheme}
-                selectedPlatform={selectedPlatform}
-                onOpenPlatformModal={() => setPlatformModalOpen(true)}
-                ambientImage={ambientImage}
-                hasAvailablePlatforms={availablePlatformIds.length > 0}
-              />
-
-              <ProjectCard
-                project={selectedProject}
-                artistName={artist.name}
-                onSelectProject={navigateToProject}
-                isSingleView={true}
-                onPlayTrack={handlePlayTrack}
-                onAddToQueue={handleAddToQueue}
-                onShowToast={showToast}
-                playingTrack={playingTrack}
-                isPlaying={isPlaying}
-                highlightedTrackSlug={highlightedTrackSlug}
-                onSelectTrackRow={(track) => selectTrackOnProjectPage(selectedProject, track)}
-                onSelectTrackTitle={(track) => selectTrackOnProjectPage(selectedProject, track)}
-                selectedPlatform={selectedPlatform}
-              />
-            </Stack>
-          ) : (
-            <Stack spacing={4}>
-              {filteredProjects.length === 0 ? (
-                <Box sx={{ py: 10, textAlign: 'center' }}>
-                  <SubduedText
-                    value=""
-                    placeholder="No projects match your selected filter or search query."
-                    variant="h6"
-                  />
-                </Box>
-              ) : (
-                filteredProjects.map((proj, idx) => {
-                  const pSlug = slugify(proj.name || '')
-                  return (
-                    <Box
-                      key={proj.id || pSlug || idx}
-                      id={`project-${pSlug}`}
-                      sx={{ scrollMarginTop: { xs: 80, sm: 100 } }}
+              {Boolean(data?.devAccess) && (
+                <Paper
+                  elevation={6}
+                  sx={{
+                    pointerEvents: 'auto',
+                    borderRadius: 3,
+                    px: { xs: 1, sm: 2 },
+                    py: { xs: 0.75, sm: 1.25 },
+                    bgcolor: '#e65100',
+                    color: '#ffffff',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    boxShadow: '0 8px 24px rgba(230, 81, 0, 0.45)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: { xs: 0.75, sm: 1.5 },
+                    animation: 'pulseDevAlert 2s infinite ease-in-out',
+                    '@keyframes pulseDevAlert': {
+                      '0%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
+                      '50%': { backgroundColor: '#f57c00', boxShadow: '0 10px 28px rgba(245, 124, 0, 0.65)' },
+                      '100%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
+                    },
+                  }}
+                >
+                  {/* Clickable Bug Icon which opens the Dev Data Health Report Drawer */}
+                  <Tooltip title="View Dev Data Health Report" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => setDevDrawerOpen(true)}
+                      sx={{
+                        color: '#ffffff',
+                        p: 0.5,
+                        flexShrink: 0,
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                          transform: 'scale(1.1)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
                     >
-                      <ProjectCard
-                        project={proj}
-                        artistName={artist.name}
-                        onSelectProject={navigateToProject}
-                        isSingleView={false}
-                        onPlayTrack={handlePlayTrack}
-                        onAddToQueue={handleAddToQueue}
-                        onShowToast={showToast}
-                        playingTrack={playingTrack}
-                        isPlaying={isPlaying}
-                        highlightedTrackSlug={highlightedTrackSlug}
-                        onSelectTrackRow={null}
-                        onSelectTrackTitle={(track) => navigateToTrack(proj, track)}
-                        selectedPlatform={selectedPlatform}
-                      />
-                    </Box>
-                  )
-                })
+                      <Badge
+                        badgeContent={health?.issues?.length || null}
+                        color="error"
+                        sx={{
+                          '& .MuiBadge-badge': {
+                            fontSize: '0.65rem',
+                            height: 16,
+                            minWidth: 16,
+                            padding: '0 4px',
+                          },
+                        }}
+                      >
+                        <BugReportIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff' }} />
+                      </Badge>
+                    </IconButton>
+                  </Tooltip>
+
+                  <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
+                      Dev Mode Enabled
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
+                      Set devAccess: false for prod
+                    </Typography>
+                  </Box>
+
+                  <Tooltip title="Open Dev Tool" arrow>
+                    <IconButton
+                      component="a"
+                      href="/_sys/_dev"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="small"
+                      sx={{
+                        color: '#ffffff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        p: { xs: 0.5, sm: 0.75 },
+                        ml: 'auto',
+                        flexShrink: 0,
+                        '&:hover': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                          transform: 'scale(1.08)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <OpenInNewRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Paper>
               )}
             </Stack>
           )}
-        </Container>
-      </Box>
+          {/* Dev Data Health Drawer (Triggered by clicking bug icon) */}
+          {Boolean(data?.devAccess) && (
+            <DevHealthDrawer
+              health={health}
+              open={devDrawerOpen}
+              onClose={() => setDevDrawerOpen(false)}
+            />
+          )}
+          {/* Top Screen-Height Hero Section (Only on main discography view) */}
+          {currentView !== 'SINGLE_PROJECT' && (
+            <ArtistHero
+              artist={artist}
+              onLogoClick={undefined}
+              ambientImage={ambientImage}
+            />
+          )}
 
-      {/* Preferred Platform Selector Modal */}
-      <PlatformSelectorModal
-        open={platformModalOpen}
-        onClose={() => setPlatformModalOpen(false)}
-        selectedPlatform={selectedPlatform}
-        onSelectPlatform={handleSelectPlatform}
-        availablePlatforms={availablePlatforms}
-      />
+          {/* Contained Floating Sticky Nav Bar (Only on main discography view) */}
+          {currentView !== 'SINGLE_PROJECT' && (
+            <FloatingNavBar
+              activeTypes={activeTypes}
+              onToggleType={handleToggleType}
+              onResetTypes={handleResetTypes}
+              sortOrder={sortOrder}
+              onSortChange={setSortOrder}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              darkMode={darkMode}
+              onToggleTheme={handleToggleTheme}
+              selectedPlatform={selectedPlatform}
+              onOpenPlatformModal={() => setPlatformModalOpen(true)}
+              hasAvailablePlatforms={availablePlatformIds.length > 0}
+              audioQuality={audioQuality}
+              onOpenQualityModal={() => setQualityModalOpen(true)}
+              showScrollTop={showScrollTop}
+              onScrollToTop={scrollToTop}
+            />
+          )}
 
-      {/* Audio Playback Quality Selector Modal */}
-      <AudioQualityModal
-        open={qualityModalOpen}
-        onClose={() => setQualityModalOpen(false)}
-        activeQuality={audioQuality}
-        onSelectQuality={handleSelectQuality}
-      />
+          {/* Main Content Projects Container */}
+          <Container
+            ref={projectsContainerRef}
+            maxWidth="md"
+            sx={{
+              px: { xs: 2, sm: 3 },
+              mt: { xs: 2, sm: 3 },
+              flexGrow: 1,
+            }}
+          >
+            {currentView === 'SINGLE_PROJECT' && selectedProject ? (
+              <Stack spacing={3}>
+                {/* Single Project Page Header: Compact Artist Header */}
+                <CompactArtistHeader
+                  artist={artist}
+                  onNavigateHome={navigateToAllProjects}
+                  darkMode={darkMode}
+                  onToggleTheme={handleToggleTheme}
+                  selectedPlatform={selectedPlatform}
+                  onOpenPlatformModal={() => setPlatformModalOpen(true)}
+                  ambientImage={ambientImage}
+                  hasAvailablePlatforms={availablePlatformIds.length > 0}
+                />
 
-      {/* Contained Floating Audio Player Bar */}
-      <AudioPlayerBar
-        playingTrack={playingTrack}
-        isPlaying={isPlaying}
-        restartCount={restartCount}
-        audioQuality={audioQuality}
-        onOpenQualityModal={() => setQualityModalOpen(true)}
-        onTogglePlay={() => setIsPlaying(prev => !prev)}
-        onClosePlayer={() => {
-          setPlayingTrack(null)
-          setIsPlaying(false)
-        }}
-        queueCount={manualQueue.length}
-        manualQueue={manualQueue}
-        autoplayTracks={autoplayTracks}
-        onQueueDragDrop={handleQueueDragDrop}
-        onRemoveFromManualQueue={(index) => {
-          setManualQueue(prev => prev.filter((_, i) => i !== index))
-        }}
-        onRemoveFromAutoplay={handleRemoveFromAutoplay}
-        onPlayQueuedTrack={(item, index, isManual = true) => {
-          if (isManual) {
+                <ProjectCard
+                  project={selectedProject}
+                  artistName={artist.name}
+                  onSelectProject={navigateToProject}
+                  isSingleView={true}
+                  onPlayTrack={handlePlayTrack}
+                  onAddToQueue={handleAddToQueue}
+                  onShowToast={showToast}
+                  playingTrack={playingTrack}
+                  isPlaying={isPlaying}
+                  highlightedTrackSlug={highlightedTrackSlug}
+                  onSelectTrackRow={(track) => selectTrackOnProjectPage(selectedProject, track)}
+                  onSelectTrackTitle={(track) => selectTrackOnProjectPage(selectedProject, track)}
+                  selectedPlatform={selectedPlatform}
+                />
+              </Stack>
+            ) : (
+              <Stack spacing={4}>
+                {filteredProjects.length === 0 ? (
+                  <Box sx={{ py: 10, textAlign: 'center' }}>
+                    <SubduedText
+                      value=""
+                      placeholder="No projects match your selected filter or search query."
+                      variant="h6"
+                    />
+                  </Box>
+                ) : (
+                  filteredProjects.map((proj, idx) => {
+                    const pSlug = slugify(proj.name || '')
+                    return (
+                      <Box
+                        key={proj.id || pSlug || idx}
+                        id={`project-${pSlug}`}
+                        sx={{ scrollMarginTop: { xs: 80, sm: 100 } }}
+                      >
+                        <ProjectCard
+                          project={proj}
+                          artistName={artist.name}
+                          onSelectProject={navigateToProject}
+                          isSingleView={false}
+                          onPlayTrack={handlePlayTrack}
+                          onAddToQueue={handleAddToQueue}
+                          onShowToast={showToast}
+                          playingTrack={playingTrack}
+                          isPlaying={isPlaying}
+                          highlightedTrackSlug={highlightedTrackSlug}
+                          onSelectTrackRow={null}
+                          onSelectTrackTitle={(track) => navigateToTrack(proj, track)}
+                          selectedPlatform={selectedPlatform}
+                        />
+                      </Box>
+                    )
+                  })
+                )}
+              </Stack>
+            )}
+          </Container>
+        </Box>
+
+        {/* Preferred Platform Selector Modal */}
+        <PlatformSelectorModal
+          open={platformModalOpen}
+          onClose={() => setPlatformModalOpen(false)}
+          selectedPlatform={selectedPlatform}
+          onSelectPlatform={handleSelectPlatform}
+          availablePlatforms={availablePlatforms}
+        />
+
+        {/* Audio Playback Quality Selector Modal */}
+        <AudioQualityModal
+          open={qualityModalOpen}
+          onClose={() => setQualityModalOpen(false)}
+          activeQuality={audioQuality}
+          onSelectQuality={handleSelectQuality}
+        />
+
+        {/* Contained Floating Audio Player Bar */}
+        <AudioPlayerBar
+          playingTrack={playingTrack}
+          isPlaying={isPlaying}
+          restartCount={restartCount}
+          audioQuality={audioQuality}
+          onOpenQualityModal={() => setQualityModalOpen(true)}
+          onTogglePlay={() => setIsPlaying(prev => !prev)}
+          onClosePlayer={() => {
+            setPlayingTrack(null)
+            setIsPlaying(false)
+          }}
+          queueCount={manualQueue.length}
+          manualQueue={manualQueue}
+          autoplayTracks={autoplayTracks}
+          onQueueDragDrop={handleQueueDragDrop}
+          onRemoveFromManualQueue={(index) => {
             setManualQueue(prev => prev.filter((_, i) => i !== index))
-          } else {
-            setAutoplayTracks(prev => prev.slice(index + 1))
-          }
-          setPlayingTrack(item.track)
-          setIsPlaying(true)
-        }}
-        onSkipNext={handleSkipNext}
-        onSkipPrev={handleSkipPrev}
-        onShowToast={showToast}
-        onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
-        isShuffle={isShuffle}
-        onToggleShuffle={handleToggleShuffle}
-        repeatMode={repeatMode}
-        onCycleRepeatMode={() => {
-          setRepeatMode(prev => {
-            if (prev === 'off') return 'all'
-            if (prev === 'all') return 'one'
-            return 'off'
-          })
-        }}
-      />
+          }}
+          onRemoveFromAutoplay={handleRemoveFromAutoplay}
+          onPlayQueuedTrack={(item, index, isManual = true) => {
+            if (isManual) {
+              setManualQueue(prev => prev.filter((_, i) => i !== index))
+            } else {
+              setAutoplayTracks(prev => prev.slice(index + 1))
+            }
+            setPlayingTrack(item.track)
+            setIsPlaying(true)
+          }}
+          onSkipNext={handleSkipNext}
+          onSkipPrev={handleSkipPrev}
+          onShowToast={showToast}
+          onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
+          isShuffle={isShuffle}
+          onToggleShuffle={handleToggleShuffle}
+          repeatMode={repeatMode}
+          onCycleRepeatMode={() => {
+            setRepeatMode(prev => {
+              if (prev === 'off') return 'all'
+              if (prev === 'all') return 'one'
+              return 'off'
+            })
+          }}
+        />
 
-      {/* Feedback Snackbar / Toast */}
-      <Snackbar
-        open={toastOpen}
-        autoHideDuration={3000}
-        onClose={() => setToastOpen(false)}
-        message={toastMessage}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{ mb: playingTrack ? 10 : 2 }}
-      />
+        {/* Feedback Snackbar / Toast */}
+        <Snackbar
+          open={toastOpen}
+          autoHideDuration={3000}
+          onClose={() => setToastOpen(false)}
+          message={toastMessage}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ mb: playingTrack ? 10 : 2 }}
+        />
 
-      {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
-      {data?.devAccess !== false && <DevHealthDrawer health={health} />}
-    </Box>
+        {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
+        {data?.devAccess !== false && <DevHealthDrawer health={health} />}
+      </Box>
     </ThemeProvider>
   )
 }

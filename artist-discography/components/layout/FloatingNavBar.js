@@ -129,6 +129,8 @@ export default function FloatingNavBar({
   hasAvailablePlatforms = true,
   audioQuality = '320k',
   onOpenQualityModal,
+  showScrollTop = false,
+  onScrollToTop,
 }) {
   const theme = useTheme()
   const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
@@ -142,23 +144,14 @@ export default function FloatingNavBar({
   const sortDrag = useDragScroll()
   const settingsDrag = useDragScroll()
 
-  // Track scroll position to conditionally show jump-to-top button
-  const [showScrollTop, setShowScrollTop] = useState(false)
-
+  // Reset scroll position to beginning when Top button appears
+  const prevShowScrollTopRef = useRef(showScrollTop)
   useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300)
+    if (showScrollTop && !prevShowScrollTopRef.current && mainDrag.ref.current) {
+      mainDrag.ref.current.scrollLeft = 0
     }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
-
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const handleScrollToTop = useCallback(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [])
+    prevShowScrollTopRef.current = showScrollTop
+  }, [showScrollTop, mainDrag.ref])
 
   // Clear timer helper
   const clearInactivityTimer = useCallback(() => {
@@ -313,7 +306,9 @@ export default function FloatingNavBar({
                 size="medium"
                 onClick={() => {
                   if (mainDrag.hasDraggedRef.current) return
-                  handleScrollToTop()
+                  if (onScrollToTop) {
+                    onScrollToTop()
+                  }
                 }}
                 startIcon={<ArrowUpwardRoundedIcon />}
                 sx={{

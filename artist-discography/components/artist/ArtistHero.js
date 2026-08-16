@@ -84,12 +84,13 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
       sx={{
         textAlign: 'center',
         px: { xs: 2, sm: 3 },
-        py: { xs: 6, sm: 10, md: 14 },
-        minHeight: { xs: '65vh', sm: '75vh' },
+        py: { xs: 5, sm: 8, md: 10 },
+        minHeight: { xs: 'max(460px, 60dvh)', sm: 'max(540px, 70dvh)', md: 'max(600px, 75dvh)' },
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
+        flexShrink: 0,
       }}
     >
       <HeaderLogo onClick={onLogoClick} ambientImage={coverSrc} />
@@ -105,6 +106,7 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
           fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
           mb: 2,
           fontFamily: 'Roboto, sans-serif',
+          flexShrink: 0,
           ...primaryTextSx,
         }}
       />
@@ -118,6 +120,7 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
           mx: 'auto',
           fontSize: { xs: '1.05rem', sm: '1.2rem' },
           lineHeight: 1.7,
+          flexShrink: 0,
           ...secondaryTextSx,
         }}
       />
@@ -127,7 +130,8 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
           sx={{
             width: '100%',
             mx: 'auto',
-            mt: { xs: 4, sm: 5 },
+            mt: { xs: 3.5, sm: 4.5, md: 5 },
+            flexShrink: 0,
           }}
         >
           <Box
@@ -137,6 +141,7 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
               justifyContent: 'center',
               alignItems: 'center',
               gap: { xs: 2, sm: 3 },
+              flexShrink: 0,
             }}
           >
             {activeLinks.map(({ key, url, icon }) => (
@@ -153,6 +158,7 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
                   borderRadius: { xs: 2.5, sm: 3 },
                   transition: 'transform 0.25s ease, opacity 0.25s ease',
                   textDecoration: 'none',
+                  flexShrink: 0,
                   '&:hover': {
                     transform: 'scale(1.12)',
                   },
@@ -168,10 +174,13 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
                   sx={{
                     width: { xs: 54, sm: 64, md: 72 },
                     height: { xs: 54, sm: 64, md: 72 },
+                    minWidth: { xs: 54, sm: 64, md: 72 },
+                    minHeight: { xs: 54, sm: 64, md: 72 },
                     objectFit: 'contain',
                     borderRadius: { xs: 2.5, sm: 3 },
                     boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
                     display: 'block',
+                    flexShrink: 0,
                   }}
                 />
               </Box>
