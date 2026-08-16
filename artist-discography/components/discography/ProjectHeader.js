@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Box, Stack, Typography, IconButton, Chip, Dialog, Tooltip, Skeleton, useTheme } from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
@@ -66,12 +66,56 @@ export default function ProjectHeader({
     }
   }
 
-  const modalHighResUrl = cover ? (cover.includes('?') ? `${cover}&w=1600&q=90&fmt=webp` : `${cover}?w=1600&q=90&fmt=webp`) : ''
+  const isApiMedia = typeof cover === 'string' && cover.startsWith('/api/media')
+  const previewUrl = isApiMedia
+    ? (cover.includes('?') ? `${cover}&w=600&q=85&fmt=webp` : `${cover}?w=600&q=85&fmt=webp`)
+    : (cover || '')
+  const masterHighResUrl = isApiMedia
+    ? (cover.includes('?') ? `${cover}&fmt=original` : `${cover}?fmt=original`)
+    : (cover || '')
+
+  const [modalImgSrc, setModalImgSrc] = useState('')
+  const [isMasterLoaded, setIsMasterLoaded] = useState(false)
+
+  // Asynchronously upgrade to the highest quality original media when the modal opens
+  useEffect(() => {
+    if (!artModalOpen || !cover) return
+
+    if (isHighResCached(masterHighResUrl)) {
+      setModalImgSrc(masterHighResUrl)
+      setIsMasterLoaded(true)
+      return
+    }
+
+    // Immediately show the already cached preview thumbnail to prevent blank screens
+    setModalImgSrc(previewUrl || cover)
+    setIsMasterLoaded(false)
+
+    // Load full uncompressed master in background
+    let isCurrent = true
+    const masterImg = new Image()
+    masterImg.src = masterHighResUrl
+    masterImg.onload = () => {
+      if (isCurrent) {
+        markHighResCached(masterHighResUrl)
+        setModalImgSrc(masterHighResUrl)
+        setIsMasterLoaded(true)
+      }
+    }
+    masterImg.onerror = () => {
+      if (isCurrent) {
+        setIsMasterLoaded(true)
+      }
+    }
+
+    return () => {
+      isCurrent = false
+    }
+  }, [artModalOpen, cover, masterHighResUrl, previewUrl])
 
   const handleCoverClick = (e) => {
     if (cover) {
       e.stopPropagation()
-      setIsModalArtLoaded(isHighResCached(modalHighResUrl))
       setArtModalOpen(true)
     }
   }
@@ -379,43 +423,26 @@ export default function ProjectHeader({
               <CloseRoundedIcon />
             </IconButton>
 
-            {/* Skeleton loading placeholder while full-res image downloads */}
-            {!isModalArtLoaded && (
-              <Skeleton
-                variant="rounded"
-                animation="wave"
+            {modalImgSrc && (
+              <Box
+                component="img"
+                src={modalImgSrc}
+                alt={name || 'Project Cover Art'}
+                draggable={false}
                 sx={{
-                  width: { xs: '80vw', sm: 420, md: 540 },
-                  height: { xs: '80vw', sm: 420, md: 540 },
                   maxWidth: '85vw',
                   maxHeight: '82vh',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
                   borderRadius: 4,
-                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 32px 64px rgba(0,0,0,0.75)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  display: 'block',
+                  transition: 'opacity 0.25s ease',
                 }}
               />
             )}
-
-            <Box
-              component="img"
-              src={modalHighResUrl || cover}
-              alt={name || 'Project Cover Art'}
-              draggable={false}
-              onLoad={() => {
-                setIsModalArtLoaded(true)
-                if (modalHighResUrl) markHighResCached(modalHighResUrl)
-              }}
-              sx={{
-                maxWidth: '85vw',
-                maxHeight: '82vh',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain',
-                borderRadius: 4,
-                boxShadow: '0 32px 64px rgba(0,0,0,0.75)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                display: isModalArtLoaded ? 'block' : 'none',
-              }}
-            />
           </Box>
         </Dialog>
       )}

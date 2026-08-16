@@ -104,7 +104,7 @@ export default function TrackRow({
     if (isTouch) {
       if (track?.hasAudio) {
         if (onPlayTrack) {
-          onPlayTrack(track, project, { restart: true, restartIfSame: true })
+          onPlayTrack(track, project, { touchMode: true })
         }
       } else {
         if (onSelectTrackTitle) {
@@ -126,7 +126,7 @@ export default function TrackRow({
     if (isTouch) {
       if (track?.hasAudio) {
         if (onPlayTrack) {
-          onPlayTrack(track, project, { restart: true, restartIfSame: true })
+          onPlayTrack(track, project, { touchMode: true })
         }
       } else {
         if (onSelectTrackRow) {
@@ -181,7 +181,7 @@ export default function TrackRow({
               onClick={(e) => {
                 e.stopPropagation()
                 if (isTouch) {
-                  if (onPlayTrack) onPlayTrack(track, project, { restart: true, restartIfSame: true })
+                  if (onPlayTrack) onPlayTrack(track, project, { touchMode: true })
                 } else {
                   if (onPlayTrack) onPlayTrack(track, project)
                 }
@@ -205,7 +205,11 @@ export default function TrackRow({
               color={isPlayingThisTrack ? "primary" : "default"}
               onClick={(e) => {
                 e.stopPropagation()
-                if (onPlayTrack) onPlayTrack(track, project, { restart: true, restartIfSame: true })
+                if (isTouch) {
+                  if (onPlayTrack) onPlayTrack(track, project, { touchMode: true })
+                } else {
+                  if (onPlayTrack) onPlayTrack(track, project)
+                }
               }}
               sx={{
                 p: 0.85,

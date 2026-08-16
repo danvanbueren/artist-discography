@@ -175,12 +175,19 @@ export async function POST(request) {
 
     // Process Tracks
     const formattedTracks = []
+    const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif']
+
     for (let i = 0; i < parsedTracks.length; i++) {
       const track = parsedTracks[i] ?? {}
       const trackName = String(track.name || '').trim()
       const rawTrackArtist = String(track.artist || '').trim()
       const trackArtist = rawTrackArtist || artist || primaryArtistName
       const trackSlug = slugify(trackName)
+      const rawOriginalName = String(track.originalName || '').trim()
+      const origSlug = rawOriginalName ? slugify(rawOriginalName) : null
+      const oldProjTrackName = oldProject?.tracks?.[i]?.name
+      const fallbackOrigSlug = oldProjTrackName ? slugify(oldProjTrackName) : null
 
       // Track the filename actually written to disk for this track (used for response + orphan cleanup)
       let writtenAudioFilename = null
@@ -188,18 +195,61 @@ export async function POST(request) {
 
       if (audioFile && typeof audioFile === 'object' && typeof audioFile.arrayBuffer === 'function' && audioFile.size > 0) {
         const origExt = path.extname(audioFile.name || '').toLowerCase()
-        const ext = origExt && ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm'].includes(origExt) ? origExt : '.mp3'
+        const ext = origExt && audioExtensions.includes(origExt) ? origExt : '.mp3'
         const audioPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
         const buffer = Buffer.from(await audioFile.arrayBuffer())
         fs.writeFileSync(audioPath, buffer)
         writtenAudioFilename = `${trackSlug}${ext}`
       } else {
-        // No new file uploaded — check if an existing audio file matches this track slug
-        const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
+        // 1. Check if an existing audio file matches this track slug
         for (const ext of audioExtensions) {
           if (fs.existsSync(path.join(targetProjectDir, `${trackSlug}${ext}`))) {
             writtenAudioFilename = `${trackSlug}${ext}`
             break
+          }
+        }
+
+        // 2. If no new file uploaded and not found under current slug, check if renamed from previous slug
+        if (!writtenAudioFilename && trackSlug) {
+          const candidateOldSlugs = [origSlug, fallbackOrigSlug].filter(
+            (s) => s && s !== trackSlug
+          )
+          for (const oldCandidateSlug of candidateOldSlugs) {
+            for (const ext of audioExtensions) {
+              const oldAudioPath = path.join(targetProjectDir, `${oldCandidateSlug}${ext}`)
+              if (fs.existsSync(oldAudioPath)) {
+                const newAudioPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
+                try {
+                  fs.renameSync(oldAudioPath, newAudioPath)
+                  writtenAudioFilename = `${trackSlug}${ext}`
+                } catch (renameErr) {
+                  console.error(`Failed to rename audio file from ${oldCandidateSlug}${ext} to ${trackSlug}${ext}:`, renameErr)
+                }
+                break
+              }
+            }
+            if (writtenAudioFilename) break
+          }
+        }
+      }
+
+      // Also rename custom track cover art if it was named after old track slug
+      if (trackSlug) {
+        const candidateOldSlugs = [origSlug, fallbackOrigSlug].filter(
+          (s) => s && s !== trackSlug
+        )
+        for (const oldCandidateSlug of candidateOldSlugs) {
+          for (const imgExt of imageExtensions) {
+            const oldArtPath = path.join(targetProjectDir, `${oldCandidateSlug}-art${imgExt}`)
+            if (fs.existsSync(oldArtPath)) {
+              const newArtPath = path.join(targetProjectDir, `${trackSlug}-art${imgExt}`)
+              try {
+                fs.renameSync(oldArtPath, newArtPath)
+              } catch (artErr) {
+                console.error(`Failed to rename track art file:`, artErr)
+              }
+              break
+            }
           }
         }
       }

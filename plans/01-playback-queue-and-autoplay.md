@@ -13,6 +13,7 @@
 - [x] ✅ Click the dedicated Play button on a queued track; verify playback starts immediately for that track.
 - [x] ✅ Verify that single project view limits autoplay strictly to that project's tracks.
 - [x] ✅ Verify that main discography view autoplays across projects according to active sort settings.
+- [x] ✅ Verify that skipping backwards restores the previously playing song and remaining tracklist into the autoplay queue.
 
 ---
 
@@ -122,6 +123,7 @@ const handlePlayTrack = useCallback((track, proj) => {
 1. **Filtering/Sorting changes during playback**: Changing sort order or search query while a song is playing should update `displayedDiscographyTracks` without interrupting the currently playing song.
 2. **Missing audio streams**: Tracks without audio are excluded at the `displayedDiscographyTracks` creation level (`track.hasAudio && track.audioUrl`).
 3. **Empty queue state**: When the last track in `autoplayTracks` finishes, if `repeatMode` is `off`, playback pauses gracefully (`setIsPlaying(false)`).
+4. **Skipping backwards restoration**: When skipping backwards to a previous track in `handleSkipPrev`, the autoplay queue is reconstructed with `displayedDiscographyTracks.slice(prevIndex + 1)` so that the previously playing track (and subsequent tracks) are placed back into the autoplay queue in proper playback order.
 
 ---
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import {
   Box,
   Container,
@@ -115,6 +115,117 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import { SOCIAL_ICONS } from '../artist/ArtistHero'
 import { slugify } from '../../lib/slugs'
 
+const DIRTY_FIELD_SX = {
+  '& .MuiOutlinedInput-root': {
+    transition: 'all 0.3s ease',
+    '& fieldset': { borderColor: '#ff9800 !important', borderWidth: 2 },
+    boxShadow: '0 0 0 3px rgba(255, 152, 0, 0.4)',
+  },
+}
+
+const SAVED_FIELD_SX = {
+  '& .MuiOutlinedInput-root': {
+    transition: 'all 0.3s ease',
+    '& fieldset': { borderColor: '#4caf50 !important', borderWidth: 2 },
+    boxShadow: '0 0 0 3px rgba(76, 175, 80, 0.5)',
+  },
+}
+
+const DEFAULT_FIELD_SX = {
+  '& .MuiOutlinedInput-root': {
+    transition: 'all 0.3s ease',
+  },
+}
+
+function resolveOverrideArtist(artistValue, primaryArtist = '', projectArtist = '') {
+  if (!artistValue || typeof artistValue !== 'string') return ''
+  const trimmed = artistValue.trim()
+  if (!trimmed) return ''
+  const lower = trimmed.toLowerCase()
+  if (primaryArtist && lower === primaryArtist.trim().toLowerCase()) return ''
+  if (projectArtist && lower === projectArtist.trim().toLowerCase()) return ''
+  return trimmed
+}
+
+const AdminTextInput = memo(function AdminTextInput({
+  label,
+  value,
+  onChange,
+  onCommit,
+  placeholder,
+  required,
+  type,
+  size = 'small',
+  fullWidth = true,
+  multiline,
+  rows,
+  error,
+  helperText,
+  isDirty,
+  isSaved,
+  slotProps,
+  sx,
+  ...rest
+}) {
+  const [localValue, setLocalValue] = useState(value ?? '')
+  const isFocusedRef = useRef(false)
+
+  useEffect(() => {
+    if (!isFocusedRef.current) {
+      setLocalValue(value ?? '')
+    }
+  }, [value])
+
+  const handleChange = (e) => {
+    const next = e.target.value
+    setLocalValue(next)
+    onChange?.(next)
+  }
+
+  const handleBlur = () => {
+    isFocusedRef.current = false
+    if (onCommit) onCommit(localValue)
+  }
+
+  const handleFocus = () => {
+    isFocusedRef.current = true
+  }
+
+  const fieldSx = isDirty ? DIRTY_FIELD_SX : isSaved ? SAVED_FIELD_SX : DEFAULT_FIELD_SX
+  const combinedSx = error
+    ? {
+        ...fieldSx,
+        '& .MuiOutlinedInput-root': {
+          '& fieldset': { borderColor: '#f44336 !important', borderWidth: 2 },
+          boxShadow: '0 0 0 3px rgba(244, 67, 54, 0.4)',
+        },
+        ...sx,
+      }
+    : { ...fieldSx, ...sx }
+
+  return (
+    <TextField
+      label={label}
+      value={localValue}
+      onChange={handleChange}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      required={required}
+      type={type}
+      size={size}
+      fullWidth={fullWidth}
+      multiline={multiline}
+      rows={rows}
+      error={error}
+      helperText={helperText}
+      slotProps={slotProps}
+      sx={combinedSx}
+      {...rest}
+    />
+  )
+})
+
 const isProjectSlugDuplicate = (name, projectsList, excludeIndex = -1) => {
   const targetSlug = slugify(name)
   if (!targetSlug) return false
@@ -183,6 +294,7 @@ const SOCIAL_KEYS = [
 const createEmptyTrack = () => ({
   id: `track-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
   name: '',
+  originalName: '',
   artist: '',
   audioFile: null,
   audioFileName: '',
@@ -200,17 +312,480 @@ const createEmptyTrack = () => ({
   },
 })
 
-const resolveOverrideArtist = (artistVal, primaryName, projectArtistVal) => {
-  if (!artistVal || typeof artistVal !== 'string') return ''
-  const trimmed = artistVal.trim()
-  if (!trimmed) return ''
-  const primary = (primaryName || '').trim()
-  if (primary && trimmed === primary) return ''
-  const projArtist = (projectArtistVal || '').trim()
-  if (projArtist && trimmed === projArtist) return ''
-  if (trimmed === 'Artist') return ''
-  return trimmed
-}
+const TrackCreateCard = memo(function TrackCreateCard({
+  track,
+  index,
+  totalTracks,
+  defaultArtist,
+  isDuplicate,
+  isDirtyTitle,
+  isSavedTitle,
+  isDirtyArtist,
+  isSavedArtist,
+  dirtyFields,
+  savedFields,
+  onUpdateName,
+  onUpdateArtist,
+  onUpdateLink,
+  onAudioUpload,
+  onAudioRemove,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+}) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        backgroundColor: 'rgba(20, 20, 28, 0.8)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 2,
+      }}
+    >
+      <CardContent sx={{ p: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 1.5,
+          }}
+        >
+          <Chip
+            label={`Track #${index + 1}`}
+            size="small"
+            color="primary"
+            sx={{ fontWeight: 700 }}
+          />
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              disabled={index === 0}
+              onClick={() => onMoveUp(index)}
+            >
+              <ArrowUpwardIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              disabled={index === totalTracks - 1}
+              onClick={() => onMoveDown(index)}
+            >
+              <ArrowDownwardIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              disabled={totalTracks <= 1}
+              onClick={() => onDelete(track, index)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+
+        <Grid container spacing={1.5}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <AdminTextInput
+              label="Track Title"
+              required
+              fullWidth
+              size="small"
+              value={track.name}
+              onChange={(val) => onUpdateName(index, val)}
+              error={isDuplicate}
+              helperText={isDuplicate ? 'Track titles in a project must be unique.' : null}
+              isDirty={isDirtyTitle}
+              isSaved={isSavedTitle}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <AdminTextInput
+              label="Track Artist (Optional Override)"
+              placeholder={`Defaults to "${defaultArtist}"`}
+              fullWidth
+              size="small"
+              value={track.artist}
+              onChange={(val) => onUpdateArtist(index, val)}
+              isDirty={isDirtyArtist}
+              isSaved={isSavedArtist}
+            />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                backgroundColor: 'rgba(0,0,0,0.25)',
+                borderRadius: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1.5,
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Button
+                  variant="contained"
+                  component="label"
+                  size="small"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ borderRadius: 1.5, textTransform: 'none' }}
+                >
+                  Upload Audio File (.flac, .mp3, .wav)
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    hidden
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        onAudioUpload(index, e.target.files[0])
+                      }
+                    }}
+                  />
+                </Button>
+                {track.audioFileName ? (
+                  <Chip
+                    icon={<CheckCircleIcon />}
+                    label={track.audioFileName}
+                    color="success"
+                    size="small"
+                    onDelete={() => onAudioRemove(index)}
+                  />
+                ) : (
+                  <Chip
+                    icon={<MusicNoteIcon />}
+                    label="No audio file attached"
+                    color="warning"
+                    variant="outlined"
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
+              </Box>
+            </Paper>
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <Accordion
+              defaultExpanded
+              elevation={0}
+              slotProps={{ transition: { unmountOnExit: true } }}
+              sx={{
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px !important',
+                '&:before': { display: 'none' },
+              }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <LinkIcon fontSize="small" color="action" /> Streaming Links ({Object.values(track.links || {}).filter(Boolean).length})
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={1.5}>
+                  {PLATFORM_KEYS.map(({ key, label }) => {
+                    const iconSrc = SOCIAL_ICONS[key]
+                    const fieldKey = `new_track_${index}_${key}`
+                    return (
+                      <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                        <AdminTextInput
+                          label={label}
+                          size="small"
+                          fullWidth
+                          value={track.links?.[key] || ''}
+                          onChange={(val) => onUpdateLink(index, key, val)}
+                          isDirty={dirtyFields.has(fieldKey)}
+                          isSaved={savedFields.has(fieldKey)}
+                          slotProps={{
+                            input: {
+                              startAdornment: iconSrc ? (
+                                <InputAdornment position="start">
+                                  <Box
+                                    component="img"
+                                    src={iconSrc}
+                                    alt=""
+                                    sx={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: '4px',
+                                      objectFit: 'contain',
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                </InputAdornment>
+                              ) : null,
+                            },
+                          }}
+                        />
+                      </Grid>
+                    )
+                  })}
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+  )
+})
+
+const TrackEditCard = memo(function TrackEditCard({
+  track,
+  index,
+  totalTracks,
+  defaultArtist,
+  isDuplicate,
+  isDirtyTitle,
+  isSavedTitle,
+  isDirtyArtist,
+  isSavedArtist,
+  dirtyFields,
+  savedFields,
+  onUpdateName,
+  onUpdateArtist,
+  onUpdateLink,
+  onAudioUpload,
+  onAudioRemove,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
+  onCopy,
+}) {
+  return (
+    <Card
+      variant="outlined"
+      sx={{
+        backgroundColor: 'rgba(20, 20, 28, 0.8)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 2,
+      }}
+    >
+      <CardContent sx={{ p: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 1.5,
+          }}
+        >
+          <Chip
+            label={`Track #${index + 1}`}
+            size="small"
+            color="primary"
+            sx={{ fontWeight: 700 }}
+          />
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              title="Copy Track to Another Project"
+              onClick={() => onCopy(track, index)}
+            >
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              disabled={index === 0}
+              onClick={() => onMoveUp(index)}
+            >
+              <ArrowUpwardIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              disabled={index === totalTracks - 1}
+              onClick={() => onMoveDown(index)}
+            >
+              <ArrowDownwardIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              disabled={totalTracks <= 1}
+              onClick={() => onDelete(track, index)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+
+        <Grid container spacing={1.5}>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <AdminTextInput
+              label="Track Title"
+              required
+              fullWidth
+              size="small"
+              value={track.name}
+              onChange={(val) => onUpdateName(index, val)}
+              error={isDuplicate}
+              helperText={isDuplicate ? 'Track titles in a project must be unique.' : null}
+              isDirty={isDirtyTitle}
+              isSaved={isSavedTitle}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <AdminTextInput
+              label="Track Artist (Optional Override)"
+              placeholder={`Defaults to "${defaultArtist}"`}
+              fullWidth
+              size="small"
+              value={track.artist}
+              onChange={(val) => onUpdateArtist(index, val)}
+              isDirty={isDirtyArtist}
+              isSaved={isSavedArtist}
+            />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                backgroundColor: 'rgba(0,0,0,0.25)',
+                borderRadius: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1.5,
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Button
+                  variant="contained"
+                  component="label"
+                  size="small"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ borderRadius: 1.5, textTransform: 'none' }}
+                >
+                  Replace Audio File
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    hidden
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        onAudioUpload(index, e.target.files[0])
+                      }
+                    }}
+                  />
+                </Button>
+                {track.audioFileName ? (
+                  <Chip
+                    icon={<CheckCircleIcon />}
+                    label={`New: ${track.audioFileName}`}
+                    color="success"
+                    size="small"
+                    onDelete={() => onAudioRemove(index)}
+                  />
+                ) : track.hasAudio || track.audio ? (
+                  <Chip
+                    icon={<CheckCircleIcon />}
+                    label={`Audio file attached (${track.audio || 'Local audio'})`}
+                    color="success"
+                    variant="outlined"
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  />
+                ) : (
+                  <Chip
+                    icon={<MusicNoteIcon />}
+                    label="No audio file attached"
+                    color="warning"
+                    variant="outlined"
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  />
+                )}
+              </Box>
+            </Paper>
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <Accordion
+              defaultExpanded
+              elevation={0}
+              slotProps={{ transition: { unmountOnExit: true } }}
+              sx={{
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                borderRadius: '8px !important',
+                '&:before': { display: 'none' },
+              }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <LinkIcon fontSize="small" color="action" /> Streaming Links ({Object.values(track.links || {}).filter(Boolean).length})
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={1.5}>
+                  {PLATFORM_KEYS.map(({ key, label }) => {
+                    const iconSrc = SOCIAL_ICONS[key]
+                    const fieldKey = `edit_track_${index}_${key}`
+                    return (
+                      <Grid key={key} size={{ xs: 12, sm: 6 }}>
+                        <AdminTextInput
+                          label={label}
+                          size="small"
+                          fullWidth
+                          value={track.links?.[key] || ''}
+                          onChange={(val) => onUpdateLink(index, key, val)}
+                          isDirty={dirtyFields.has(fieldKey)}
+                          isSaved={savedFields.has(fieldKey)}
+                          slotProps={{
+                            input: {
+                              startAdornment: iconSrc ? (
+                                <InputAdornment position="start">
+                                  <Box
+                                    component="img"
+                                    src={iconSrc}
+                                    alt=""
+                                    sx={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: '4px',
+                                      objectFit: 'contain',
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                </InputAdornment>
+                              ) : null,
+                            },
+                          }}
+                        />
+                      </Grid>
+                    )
+                  })}
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+  )
+})
 
 export default function AdminDashboardClient({ adminAccess = true, defaultArtistName = 'Artist', initialData = {} }) {
   // Tabs: 0 = Artist Profile, 1 = Manage Projects
@@ -375,6 +950,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     const formattedTracks = (proj.tracks ?? []).map((t, tIdx) => ({
       id: `edit-track-${tIdx}-${Date.now()}`,
       name: t.name || '',
+      originalName: t.name || '',
       artist: resolveOverrideArtist(t.artist, primaryName, proj.artist),
       audio: t.audio || t.audioUrl || '',
       hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
@@ -455,6 +1031,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
       const formattedTracks = (proj.tracks ?? []).map((t, idx) => ({
         id: `edit-track-${idx}-${Date.now()}`,
         name: t.name || '',
+        originalName: t.name || '',
         artist: resolveOverrideArtist(t.artist, primaryName, proj.artist),
         audio: t.audio || t.audioUrl || '',
         hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
@@ -498,8 +1075,14 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
   // Helper to mark a field dirty and trigger debounced auto-save
   const markFieldDirty = useCallback((fieldKey, saveCallback, delayMs = 1000) => {
-    setDirtyFields((prev) => new Set(prev).add(fieldKey))
+    setDirtyFields((prev) => {
+      if (prev.has(fieldKey)) return prev
+      const next = new Set(prev)
+      next.add(fieldKey)
+      return next
+    })
     setSavedFields((prev) => {
+      if (!prev.has(fieldKey)) return prev
       const next = new Set(prev)
       next.delete(fieldKey)
       return next
@@ -645,6 +1228,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           const formattedTracks = (createdProj.tracks ?? []).map((t, idx) => ({
             id: `edit-track-${idx}-${Date.now()}`,
             name: t.name || '',
+            originalName: t.name || '',
             artist: resolveOverrideArtist(t.artist, primaryName, createdProj.artist),
             audio: t.audio || t.audioUrl || '',
             hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
@@ -731,6 +1315,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
         }
         return {
           name: t.name.trim(),
+          originalName: (t.originalName || '').trim(),
           artist: t.artist.trim(),
           links: t.links,
         }
@@ -761,6 +1346,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           const updatedFormattedTracks = (result.updatedProject.tracks ?? []).map((t, idx) => ({
             id: editTracksRef.current[idx]?.id || `edit-track-${idx}-${Date.now()}`,
             name: t.name || '',
+            originalName: t.name || '',
             artist: resolveOverrideArtist(t.artist, primaryName, result.updatedProject.artist),
             audio: t.audio || t.audioUrl || '',
             hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
@@ -874,6 +1460,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
           const formattedTracks = (nextProj.tracks ?? []).map((t, tIdx) => ({
             id: `edit-track-${tIdx}-${Date.now()}`,
             name: t.name || '',
+            originalName: t.name || '',
             artist: resolveOverrideArtist(t.artist, primaryName, nextProj.artist),
             audio: t.audio || t.audioUrl || '',
             hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
@@ -968,6 +1555,7 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
             const updatedTracks = (result.updatedTargetProject.tracks ?? []).map((t, idx) => ({
               id: editTracksRef.current[idx]?.id || `edit-track-${idx}-${Date.now()}`,
               name: t.name || '',
+              originalName: t.name || '',
               artist: resolveOverrideArtist(t.artist, primaryName, result.updatedTargetProject.artist),
               audio: t.audio || t.audioUrl || '',
               hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl),
@@ -1003,36 +1591,167 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
     }
   }
 
-  // Input Field Sx Style Helper for Unsaved (Dirty) and Saved (Green) highlights
+  // Stable track handlers for TrackCreateCard
+  const handleUpdateCreateTrackName = useCallback((index, val) => {
+    setTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], name: val }
+      return n
+    })
+    markFieldDirty(`new_track_${index}_title`, executeCreateProject)
+  }, [executeCreateProject, markFieldDirty])
+
+  const handleUpdateCreateTrackArtist = useCallback((index, val) => {
+    setTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], artist: val }
+      return n
+    })
+    markFieldDirty(`new_track_${index}_artist`, executeCreateProject)
+  }, [executeCreateProject, markFieldDirty])
+
+  const handleUpdateCreateTrackLink = useCallback((index, key, val) => {
+    setTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], links: { ...n[index].links, [key]: val } }
+      return n
+    })
+    markFieldDirty(`new_track_${index}_${key}`, executeCreateProject)
+  }, [executeCreateProject, markFieldDirty])
+
+  const handleCreateTrackAudioUpload = useCallback((index, file) => {
+    const n = tracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
+    setTracks(n)
+    tracksRef.current = n
+    markFieldDirty(`new_track_${index}_audio`, executeCreateProject)
+  }, [executeCreateProject, markFieldDirty])
+
+  const handleCreateTrackAudioRemove = useCallback((index) => {
+    setTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], audioFile: null, audioFileName: '' }
+      return n
+    })
+  }, [])
+
+  const handleMoveCreateTrackUp = useCallback((index) => {
+    setTracks((prev) => {
+      if (index === 0) return prev
+      const n = [...prev]
+      const t = n[index]
+      n[index] = n[index - 1]
+      n[index - 1] = t
+      return n
+    })
+  }, [])
+
+  const handleMoveCreateTrackDown = useCallback((index) => {
+    setTracks((prev) => {
+      if (index >= prev.length - 1) return prev
+      const n = [...prev]
+      const t = n[index]
+      n[index] = n[index + 1]
+      n[index + 1] = t
+      return n
+    })
+  }, [])
+
+  const handleDeleteCreateTrack = useCallback((track, index) => {
+    setTrackToDelete({
+      index,
+      isEditing: false,
+      trackName: track.name.trim() || `Track #${index + 1}`,
+    })
+  }, [])
+
+  // Stable track handlers for TrackEditCard
+  const handleUpdateEditTrackName = useCallback((index, val) => {
+    setEditTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], name: val }
+      return n
+    })
+    markFieldDirty(`edit_track_${index}_title`, executeUpdateProject)
+  }, [executeUpdateProject, markFieldDirty])
+
+  const handleUpdateEditTrackArtist = useCallback((index, val) => {
+    setEditTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], artist: val }
+      return n
+    })
+    markFieldDirty(`edit_track_${index}_artist`, executeUpdateProject)
+  }, [executeUpdateProject, markFieldDirty])
+
+  const handleUpdateEditTrackLink = useCallback((index, key, val) => {
+    setEditTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], links: { ...n[index].links, [key]: val } }
+      return n
+    })
+    markFieldDirty(`edit_track_${index}_${key}`, executeUpdateProject)
+  }, [executeUpdateProject, markFieldDirty])
+
+  const handleEditTrackAudioUpload = useCallback((index, file) => {
+    const n = editTracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
+    setEditTracks(n)
+    editTracksRef.current = n
+    markFieldDirty(`edit_track_${index}_audio`, () => executeUpdateProject(n), 100)
+  }, [executeUpdateProject, markFieldDirty])
+
+  const handleEditTrackAudioRemove = useCallback((index) => {
+    setEditTracks((prev) => {
+      const n = [...prev]
+      n[index] = { ...n[index], audioFile: null, audioFileName: '' }
+      return n
+    })
+  }, [])
+
+  const handleMoveEditTrackUp = useCallback((index) => {
+    const n = [...editTracksRef.current]
+    if (index === 0) return
+    const t = n[index]
+    n[index] = n[index - 1]
+    n[index - 1] = t
+    setEditTracks(n)
+    editTracksRef.current = n
+    markFieldDirty(`edit_move_${index}`, () => executeUpdateProject(n), 100)
+  }, [executeUpdateProject, markFieldDirty])
+
+  const handleMoveEditTrackDown = useCallback((index) => {
+    const n = [...editTracksRef.current]
+    if (index >= n.length - 1) return
+    const t = n[index]
+    n[index] = n[index + 1]
+    n[index + 1] = t
+    setEditTracks(n)
+    editTracksRef.current = n
+    markFieldDirty(`edit_move_${index}`, () => executeUpdateProject(n), 100)
+  }, [executeUpdateProject, markFieldDirty])
+
+  const handleDeleteEditTrack = useCallback((track, index) => {
+    setTrackToDelete({
+      index,
+      isEditing: true,
+      trackName: track.name.trim() || `Track #${index + 1}`,
+    })
+  }, [])
+
+  const handleCopyEditTrack = useCallback((track, index) => {
+    setTrackToCopy({
+      track,
+      sourceProjectIndex: selectedProjIndex,
+      trackIndex: index,
+    })
+    const defaultTarget = projectsList.length > 1 && selectedProjIndex === 0 ? 1 : 0
+    setCopyTargetProjectIndex(defaultTarget)
+  }, [selectedProjIndex, projectsList.length])
+
+  // Input Field Sx Style Helper using static references
   const getFieldSx = (fieldKey) => {
-    const isDirty = dirtyFields.has(fieldKey)
-    const isSaved = savedFields.has(fieldKey)
-
-    if (isDirty) {
-      return {
-        '& .MuiOutlinedInput-root': {
-          transition: 'all 0.3s ease',
-          '& fieldset': { borderColor: '#ff9800 !important', borderWidth: 2 },
-          boxShadow: '0 0 0 3px rgba(255, 152, 0, 0.4)',
-        },
-      }
-    }
-
-    if (isSaved) {
-      return {
-        '& .MuiOutlinedInput-root': {
-          transition: 'all 0.3s ease',
-          '& fieldset': { borderColor: '#4caf50 !important', borderWidth: 2 },
-          boxShadow: '0 0 0 3px rgba(76, 175, 80, 0.5)',
-        },
-      }
-    }
-
-    return {
-      '& .MuiOutlinedInput-root': {
-        transition: 'all 0.3s ease',
-      },
-    }
+    if (dirtyFields.has(fieldKey)) return DIRTY_FIELD_SX
+    if (savedFields.has(fieldKey)) return SAVED_FIELD_SX
+    return DEFAULT_FIELD_SX
   }
 
   // 1. Admin access disabled view
@@ -1182,10 +1901,22 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
   }
 
   // Compute slug validation variables
-  const isEditNameDuplicate = !isCreatingNew && isProjectSlugDuplicate(editName, projectsList, selectedProjIndex)
-  const editDupTrackIndexes = !isCreatingNew ? getDuplicateTrackSlugIndexes(editTracks) : new Set()
-  const isNewNameDuplicate = isCreatingNew && isProjectSlugDuplicate(name, projectsList, -1)
-  const newDupTrackIndexes = isCreatingNew ? getDuplicateTrackSlugIndexes(tracks) : new Set()
+  const isEditNameDuplicate = useMemo(
+    () => !isCreatingNew && isProjectSlugDuplicate(editName, projectsList, selectedProjIndex),
+    [isCreatingNew, editName, projectsList, selectedProjIndex]
+  )
+  const editDupTrackIndexes = useMemo(
+    () => (!isCreatingNew ? getDuplicateTrackSlugIndexes(editTracks) : new Set()),
+    [isCreatingNew, editTracks]
+  )
+  const isNewNameDuplicate = useMemo(
+    () => isCreatingNew && isProjectSlugDuplicate(name, projectsList, -1),
+    [isCreatingNew, name, projectsList]
+  )
+  const newDupTrackIndexes = useMemo(
+    () => (isCreatingNew ? getDuplicateTrackSlugIndexes(tracks) : new Set()),
+    [isCreatingNew, tracks]
+  )
 
   // 3. Admin Full Widescreen Dashboard with Auto-Save
   return (
@@ -1356,33 +2087,33 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                       <PersonIcon color="primary" /> Artist Profile Information
                     </Typography>
                     <Stack spacing={2.5}>
-                      <TextField
+                      <AdminTextInput
                         label="Artist Name"
                         required
                         fullWidth
                         value={artistNameInput}
-                        onChange={(e) => {
-                          const val = e.target.value
+                        onChange={(val) => {
                           setArtistNameInput(val)
                           artistNameInputRef.current = val
                           markFieldDirty('artistName', executeSaveArtist)
                         }}
-                        sx={getFieldSx('artistName')}
+                        isDirty={dirtyFields.has('artistName')}
+                        isSaved={savedFields.has('artistName')}
                       />
-                      <TextField
+                      <AdminTextInput
                         label="Artist Bio / Description"
                         multiline
                         rows={6}
                         fullWidth
                         placeholder="Write a bio describing the artist project..."
                         value={artistBioInput}
-                        onChange={(e) => {
-                          const val = e.target.value
+                        onChange={(val) => {
                           setArtistBioInput(val)
                           artistBioInputRef.current = val
                           markFieldDirty('artistBio', executeSaveArtist)
                         }}
-                        sx={getFieldSx('artistBio')}
+                        isDirty={dirtyFields.has('artistBio')}
+                        isSaved={savedFields.has('artistBio')}
                       />
                     </Stack>
                   </Paper>
@@ -1399,22 +2130,24 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                       <Grid container spacing={2}>
                         {PLATFORM_KEYS.map(({ key, label }) => {
                           const iconSrc = SOCIAL_ICONS[key]
+                          const fieldKey = `platform_${key}`
                           return (
                             <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                              <TextField
+                              <AdminTextInput
                                 label={label}
                                 size="small"
                                 fullWidth
                                 value={artistPlatforms[key] || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value
+                                onChange={(val) => {
                                   setArtistPlatforms((prev) => {
                                     const next = { ...prev, [key]: val }
                                     artistPlatformsRef.current = next
                                     return next
                                   })
-                                  markFieldDirty(`platform_${key}`, executeSaveArtist)
+                                  markFieldDirty(fieldKey, executeSaveArtist)
                                 }}
+                                isDirty={dirtyFields.has(fieldKey)}
+                                isSaved={savedFields.has(fieldKey)}
                                 slotProps={{
                                   input: {
                                     startAdornment: iconSrc ? (
@@ -1435,7 +2168,6 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                     ) : null,
                                   },
                                 }}
-                                sx={getFieldSx(`platform_${key}`)}
                               />
                             </Grid>
                           )
@@ -1451,22 +2183,24 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                       <Grid container spacing={2}>
                         {SOCIAL_KEYS.map(({ key, label }) => {
                           const iconSrc = SOCIAL_ICONS[key]
+                          const fieldKey = `social_${key}`
                           return (
                             <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                              <TextField
+                              <AdminTextInput
                                 label={label}
                                 size="small"
                                 fullWidth
                                 value={artistSocials[key] || ''}
-                                onChange={(e) => {
-                                  const val = e.target.value
+                                onChange={(val) => {
                                   setArtistSocials((prev) => {
                                     const next = { ...prev, [key]: val }
                                     artistSocialsRef.current = next
                                     return next
                                   })
-                                  markFieldDirty(`social_${key}`, executeSaveArtist)
+                                  markFieldDirty(fieldKey, executeSaveArtist)
                                 }}
+                                isDirty={dirtyFields.has(fieldKey)}
+                                isSaved={savedFields.has(fieldKey)}
                                 slotProps={{
                                   input: {
                                     startAdornment: iconSrc ? (
@@ -1487,7 +2221,6 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                                     ) : null,
                                   },
                                 }}
-                                sx={getFieldSx(`social_${key}`)}
                               />
                             </Grid>
                           )
@@ -1763,27 +2496,21 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                         </Typography>
                         <Grid container spacing={2.5}>
                           <Grid size={{ xs: 12, sm: 8 }}>
-                            <TextField
+                            <AdminTextInput
                               label="Project Title"
                               placeholder="e.g. Post Mortem, Sugar Water"
                               fullWidth
                               required
                               value={name}
-                              onChange={(e) => {
-                                setName(e.target.value)
+                              onChange={(val) => {
+                                setName(val)
+                                nameRef.current = val
                                 markFieldDirty('new_name', executeCreateProject)
                               }}
                               error={isNewNameDuplicate}
                               helperText={isNewNameDuplicate ? 'A project with this title / URL slug already exists.' : null}
-                              sx={{
-                                ...getFieldSx('new_name'),
-                                ...(isNewNameDuplicate && {
-                                  '& .MuiOutlinedInput-root': {
-                                    '& fieldset': { borderColor: '#f44336 !important', borderWidth: 2 },
-                                    boxShadow: '0 0 0 3px rgba(244, 67, 54, 0.4)',
-                                  },
-                                }),
-                              }}
+                              isDirty={dirtyFields.has('new_name')}
+                              isSaved={savedFields.has('new_name')}
                             />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 4 }}>
@@ -1803,33 +2530,35 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             </FormControl>
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
+                            <AdminTextInput
                               label="Artist Name (Optional Override)"
                               placeholder={`Defaults to "${artistNameInput.trim() || defaultArtistName}"`}
                               fullWidth
                               value={artist}
-                              onChange={(e) => {
-                                const val = e.target.value
+                              onChange={(val) => {
                                 setArtist(val)
                                 artistRef.current = val
                                 markFieldDirty('new_artist', executeCreateProject)
                               }}
-                              sx={getFieldSx('new_artist')}
+                              isDirty={dirtyFields.has('new_artist')}
+                              isSaved={savedFields.has('new_artist')}
                             />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
+                            <AdminTextInput
                               label="Release Date"
                               type="date"
                               fullWidth
                               required
                               value={date}
-                              onChange={(e) => {
-                                setDate(e.target.value)
+                              onChange={(val) => {
+                                setDate(val)
+                                dateRef.current = val
                                 markFieldDirty('new_date', executeCreateProject)
                               }}
                               slotProps={{ inputLabel: { shrink: true } }}
-                              sx={getFieldSx('new_date')}
+                              isDirty={dirtyFields.has('new_date')}
+                              isSaved={savedFields.has('new_date')}
                             />
                           </Grid>
                         </Grid>
@@ -1886,159 +2615,28 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
                         <Stack spacing={2}>
                           {tracks.map((track, index) => (
-                            <Card key={track.id} variant="outlined" sx={{ backgroundColor: 'rgba(20, 20, 28, 0.8)', borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 2 }}>
-                              <CardContent sx={{ p: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                  <Chip label={`Track #${index + 1}`} size="small" color="primary" sx={{ fontWeight: 700 }} />
-                                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                    <IconButton size="small" disabled={index === 0} onClick={() => setTracks((prev) => { const n = [...prev]; const t = n[index]; n[index] = n[index - 1]; n[index - 1] = t; return n })}>
-                                      <ArrowUpwardIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton size="small" disabled={index === tracks.length - 1} onClick={() => setTracks((prev) => { const n = [...prev]; const t = n[index]; n[index] = n[index + 1]; n[index + 1] = t; return n })}>
-                                      <ArrowDownwardIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton
-                                      size="small"
-                                      color="error"
-                                      disabled={tracks.length <= 1}
-                                      onClick={() => {
-                                        setTrackToDelete({
-                                          index,
-                                          isEditing: false,
-                                          trackName: track.name.trim() || `Track #${index + 1}`,
-                                        })
-                                      }}
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </Box>
-                                </Box>
-
-                                <Grid container spacing={1.5}>
-                                  <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                      label="Track Title"
-                                      required
-                                      fullWidth
-                                      size="small"
-                                      value={track.name}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        setTracks((prev) => { const n = [...prev]; n[index].name = val; return n })
-                                        markFieldDirty(`new_track_${index}_title`, executeCreateProject)
-                                      }}
-                                      error={newDupTrackIndexes.has(index)}
-                                      helperText={newDupTrackIndexes.has(index) ? 'Track titles in a project must be unique.' : null}
-                                      sx={{
-                                        ...getFieldSx(`new_track_${index}_title`),
-                                        ...(newDupTrackIndexes.has(index) && {
-                                          '& .MuiOutlinedInput-root': {
-                                            '& fieldset': { borderColor: '#f44336 !important', borderWidth: 2 },
-                                            boxShadow: '0 0 0 3px rgba(244, 67, 54, 0.4)',
-                                          },
-                                        }),
-                                      }}
-                                    />
-                                  </Grid>
-                                  <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                      label="Track Artist (Optional Override)"
-                                      placeholder={`Defaults to "${artist.trim() || artistNameInput.trim() || defaultArtistName}"`}
-                                      fullWidth
-                                      size="small"
-                                      value={track.artist}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        setTracks((prev) => { const n = [...prev]; n[index].artist = val; return n })
-                                        markFieldDirty(`new_track_${index}_artist`, executeCreateProject)
-                                      }}
-                                      sx={getFieldSx(`new_track_${index}_artist`)}
-                                    />
-                                  </Grid>
-                                  <Grid size={{ xs: 12 }}>
-                                    <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 2 }}>
-                                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                                        <Button variant="contained" component="label" size="small" startIcon={<CloudUploadIcon />} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
-                                          Upload Audio File (.flac, .mp3, .wav)
-                                          <input
-                                            type="file"
-                                            accept="audio/*"
-                                            hidden
-                                            onChange={(e) => {
-                                              if (e.target.files?.[0]) {
-                                                const file = e.target.files[0]
-                                                const n = tracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
-                                                setTracks(n)
-                                                tracksRef.current = n
-                                                markFieldDirty(`new_track_${index}_audio`, executeCreateProject)
-                                              }
-                                            }}
-                                          />
-                                        </Button>
-                                        {track.audioFileName ? (
-                                          <Chip icon={<CheckCircleIcon />} label={track.audioFileName} color="success" size="small" onDelete={() => setTracks((prev) => { const n = [...prev]; n[index].audioFile = null; n[index].audioFileName = ''; return n })} />
-                                        ) : (
-                                          <Chip icon={<MusicNoteIcon />} label="No audio file attached" color="warning" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
-                                        )}
-                                      </Box>
-                                    </Paper>
-                                  </Grid>
-
-                                  <Grid size={{ xs: 12 }}>
-                                    <Accordion defaultExpanded elevation={0} sx={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '8px !important', '&:before': { display: 'none' } }}>
-                                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                          <LinkIcon fontSize="small" color="action" /> Streaming Links ({Object.values(track.links).filter(Boolean).length})
-                                        </Typography>
-                                      </AccordionSummary>
-                                      <AccordionDetails>
-                                        <Grid container spacing={1.5}>
-                                          {PLATFORM_KEYS.map(({ key, label }) => {
-                                            const iconSrc = SOCIAL_ICONS[key]
-                                            return (
-                                              <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                                                <TextField
-                                                  label={label}
-                                                  size="small"
-                                                  fullWidth
-                                                  value={track.links[key] || ''}
-                                                  onChange={(e) => {
-                                                    const val = e.target.value
-                                                    setTracks((prev) => { const n = [...prev]; n[index].links[key] = val; return n })
-                                                    markFieldDirty(`new_track_${index}_${key}`, executeCreateProject)
-                                                  }}
-                                                  slotProps={{
-                                                    input: {
-                                                      startAdornment: iconSrc ? (
-                                                        <InputAdornment position="start">
-                                                          <Box
-                                                            component="img"
-                                                            src={iconSrc}
-                                                            alt=""
-                                                            sx={{
-                                                              width: 20,
-                                                              height: 20,
-                                                              borderRadius: '4px',
-                                                              objectFit: 'contain',
-                                                              flexShrink: 0,
-                                                            }}
-                                                          />
-                                                        </InputAdornment>
-                                                      ) : null,
-                                                    },
-                                                  }}
-                                                  sx={getFieldSx(`new_track_${index}_${key}`)}
-                                                />
-                                              </Grid>
-                                            )
-                                          })}
-                                        </Grid>
-                                      </AccordionDetails>
-                                    </Accordion>
-                                  </Grid>
-                                </Grid>
-                              </CardContent>
-                            </Card>
+                            <TrackCreateCard
+                              key={track.id}
+                              track={track}
+                              index={index}
+                              totalTracks={tracks.length}
+                              defaultArtist={artist.trim() || artistNameInput.trim() || defaultArtistName}
+                              isDuplicate={newDupTrackIndexes.has(index)}
+                              isDirtyTitle={dirtyFields.has(`new_track_${index}_title`)}
+                              isSavedTitle={savedFields.has(`new_track_${index}_title`)}
+                              isDirtyArtist={dirtyFields.has(`new_track_${index}_artist`)}
+                              isSavedArtist={savedFields.has(`new_track_${index}_artist`)}
+                              dirtyFields={dirtyFields}
+                              savedFields={savedFields}
+                              onUpdateName={handleUpdateCreateTrackName}
+                              onUpdateArtist={handleUpdateCreateTrackArtist}
+                              onUpdateLink={handleUpdateCreateTrackLink}
+                              onAudioUpload={handleCreateTrackAudioUpload}
+                              onAudioRemove={handleCreateTrackAudioRemove}
+                              onMoveUp={handleMoveCreateTrackUp}
+                              onMoveDown={handleMoveCreateTrackDown}
+                              onDelete={handleDeleteCreateTrack}
+                            />
                           ))}
                         </Stack>
                       </Paper>
@@ -2066,28 +2664,20 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
                         <Grid container spacing={2.5}>
                           <Grid size={{ xs: 12, sm: 8 }}>
-                            <TextField
+                            <AdminTextInput
                               label="Project Title"
                               fullWidth
                               required
                               value={editName}
-                              onChange={(e) => {
-                                const val = e.target.value
+                              onChange={(val) => {
                                 setEditName(val)
                                 editNameRef.current = val
                                 markFieldDirty('edit_name', executeUpdateProject)
                               }}
                               error={isEditNameDuplicate}
                               helperText={isEditNameDuplicate ? 'A project with this title / URL slug already exists.' : null}
-                              sx={{
-                                ...getFieldSx('edit_name'),
-                                ...(isEditNameDuplicate && {
-                                  '& .MuiOutlinedInput-root': {
-                                    '& fieldset': { borderColor: '#f44336 !important', borderWidth: 2 },
-                                    boxShadow: '0 0 0 3px rgba(244, 67, 54, 0.4)',
-                                  },
-                                }),
-                              }}
+                              isDirty={dirtyFields.has('edit_name')}
+                              isSaved={savedFields.has('edit_name')}
                             />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 4 }}>
@@ -2107,33 +2697,35 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
                             </FormControl>
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
+                            <AdminTextInput
                               label="Artist Name (Optional Override)"
                               placeholder={`Defaults to "${artistNameInput.trim() || defaultArtistName}"`}
                               fullWidth
                               value={editArtist}
-                              onChange={(e) => {
-                                const val = e.target.value
+                              onChange={(val) => {
                                 setEditArtist(val)
                                 editArtistRef.current = val
                                 markFieldDirty('edit_artist', executeUpdateProject)
                               }}
-                              sx={getFieldSx('edit_artist')}
+                              isDirty={dirtyFields.has('edit_artist')}
+                              isSaved={savedFields.has('edit_artist')}
                             />
                           </Grid>
                           <Grid size={{ xs: 12, sm: 6 }}>
-                            <TextField
+                            <AdminTextInput
                               label="Release Date"
                               type="date"
                               fullWidth
                               required
                               value={editDate}
-                              onChange={(e) => {
-                                setEditDate(e.target.value)
+                              onChange={(val) => {
+                                setEditDate(val)
+                                editDateRef.current = val
                                 markFieldDirty('edit_date', executeUpdateProject)
                               }}
                               slotProps={{ inputLabel: { shrink: true } }}
-                              sx={getFieldSx('edit_date')}
+                              isDirty={dirtyFields.has('edit_date')}
+                              isSaved={savedFields.has('edit_date')}
                             />
                           </Grid>
                         </Grid>
@@ -2192,176 +2784,29 @@ export default function AdminDashboardClient({ adminAccess = true, defaultArtist
 
                         <Stack spacing={2}>
                           {editTracks.map((track, index) => (
-                            <Card key={track.id} variant="outlined" sx={{ backgroundColor: 'rgba(20, 20, 28, 0.8)', borderColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 2 }}>
-                              <CardContent sx={{ p: 2 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                  <Chip label={`Track #${index + 1}`} size="small" color="primary" sx={{ fontWeight: 700 }} />
-                                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                    <IconButton
-                                      size="small"
-                                      title="Copy Track to Another Project"
-                                      onClick={() => {
-                                        setTrackToCopy({
-                                          track,
-                                          sourceProjectIndex: selectedProjIndex,
-                                          trackIndex: index,
-                                        })
-                                        const defaultTarget = projectsList.length > 1 && selectedProjIndex === 0 ? 1 : 0
-                                        setCopyTargetProjectIndex(defaultTarget)
-                                      }}
-                                    >
-                                      <ContentCopyIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton size="small" disabled={index === 0} onClick={() => { const n = [...editTracks]; const t = n[index]; n[index] = n[index - 1]; n[index - 1] = t; setEditTracks(n); editTracksRef.current = n; markFieldDirty(`edit_move_${index}`, () => executeUpdateProject(n), 100) }}>
-                                      <ArrowUpwardIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton size="small" disabled={index === editTracks.length - 1} onClick={() => { const n = [...editTracks]; const t = n[index]; n[index] = n[index + 1]; n[index + 1] = t; setEditTracks(n); editTracksRef.current = n; markFieldDirty(`edit_move_${index}`, () => executeUpdateProject(n), 100) }}>
-                                      <ArrowDownwardIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton
-                                      size="small"
-                                      color="error"
-                                      disabled={editTracks.length <= 1}
-                                      onClick={() => {
-                                        setTrackToDelete({
-                                          index,
-                                          isEditing: true,
-                                          trackName: track.name.trim() || `Track #${index + 1}`,
-                                        })
-                                      }}
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </Box>
-                                </Box>
-
-                                <Grid container spacing={1.5}>
-                                  <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                      label="Track Title"
-                                      required
-                                      fullWidth
-                                      size="small"
-                                      value={track.name}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        setEditTracks((prev) => { const n = [...prev]; n[index].name = val; return n })
-                                        markFieldDirty(`edit_track_${index}_title`, executeUpdateProject)
-                                      }}
-                                      error={editDupTrackIndexes.has(index)}
-                                      helperText={editDupTrackIndexes.has(index) ? 'Track titles in a project must be unique.' : null}
-                                      sx={{
-                                        ...getFieldSx(`edit_track_${index}_title`),
-                                        ...(editDupTrackIndexes.has(index) && {
-                                          '& .MuiOutlinedInput-root': {
-                                            '& fieldset': { borderColor: '#f44336 !important', borderWidth: 2 },
-                                            boxShadow: '0 0 0 3px rgba(244, 67, 54, 0.4)',
-                                          },
-                                        }),
-                                      }}
-                                    />
-                                  </Grid>
-                                  <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                      label="Track Artist (Optional Override)"
-                                      placeholder={`Defaults to "${editArtist.trim() || artistNameInput.trim() || defaultArtistName}"`}
-                                      fullWidth
-                                      size="small"
-                                      value={track.artist}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        setEditTracks((prev) => { const n = [...prev]; n[index].artist = val; return n })
-                                        markFieldDirty(`edit_track_${index}_artist`, executeUpdateProject)
-                                      }}
-                                      sx={getFieldSx(`edit_track_${index}_artist`)}
-                                    />
-                                  </Grid>
-                                  <Grid size={{ xs: 12 }}>
-                                    <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 2 }}>
-                                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                                        <Button variant="contained" component="label" size="small" startIcon={<CloudUploadIcon />} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
-                                          Replace Audio File
-                                          <input
-                                            type="file"
-                                            accept="audio/*"
-                                            hidden
-                                            onChange={(e) => {
-                                              if (e.target.files?.[0]) {
-                                                const file = e.target.files[0]
-                                                const n = editTracksRef.current.map((t, i) => i === index ? { ...t, audioFile: file, audioFileName: file.name } : t)
-                                                setEditTracks(n)
-                                                editTracksRef.current = n
-                                                markFieldDirty(`edit_track_${index}_audio`, () => executeUpdateProject(n), 100)
-                                              }
-                                            }}
-                                          />
-                                        </Button>
-                                        {track.audioFileName ? (
-                                          <Chip icon={<CheckCircleIcon />} label={`New: ${track.audioFileName}`} color="success" size="small" onDelete={() => setEditTracks((prev) => { const n = [...prev]; n[index].audioFile = null; n[index].audioFileName = ''; return n })} />
-                                        ) : track.hasAudio || track.audio ? (
-                                          <Chip icon={<CheckCircleIcon />} label={`Audio file attached (${track.audio || 'Local audio'})`} color="success" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
-                                        ) : (
-                                          <Chip icon={<MusicNoteIcon />} label="No audio file attached" color="warning" variant="outlined" size="small" sx={{ fontWeight: 600 }} />
-                                        )}
-                                      </Box>
-                                    </Paper>
-                                  </Grid>
-
-                                  <Grid size={{ xs: 12 }}>
-                                    <Accordion defaultExpanded elevation={0} sx={{ backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '8px !important', '&:before': { display: 'none' } }}>
-                                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                          <LinkIcon fontSize="small" color="action" /> Streaming Links ({Object.values(track.links).filter(Boolean).length})
-                                        </Typography>
-                                      </AccordionSummary>
-                                      <AccordionDetails>
-                                        <Grid container spacing={1.5}>
-                                          {PLATFORM_KEYS.map(({ key, label }) => {
-                                            const iconSrc = SOCIAL_ICONS[key]
-                                            return (
-                                              <Grid key={key} size={{ xs: 12, sm: 6 }}>
-                                                <TextField
-                                                  label={label}
-                                                  size="small"
-                                                  fullWidth
-                                                  value={track.links[key] || ''}
-                                                  onChange={(e) => {
-                                                    const val = e.target.value
-                                                    setEditTracks((prev) => { const n = [...prev]; n[index].links[key] = val; return n })
-                                                    markFieldDirty(`edit_track_${index}_${key}`, executeUpdateProject)
-                                                  }}
-                                                  slotProps={{
-                                                    input: {
-                                                      startAdornment: iconSrc ? (
-                                                        <InputAdornment position="start">
-                                                          <Box
-                                                            component="img"
-                                                            src={iconSrc}
-                                                            alt=""
-                                                            sx={{
-                                                              width: 20,
-                                                              height: 20,
-                                                              borderRadius: '4px',
-                                                              objectFit: 'contain',
-                                                              flexShrink: 0,
-                                                            }}
-                                                          />
-                                                        </InputAdornment>
-                                                      ) : null,
-                                                    },
-                                                  }}
-                                                  sx={getFieldSx(`edit_track_${index}_${key}`)}
-                                                />
-                                              </Grid>
-                                            )
-                                          })}
-                                        </Grid>
-                                      </AccordionDetails>
-                                    </Accordion>
-                                  </Grid>
-                                </Grid>
-                              </CardContent>
-                            </Card>
+                            <TrackEditCard
+                              key={track.id}
+                              track={track}
+                              index={index}
+                              totalTracks={editTracks.length}
+                              defaultArtist={editArtist.trim() || artistNameInput.trim() || defaultArtistName}
+                              isDuplicate={editDupTrackIndexes.has(index)}
+                              isDirtyTitle={dirtyFields.has(`edit_track_${index}_title`)}
+                              isSavedTitle={savedFields.has(`edit_track_${index}_title`)}
+                              isDirtyArtist={dirtyFields.has(`edit_track_${index}_artist`)}
+                              isSavedArtist={savedFields.has(`edit_track_${index}_artist`)}
+                              dirtyFields={dirtyFields}
+                              savedFields={savedFields}
+                              onUpdateName={handleUpdateEditTrackName}
+                              onUpdateArtist={handleUpdateEditTrackArtist}
+                              onUpdateLink={handleUpdateEditTrackLink}
+                              onAudioUpload={handleEditTrackAudioUpload}
+                              onAudioRemove={handleEditTrackAudioRemove}
+                              onMoveUp={handleMoveEditTrackUp}
+                              onMoveDown={handleMoveEditTrackDown}
+                              onDelete={handleDeleteEditTrack}
+                              onCopy={handleCopyEditTrack}
+                            />
                           ))}
                         </Stack>
                       </Paper>

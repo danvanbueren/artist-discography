@@ -608,7 +608,10 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             track: {
               ...track,
               project: proj.name || '',
+              projectType: proj.type || '',
+              projectArtist: proj.artist || artist?.name || '',
               projectCover: track.cover || proj.cover || '',
+              artist: track.artist || proj.artist || artist?.name || '',
             },
             project: proj,
           })
@@ -616,7 +619,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       }
     }
     return list
-  }, [currentView, selectedProject, filteredProjects])
+  }, [currentView, selectedProject, filteredProjects, artist?.name])
 
   const [autoplayTracks, setAutoplayTracks] = useState([])
   const [isShuffle, setIsShuffle] = useState(false)
@@ -627,14 +630,12 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       const nextShuffle = !prev
       if (nextShuffle) {
         setAutoplayTracks(current => shuffleArray(current))
-        showToast('Shuffle ON')
       } else {
         setAutoplayTracks(current => sortTracksByDiscographyOrder(current, displayedDiscographyTracks))
-        showToast('Shuffle OFF')
       }
       return nextShuffle
     })
-  }, [displayedDiscographyTracks, showToast])
+  }, [displayedDiscographyTracks])
 
   // Audio Playback Handler (Invoked when user physically clicks PLAY on a track)
   const handlePlayTrack = useCallback((track, proj, options = {}) => {
@@ -650,18 +651,26 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     const isSameTrack = playingTrack?.name === track.name
 
     if (isSameTrack) {
-      if (options?.restart || options?.restartIfSame) {
+      if (options?.touchMode) {
+        if (isPlaying) {
+          setRestartCount((c) => c + 1)
+        } else {
+          setIsPlaying(true)
+        }
+      } else if (options?.restart || options?.restartIfSame) {
         setIsPlaying(true)
-        setRestartCount(c => c + 1)
+        setRestartCount((c) => c + 1)
       } else {
-        setIsPlaying(prev => !prev)
+        setIsPlaying((prev) => !prev)
       }
     } else {
       const trackWithProject = {
         ...track,
         project: projName,
+        projectType: parentProj?.type || track.projectType || '',
+        projectArtist: parentProj?.artist || artist.name || '',
         projectCover: projCover,
-        artist: track.artist || parentProj?.artist || artist.name,
+        artist: track.artist || parentProj?.artist || artist.name || '',
       }
       setPlayingTrack(trackWithProject)
       setIsPlaying(true)
@@ -671,7 +680,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
       // User physically clicked PLAY on a new track -> populate autoplay queue with tracks that follow it
       const currIndex = (displayedDiscographyTracks || []).findIndex(
-        item => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase()
+        (item) => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase()
       )
       if (currIndex !== -1) {
         const remaining = displayedDiscographyTracks.slice(currIndex + 1)
@@ -680,7 +689,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
         setAutoplayTracks([])
       }
     }
-  }, [playingTrack, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
+  }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
 
   // Compute the most contextually relevant cover art to use as the full-page ambient background
   const ambientImage = useMemo(() => {
@@ -708,11 +717,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     const trackWithProject = {
       ...track,
       project: parentProj?.name || track.project || '',
+      projectType: parentProj?.type || track.projectType || '',
+      projectArtist: parentProj?.artist || artist.name || '',
       projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
     }
     setManualQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
     showToast(`Added "${track?.name || 'track'}" to queue`)
-  }, [selectedProject, projects, showToast])
+  }, [selectedProject, projects, showToast, artist?.name])
 
   const handleSkipNext = useCallback(() => {
     if (repeatMode === 'one' && playingTrack) {
@@ -740,6 +751,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       setIsPlaying(true)
     } else {
       setIsPlaying(false)
+      setRestartCount((c) => c + 1)
     }
   }, [repeatMode, playingTrack, manualQueue, autoplayTracks, displayedDiscographyTracks, isShuffle])
 
@@ -752,12 +764,28 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
         )
       }
       if (currIndex > 0) {
-        const prevItem = displayedDiscographyTracks[currIndex - 1]
+        const prevIndex = currIndex - 1
+        const prevItem = displayedDiscographyTracks[prevIndex]
+        const remaining = displayedDiscographyTracks.slice(prevIndex + 1)
         setPlayingTrack(prevItem.track)
         setIsPlaying(true)
+        setAutoplayTracks(isShuffle ? shuffleArray(remaining) : remaining)
+      } else if (currIndex === 0) {
+        if (repeatMode === 'all') {
+          const prevIndex = displayedDiscographyTracks.length - 1
+          const prevItem = displayedDiscographyTracks[prevIndex]
+          setPlayingTrack(prevItem.track)
+          setIsPlaying(true)
+          setAutoplayTracks([])
+        } else {
+          const remaining = displayedDiscographyTracks.slice(1)
+          setAutoplayTracks(isShuffle ? shuffleArray(remaining) : remaining)
+          setRestartCount((c) => c + 1)
+          setIsPlaying(true)
+        }
       }
     }
-  }, [playingTrack, displayedDiscographyTracks])
+  }, [playingTrack, displayedDiscographyTracks, isShuffle, repeatMode])
 
   const handleQueueDragDrop = useCallback(({ fromList, fromIndex, toList, toIndex }) => {
     let currentQueue = [...manualQueue]
@@ -1284,79 +1312,72 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             </Stack>
           )}
         </Container>
-
-        {/* Preferred Platform Selector Modal */}
-        <PlatformSelectorModal
-          open={platformModalOpen}
-          onClose={() => setPlatformModalOpen(false)}
-          selectedPlatform={selectedPlatform}
-          onSelectPlatform={handleSelectPlatform}
-          availablePlatforms={availablePlatforms}
-        />
-
-        {/* Contained Floating Audio Player Bar */}
-        <AudioPlayerBar
-          playingTrack={playingTrack}
-          isPlaying={isPlaying}
-          restartCount={restartCount}
-          onTogglePlay={() => setIsPlaying(prev => !prev)}
-          onClosePlayer={() => {
-            setPlayingTrack(null)
-            setIsPlaying(false)
-          }}
-          queueCount={manualQueue.length}
-          manualQueue={manualQueue}
-          autoplayTracks={autoplayTracks}
-          onQueueDragDrop={handleQueueDragDrop}
-          onRemoveFromManualQueue={(index) => {
-            setManualQueue(prev => prev.filter((_, i) => i !== index))
-          }}
-          onRemoveFromAutoplay={handleRemoveFromAutoplay}
-          onPlayQueuedTrack={(item, index, isManual = true) => {
-            if (isManual) {
-              setManualQueue(prev => prev.filter((_, i) => i !== index))
-            } else {
-              handleRemoveFromAutoplay(index)
-            }
-            setPlayingTrack(item.track)
-            setIsPlaying(true)
-          }}
-          onSkipNext={handleSkipNext}
-          onSkipPrev={handleSkipPrev}
-          onShowToast={showToast}
-          onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
-          isShuffle={isShuffle}
-          onToggleShuffle={handleToggleShuffle}
-          repeatMode={repeatMode}
-          onCycleRepeatMode={() => {
-            setRepeatMode(prev => {
-              if (prev === 'off') {
-                showToast('Repeat ALL')
-                return 'all'
-              }
-              if (prev === 'all') {
-                showToast('Repeat ONE')
-                return 'one'
-              }
-              showToast('Repeat OFF')
-              return 'off'
-            })
-          }}
-        />
-
-        {/* Feedback Snackbar / Toast */}
-        <Snackbar
-          open={toastOpen}
-          autoHideDuration={3000}
-          onClose={() => setToastOpen(false)}
-          message={toastMessage}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          sx={{ mb: playingTrack ? 10 : 2 }}
-        />
-
-        {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
-        {data?.devAccess !== false && <DevHealthDrawer health={health} />}
       </Box>
+
+      {/* Preferred Platform Selector Modal */}
+      <PlatformSelectorModal
+        open={platformModalOpen}
+        onClose={() => setPlatformModalOpen(false)}
+        selectedPlatform={selectedPlatform}
+        onSelectPlatform={handleSelectPlatform}
+        availablePlatforms={availablePlatforms}
+      />
+
+      {/* Contained Floating Audio Player Bar */}
+      <AudioPlayerBar
+        playingTrack={playingTrack}
+        isPlaying={isPlaying}
+        restartCount={restartCount}
+        onTogglePlay={() => setIsPlaying(prev => !prev)}
+        onClosePlayer={() => {
+          setPlayingTrack(null)
+          setIsPlaying(false)
+        }}
+        queueCount={manualQueue.length}
+        manualQueue={manualQueue}
+        autoplayTracks={autoplayTracks}
+        onQueueDragDrop={handleQueueDragDrop}
+        onRemoveFromManualQueue={(index) => {
+          setManualQueue(prev => prev.filter((_, i) => i !== index))
+        }}
+        onRemoveFromAutoplay={handleRemoveFromAutoplay}
+        onPlayQueuedTrack={(item, index, isManual = true) => {
+          if (isManual) {
+            setManualQueue(prev => prev.filter((_, i) => i !== index))
+          } else {
+            setAutoplayTracks(prev => prev.slice(index + 1))
+          }
+          setPlayingTrack(item.track)
+          setIsPlaying(true)
+        }}
+        onSkipNext={handleSkipNext}
+        onSkipPrev={handleSkipPrev}
+        onShowToast={showToast}
+        onNavigateToCurrentTrack={handleNavigateToCurrentTrack}
+        isShuffle={isShuffle}
+        onToggleShuffle={handleToggleShuffle}
+        repeatMode={repeatMode}
+        onCycleRepeatMode={() => {
+          setRepeatMode(prev => {
+            if (prev === 'off') return 'all'
+            if (prev === 'all') return 'one'
+            return 'off'
+          })
+        }}
+      />
+
+      {/* Feedback Snackbar / Toast */}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={3000}
+        onClose={() => setToastOpen(false)}
+        message={toastMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ mb: playingTrack ? 10 : 2 }}
+      />
+
+      {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
+      {data?.devAccess !== false && <DevHealthDrawer health={health} />}
     </Box>
     </ThemeProvider>
   )

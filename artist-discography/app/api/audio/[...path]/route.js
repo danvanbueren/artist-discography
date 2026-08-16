@@ -48,7 +48,7 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url)
     const quality = searchParams.get('q') || searchParams.get('quality') || (searchParams.has('b') || searchParams.has('bitrate') ? 'custom' : 'high')
     const bitrate = searchParams.get('b') || searchParams.get('bitrate') || null
-    const format = searchParams.get('fmt') || searchParams.get('format') || 'mp3'
+    const format = searchParams.get('fmt') || searchParams.get('format') || (quality === 'lossless' || quality === 'original' || bitrate === 'lossless' || bitrate === 'original' ? 'flac' : 'mp3')
 
     // Process & retrieve optimized audio variant from data/cache/audio/
     const optimized = await getOptimizedAudio(sourceFilePath, {
@@ -62,7 +62,7 @@ export async function GET(request, { params }) {
     const mimeType = optimized.mimeType || AUDIO_MIME_TYPES[ext] || 'application/octet-stream'
     const stat = fs.statSync(/*turbopackIgnore: true*/ targetFilePath)
     const fileSize = optimized.size || stat.size
-    const etag = `W/"audio-${fileSize.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}-q${quality}-b${bitrate || 'def'}-f${format}"`
+    const etag = `W/"audio-${fileSize.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}-q${quality}-b${bitrate || 'def'}-f${ext.replace('.', '')}"`
     const lastModified = new Date(stat.mtimeMs).toUTCString()
     const cacheControl = 'public, max-age=86400, stale-while-revalidate=604800'
 
