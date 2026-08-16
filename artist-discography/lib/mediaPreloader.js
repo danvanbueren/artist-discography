@@ -55,7 +55,6 @@ class MediaPreloadManager {
     if (
       !audioUrl ||
       typeof window === 'undefined' ||
-      this.audioCache.has(audioUrl) ||
       this.activeAudioPreloads.has(audioUrl)
     ) {
       return
@@ -67,28 +66,25 @@ class MediaPreloadManager {
       ? window.requestIdleCallback
       : (cb) => setTimeout(cb, 200)
 
-    schedule(async () => {
+    schedule(() => {
       try {
-        const res = await fetch(audioUrl, {
-          headers: { Range: 'bytes=0-393215' },
-          priority: 'high',
-          cache: 'force-cache',
-        })
+        const audio = new Audio()
+        audio.preload = 'auto'
+        audio.muted = true
+        audio.volume = 0
+        audio.src = audioUrl
+        audio.load()
 
-        if (res.status === 200 || res.status === 206) {
-          const blob = await res.blob()
-
-          // Enforce LRU cap
-          if (this.audioCache.size >= this.maxAudioChunks) {
-            const oldestKey = this.audioCache.keys().next().value
-            this.audioCache.delete(oldestKey)
-          }
-
-          this.audioCache.set(audioUrl, blob)
+        const cleanup = () => {
+          this.activeAudioPreloads.delete(audioUrl)
+          audio.removeEventListener('canplay', cleanup)
+          audio.removeEventListener('error', cleanup)
         }
-      } catch (err) {
-        // Background chunk preloading failed silently without throwing
-      } finally {
+
+        audio.addEventListener('canplay', cleanup, { once: true })
+        audio.addEventListener('error', cleanup, { once: true })
+        setTimeout(cleanup, 5000)
+      } catch {
         this.activeAudioPreloads.delete(audioUrl)
       }
     })

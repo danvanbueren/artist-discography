@@ -31,6 +31,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
+import HighQualityRoundedIcon from '@mui/icons-material/HighQualityRounded'
 import { SOCIAL_ICONS } from '../artist/ArtistHero'
 
 export const FILTER_OPTIONS = [
@@ -126,6 +127,8 @@ export default function FloatingNavBar({
   selectedPlatform,
   onOpenPlatformModal,
   hasAvailablePlatforms = true,
+  audioQuality = '320k',
+  onOpenQualityModal,
 }) {
   const theme = useTheme()
   const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
@@ -735,6 +738,34 @@ export default function FloatingNavBar({
               }}
             >
               Platform
+            </Button>
+
+            <Button
+              size="medium"
+              variant="outlined"
+              onClick={() => {
+                if (settingsDrag.hasDraggedRef.current) return
+                if (onOpenQualityModal) onOpenQualityModal()
+              }}
+              startIcon={<HighQualityRoundedIcon />}
+              sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                py: 1,
+                px: 2,
+                color: 'text.primary',
+                borderColor: 'divider',
+                '&:hover': {
+                  borderColor: 'text.primary',
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
+              Quality: {audioQuality === 'lossless' ? 'Lossless' : audioQuality === '128k' ? '128k' : '320k'}
             </Button>
 
             <Button

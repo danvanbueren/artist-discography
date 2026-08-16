@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { Readable } from 'stream'
 import { NextResponse } from 'next/server'
 import { getOptimizedAudio } from '../../../../lib/audioOptimizer'
 
@@ -86,62 +87,65 @@ export async function GET(request, { params }) {
 
     // Handle HTTP Range Requests for HTML5 Audio seeking and initial chunk buffering
     if (rangeHeader && isRangeValid) {
-      const parts = rangeHeader.replace(/bytes=/, '').split('-')
-      const start = parseInt(parts[0], 10)
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const match = rangeHeader.trim().match(/^bytes=(\d*)-(\d*)$/)
+      if (match) {
+        let start = match[1] ? parseInt(match[1], 10) : null
+        let end = match[2] ? parseInt(match[2], 10) : null
 
-      if (isNaN(start) || start >= fileSize || end >= fileSize) {
-        return new NextResponse(null, {
-          status: 416,
+        if (start === null && end !== null) {
+          // Suffix range: bytes=-500 -> last 500 bytes
+          const suffixLength = end
+          if (suffixLength === 0) {
+            return new NextResponse(null, {
+              status: 416,
+              headers: {
+                'Content-Range': `bytes */${fileSize}`,
+                'Accept-Ranges': 'bytes',
+              },
+            })
+          }
+          start = Math.max(0, fileSize - suffixLength)
+          end = fileSize - 1
+        } else if (start !== null) {
+          if (end === null || end >= fileSize) {
+            // Open-ended range (bytes=start-) or oversized end -> clamp to fileSize - 1
+            end = fileSize - 1
+          }
+        }
+
+        if (start === null || isNaN(start) || start >= fileSize || start > end) {
+          return new NextResponse(null, {
+            status: 416,
+            headers: {
+              'Content-Range': `bytes */${fileSize}`,
+              'Accept-Ranges': 'bytes',
+            },
+          })
+        }
+
+        const chunkSize = end - start + 1
+        const fileStream = fs.createReadStream(targetFilePath, { start, end })
+        const stream = Readable.toWeb(fileStream)
+
+        return new NextResponse(stream, {
+          status: 206,
           headers: {
-            'Content-Range': `bytes */${fileSize}`,
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
             'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize.toString(),
+            'Content-Type': mimeType,
+            'Cache-Control': cacheControl,
+            ETag: etag,
+            'Last-Modified': lastModified,
+            'X-Audio-Cache': optimized.isFromCache ? 'HIT' : 'MISS',
           },
         })
       }
-
-      const chunkSize = end - start + 1
-      const fileStream = fs.createReadStream(targetFilePath, { start, end })
-
-      // Convert Node read stream to Web ReadableStream
-      const stream = new ReadableStream({
-        start(controller) {
-          fileStream.on('data', chunk => controller.enqueue(chunk))
-          fileStream.on('end', () => controller.close())
-          fileStream.on('error', err => controller.error(err))
-        },
-        cancel() {
-          fileStream.destroy()
-        },
-      })
-
-      return new NextResponse(stream, {
-        status: 206,
-        headers: {
-          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': chunkSize.toString(),
-          'Content-Type': mimeType,
-          'Cache-Control': cacheControl,
-          ETag: etag,
-          'Last-Modified': lastModified,
-          'X-Audio-Cache': optimized.isFromCache ? 'HIT' : 'MISS',
-        },
-      })
     }
 
     // Standard Full Response
     const fileStream = fs.createReadStream(targetFilePath)
-    const stream = new ReadableStream({
-      start(controller) {
-        fileStream.on('data', chunk => controller.enqueue(chunk))
-        fileStream.on('end', () => controller.close())
-        fileStream.on('error', err => controller.error(err))
-      },
-      cancel() {
-        fileStream.destroy()
-      },
-    })
+    const stream = Readable.toWeb(fileStream)
 
     return new NextResponse(stream, {
       status: 200,
@@ -160,3 +164,4 @@ export async function GET(request, { params }) {
     return new NextResponse('Internal Server Error', { status: 500 })
   }
 }
+

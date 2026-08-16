@@ -28,6 +28,7 @@ import FloatingNavBar from '../layout/FloatingNavBar'
 import PlatformSelectorModal, { STREAMING_PLATFORMS } from './PlatformSelectorModal'
 import ProjectCard from './ProjectCard'
 import AudioPlayerBar from '../player/AudioPlayerBar'
+import AudioQualityModal from '../player/AudioQualityModal'
 import DevHealthDrawer from '../dev/DevHealthDrawer'
 import SubduedText from '../ui/SubduedText'
 import AmbientBackground from '../layout/AmbientBackground'
@@ -35,6 +36,7 @@ import { slugify, findProjectBySlug, findTrackBySlug } from '../../lib/slugs'
 import { useLogoAnalysis, getLogoFilter } from '../../lib/hooks/useLogoAnalysis'
 import { getCookie, setCookie } from '../../lib/cookies'
 import { mediaPreloader } from '../../lib/mediaPreloader'
+import { detectInitialAudioQuality, saveAudioQuality, getSavedAudioQuality, QUALITY_TIER_CONFIG } from '../../lib/networkProbe'
 
 function shuffleArray(array) {
   const arr = [...array]
@@ -137,13 +139,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
   const [selectedPlatform, setSelectedPlatform] = useState('youtube')
   const [platformModalOpen, setPlatformModalOpen] = useState(false)
 
-  // Audio Player & Queue State
-  const [playingTrack, setPlayingTrack] = useState(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [manualQueue, setManualQueue] = useState([])
-  const [devDrawerOpen, setDevDrawerOpen] = useState(false)
-  const [restartCount, setRestartCount] = useState(0)
-
   // Toast / Notification State
   const [toastMessage, setToastMessage] = useState('')
   const [toastOpen, setToastOpen] = useState(false)
@@ -152,6 +147,34 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     setToastMessage(msg)
     setToastOpen(true)
   }, [])
+
+  // Audio Quality State & Modal
+  const [audioQuality, setAudioQuality] = useState(() => getSavedAudioQuality() || '320k')
+  const [qualityModalOpen, setQualityModalOpen] = useState(false)
+
+  // On mount: Probe network performance on initial app load if no saved preference
+  useEffect(() => {
+    const saved = getSavedAudioQuality()
+    if (!saved) {
+      detectInitialAudioQuality().then((tier) => {
+        setAudioQuality(tier)
+      })
+    }
+  }, [])
+
+  const handleSelectQuality = useCallback((tier) => {
+    setAudioQuality(tier)
+    saveAudioQuality(tier)
+    const tierLabel = QUALITY_TIER_CONFIG[tier]?.label || tier
+    showToast(`Audio quality set to ${tierLabel}`)
+  }, [showToast])
+
+  // Audio Player & Queue State
+  const [playingTrack, setPlayingTrack] = useState(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [manualQueue, setManualQueue] = useState([])
+  const [devDrawerOpen, setDevDrawerOpen] = useState(false)
+  const [restartCount, setRestartCount] = useState(0)
 
   // Ref for the projects container — used by the scroll-aware mask effect below
   const projectsContainerRef = useRef(null)
@@ -1228,6 +1251,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             selectedPlatform={selectedPlatform}
             onOpenPlatformModal={() => setPlatformModalOpen(true)}
             hasAvailablePlatforms={availablePlatformIds.length > 0}
+            audioQuality={audioQuality}
+            onOpenQualityModal={() => setQualityModalOpen(true)}
           />
         )}
 
@@ -1323,11 +1348,21 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
         availablePlatforms={availablePlatforms}
       />
 
+      {/* Audio Playback Quality Selector Modal */}
+      <AudioQualityModal
+        open={qualityModalOpen}
+        onClose={() => setQualityModalOpen(false)}
+        activeQuality={audioQuality}
+        onSelectQuality={handleSelectQuality}
+      />
+
       {/* Contained Floating Audio Player Bar */}
       <AudioPlayerBar
         playingTrack={playingTrack}
         isPlaying={isPlaying}
         restartCount={restartCount}
+        audioQuality={audioQuality}
+        onOpenQualityModal={() => setQualityModalOpen(true)}
         onTogglePlay={() => setIsPlaying(prev => !prev)}
         onClosePlayer={() => {
           setPlayingTrack(null)

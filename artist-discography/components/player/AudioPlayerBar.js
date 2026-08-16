@@ -76,6 +76,8 @@ export default function AudioPlayerBar({
   repeatMode: propsRepeatMode,
   onCycleRepeatMode,
   restartCount = 0,
+  audioQuality = '320k',
+  onOpenQualityModal,
 }) {
   const theme = useTheme()
   const isTouch = useTouchDevice()
@@ -89,27 +91,15 @@ export default function AudioPlayerBar({
   const [queueOpen, setQueueOpen] = useState(false)
   const [mobileFullScreenOpen, setMobileFullScreenOpen] = useState(false)
   const [realDuration, setRealDuration] = useState(0)
-  const [activeTier, setActiveTier] = useState(() => {
-    if (typeof navigator !== 'undefined' && navigator.connection) {
-      const conn = navigator.connection
-      if (conn.saveData || conn.effectiveType === '2g') return '128k'
-      if (conn.effectiveType === '3g') return '192k'
-    }
-    return '320k'
-  })
+  const activeTier = audioQuality || '320k'
 
   const pendingResumeTimeRef = useRef(null)
   const shouldResumeAfterQualitySwitchRef = useRef(false)
-  const isSwitchingTierRef = useRef(false)
-  const stallTimerRef = useRef(null)
-  const preloaderAudioRef = useRef(null)
-  const isPrewarmingRef = useRef(false)
-  const targetPrewarmTierRef = useRef(null)
   const audioRef = useRef(null)
 
   const rawAudioUrl = playingTrack?.audioUrl
 
-  // Compute adaptive audio source URL
+  // Compute audio source URL based on active quality tier
   const activeAudioSrc = useMemo(() => {
     if (!rawAudioUrl) return undefined
     const sep = rawAudioUrl.includes('?') ? '&' : '?'
@@ -127,6 +117,20 @@ export default function AudioPlayerBar({
     if (activeTier === 'lossless') return 'Lossless'
     return '320 kbps'
   }, [playingTrack?.quality, activeTier])
+
+  // Seamlessly update audio stream when user explicitly changes quality in Settings
+  const prevTierRef = useRef(activeTier)
+  useEffect(() => {
+    if (prevTierRef.current !== activeTier) {
+      prevTierRef.current = activeTier
+      if (audioRef.current && playingTrack) {
+        const currentPos = audioRef.current.currentTime || currentTime
+        const wasPlaying = isPlaying && !audioRef.current.paused
+        pendingResumeTimeRef.current = currentPos
+        shouldResumeAfterQualitySwitchRef.current = wasPlaying
+      }
+    }
+  }, [activeTier, playingTrack, isPlaying, currentTime])
   const coverArt = playingTrack?.cover || playingTrack?.image || playingTrack?.projectCover || ''
   const { colors, isLoaded: isPaletteLoaded } = useVibrantColors(coverArt)
 
@@ -183,7 +187,7 @@ export default function AudioPlayerBar({
         }
       }
     }
-  }, [restartCount])
+  }, [restartCount, isPlaying])
 
   // Load volume & mute preference from cookie/localStorage on mount
   useEffect(() => {
@@ -226,151 +230,9 @@ export default function AudioPlayerBar({
   // Track duration in seconds
   const duration = realDuration || playingTrack?.durationSeconds || playingTrack?.duration || 215
 
-  // Clear stall debounce timer and background preloader on unmount
-  useEffect(() => {
-    return () => {
-      if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
-      if (preloaderAudioRef.current) {
-        preloaderAudioRef.current.src = ''
-        preloaderAudioRef.current = null
-      }
-    }
-  }, [])
-
-  // Helper to compute audio URL for any tier
-  const getAudioUrlForTier = useCallback((baseUrl, tier) => {
-    if (!baseUrl) return ''
-    const sep = baseUrl.includes('?') ? '&' : '?'
-    if (tier === 'lossless') return `${baseUrl}${sep}q=lossless`
-    if (tier === '320k') return `${baseUrl}${sep}b=320k`
-    return `${baseUrl}${sep}b=${tier}`
-  }, [])
-
-  // Seamless Pre-warmed Adaptive Bitrate Switching Callback
-  const switchQualityTier = useCallback((nextTier) => {
-    if (nextTier === activeTier || !rawAudioUrl) return
-
-    // If downgrading due to a real stall, switch immediately to unfreeze playback ASAP
-    const isDowngrade =
-      (activeTier === 'lossless') ||
-      (activeTier === '320k' && (nextTier === '192k' || nextTier === '128k')) ||
-      (activeTier === '192k' && nextTier === '128k')
-
-    if (isDowngrade) {
-      if (preloaderAudioRef.current) {
-        preloaderAudioRef.current.src = ''
-        preloaderAudioRef.current = null
-      }
-      isPrewarmingRef.current = false
-      const currentPos = audioRef.current ? audioRef.current.currentTime : currentTime
-      const wasPlaying = isPlaying && (!audioRef.current || !audioRef.current.paused)
-      isSwitchingTierRef.current = true
-      pendingResumeTimeRef.current = currentPos
-      shouldResumeAfterQualitySwitchRef.current = wasPlaying
-      setActiveTier(nextTier)
-      return
-    }
-
-    // For upgrades (128k -> 192k -> 320k -> lossless):
-    // Pre-warm the target stream in a background Audio element while the current stream plays UNINTERRUPTED!
-    if (isPrewarmingRef.current && targetPrewarmTierRef.current === nextTier) return
-    isPrewarmingRef.current = true
-    targetPrewarmTierRef.current = nextTier
-
-    const targetUrl = getAudioUrlForTier(rawAudioUrl, nextTier)
-    const currentAudio = audioRef.current
-
-    if (preloaderAudioRef.current) {
-      preloaderAudioRef.current.src = ''
-      preloaderAudioRef.current = null
-    }
-
-    const preloader = new Audio()
-    preloaderAudioRef.current = preloader
-    preloader.preload = 'auto'
-
-    const volVal = isMuted ? 0 : volume
-    preloader.volume = Math.min(1, Math.max(0, volVal / 100))
-    preloader.muted = isMuted
-
-    let timeoutId = null
-
-    const handlePrewarmReady = () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (!preloaderAudioRef.current || preloaderAudioRef.current !== preloader) return
-      if (targetPrewarmTierRef.current !== nextTier) return
-
-      // Target stream is already buffered in memory/cache and ready for 0ms transition!
-      const syncTime = audioRef.current ? audioRef.current.currentTime : currentTime
-      const shouldPlay = isPlaying && (audioRef.current ? !audioRef.current.paused : true)
-
-      isSwitchingTierRef.current = true
-      pendingResumeTimeRef.current = syncTime
-      shouldResumeAfterQualitySwitchRef.current = shouldPlay
-
-      setActiveTier(nextTier)
-
-      setTimeout(() => {
-        if (preloaderAudioRef.current === preloader) {
-          preloader.src = ''
-          preloaderAudioRef.current = null
-        }
-        isPrewarmingRef.current = false
-      }, 500)
-    }
-
-    preloader.addEventListener('canplaythrough', handlePrewarmReady, { once: true })
-    preloader.addEventListener('canplay', handlePrewarmReady, { once: true })
-    preloader.addEventListener('error', () => {
-      if (timeoutId) clearTimeout(timeoutId)
-      isPrewarmingRef.current = false
-      if (preloaderAudioRef.current === preloader) {
-        preloaderAudioRef.current = null
-      }
-    }, { once: true })
-
-    timeoutId = setTimeout(() => {
-      isPrewarmingRef.current = false
-      if (preloaderAudioRef.current === preloader) {
-        preloader.src = ''
-        preloaderAudioRef.current = null
-      }
-    }, 4000)
-
-    preloader.src = targetUrl
-    if (currentAudio && currentAudio.currentTime > 0) {
-      try {
-        preloader.currentTime = currentAudio.currentTime
-      } catch { }
-    }
-    preloader.load()
-  }, [activeTier, rawAudioUrl, isPlaying, currentTime, isMuted, volume, getAudioUrlForTier])
-
-  // Fast Stall Handler: Drops quality after 800ms of true freeze
-  const handleBufferingStall = useCallback(() => {
-    mediaPreloader.setAudioBuffering(true)
-    if (isSwitchingTierRef.current) return
-
-    if (stallTimerRef.current) clearTimeout(stallTimerRef.current)
-    stallTimerRef.current = setTimeout(() => {
-      if (isSwitchingTierRef.current) return
-      if (activeTier === 'lossless') {
-        switchQualityTier('320k')
-      } else if (activeTier === '320k') {
-        switchQualityTier('192k')
-      } else if (activeTier === '192k') {
-        switchQualityTier('128k')
-      }
-    }, 800)
-  }, [activeTier, switchQualityTier])
-
-  // Ready / Playing Handler: Restores playback position instantly
+  // Ready / Playing Handler: Restores playback position after clean quality switch
   const handleCanPlayOrPlaying = useCallback(() => {
     mediaPreloader.setAudioBuffering(false)
-    if (stallTimerRef.current) {
-      clearTimeout(stallTimerRef.current)
-      stallTimerRef.current = null
-    }
 
     if (pendingResumeTimeRef.current !== null && audioRef.current) {
       const targetTime = pendingResumeTimeRef.current
@@ -384,59 +246,12 @@ export default function AudioPlayerBar({
         })
       }
     }
-    isSwitchingTierRef.current = false
   }, [])
 
-  // Fast Buffer Upgrade Handler: Upgrades swiftly as buffer headroom grows
-  const handleBufferProgress = useCallback(() => {
-    if (!audioRef.current || isSwitchingTierRef.current || isPrewarmingRef.current || activeTier === 'lossless') return
-
-    const audio = audioRef.current
-    const cur = audio.currentTime
-    let bufferAhead = 0
-
-    for (let i = 0; i < audio.buffered.length; i++) {
-      const start = audio.buffered.start(i)
-      const end = audio.buffered.end(i)
-      if (cur >= start && cur <= end) {
-        bufferAhead = end - cur
-        break
-      }
-    }
-
-    // Upgrades rapidly as buffer ahead is available:
-    if (activeTier === '128k' && bufferAhead >= 2.5) {
-      switchQualityTier('192k')
-    } else if (activeTier === '192k' && bufferAhead >= 3) {
-      switchQualityTier('320k')
-    } else if (activeTier === '320k' && bufferAhead >= 4) {
-      switchQualityTier('lossless')
-    }
-  }, [activeTier, switchQualityTier])
-
-  // Reset player state and preload audio when playing track changes
+  // Reset player state when playing track changes
   useEffect(() => {
     setRealDuration(0)
     pendingResumeTimeRef.current = null
-    isSwitchingTierRef.current = false
-    isPrewarmingRef.current = false
-    targetPrewarmTierRef.current = null
-    if (stallTimerRef.current) {
-      clearTimeout(stallTimerRef.current)
-      stallTimerRef.current = null
-    }
-    if (preloaderAudioRef.current) {
-      preloaderAudioRef.current.src = ''
-      preloaderAudioRef.current = null
-    }
-    if (typeof navigator !== 'undefined' && navigator.connection) {
-      const conn = navigator.connection
-      if (conn.saveData || conn.effectiveType === '2g') {
-        setActiveTier('128k')
-      } else if (conn.effectiveType === '3g') {
-        setActiveTier('192k')
-      }
-    }
     if (rawAudioUrl) {
       mediaPreloader.preloadAudioChunk(rawAudioUrl)
     }
@@ -784,6 +599,10 @@ export default function AudioPlayerBar({
                   {/* Audio Quality Pill */}
                   <Box
                     component="span"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onOpenQualityModal) onOpenQualityModal()
+                    }}
                     sx={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -802,6 +621,13 @@ export default function AudioPlayerBar({
                       width: 'fit-content',
                       userSelect: 'none',
                       mt: 0.1,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        transform: 'scale(1.04)',
+                        borderColor: 'primary.main',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                      },
                     }}
                   >
                     {audioQualityLabel}
@@ -1010,6 +836,10 @@ export default function AudioPlayerBar({
                       {/* Audio Quality Pill */}
                       <Box
                         component="span"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (onOpenQualityModal) onOpenQualityModal()
+                        }}
                         sx={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -1028,6 +858,13 @@ export default function AudioPlayerBar({
                           width: 'fit-content',
                           userSelect: 'none',
                           mt: 0.15,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          '&:hover': {
+                            transform: 'scale(1.04)',
+                            borderColor: 'primary.main',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                          },
                         }}
                       >
                         {audioQualityLabel}
@@ -1389,7 +1226,7 @@ export default function AudioPlayerBar({
                 </Stack>
               </Box>
 
-              {/* Hidden HTML5 Audio Element with Dynamic Adaptive Bitrate */}
+              {/* Hidden HTML5 Audio Element with Rock-Solid Streaming */}
               <audio
                 ref={audioRef}
                 src={activeAudioSrc || undefined}
@@ -1402,9 +1239,7 @@ export default function AudioPlayerBar({
                 }}
                 onPlaying={handleCanPlayOrPlaying}
                 onCanPlay={handleCanPlayOrPlaying}
-                onWaiting={handleBufferingStall}
-                onStalled={handleBufferingStall}
-                onProgress={handleBufferProgress}
+                onWaiting={() => mediaPreloader.setAudioBuffering(true)}
                 onLoadedMetadata={(e) => {
                   const d = e.currentTarget.duration
                   if (d && !isNaN(d)) setRealDuration(d)
@@ -1417,7 +1252,6 @@ export default function AudioPlayerBar({
                   if (pendingResumeTimeRef.current === null) {
                     setCurrentTime(e.currentTarget.currentTime)
                   }
-                  handleBufferProgress()
                 }}
                 onEnded={() => {
                   mediaPreloader.setAudioBuffering(false)
@@ -1439,12 +1273,8 @@ export default function AudioPlayerBar({
                 onError={() => {
                   mediaPreloader.setAudioBuffering(false)
                   if (isPlaying) {
-                    if (activeTier !== '128k') {
-                      switchQualityTier('128k')
-                    } else {
-                      if (onShowToast) onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
-                      if (onTogglePlay) onTogglePlay()
-                    }
+                    if (onShowToast) onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
+                    if (onTogglePlay) onTogglePlay()
                   }
                 }}
               />
@@ -1748,6 +1578,10 @@ export default function AudioPlayerBar({
                   {/* Audio Quality Pill */}
                   <Box
                     component="span"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onOpenQualityModal) onOpenQualityModal()
+                    }}
                     sx={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1766,6 +1600,13 @@ export default function AudioPlayerBar({
                       width: 'fit-content',
                       userSelect: 'none',
                       flexShrink: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        transform: 'scale(1.04)',
+                        borderColor: 'primary.main',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.12)',
+                      },
                     }}
                   >
                     {audioQualityLabel}
@@ -2108,6 +1949,10 @@ export default function AudioPlayerBar({
                 {/* Audio Quality Pill */}
                 <Box
                   component="span"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onOpenQualityModal) onOpenQualityModal()
+                  }}
                   sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -2126,6 +1971,13 @@ export default function AudioPlayerBar({
                     width: 'fit-content',
                     userSelect: 'none',
                     flexShrink: 0,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                      transform: 'scale(1.04)',
+                      borderColor: 'primary.main',
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.12)',
+                    },
                   }}
                 >
                   {audioQualityLabel}
