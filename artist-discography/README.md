@@ -36,16 +36,23 @@ For full JSON schema instructions and file naming conventions, see the [Operator
 
 ## Quick Start
 
-Run the development server from this directory:
-
+### Local Development (Bun)
 ```bash
+# Run the development server
 bun dev
+
+# Build for production verification
+bun run build
 ```
 
-Or from the repository root:
-
+### Containerized Deployment (Docker)
 ```bash
-cd artist-discography
-bun dev
+# Run from repository root with Docker Compose
+docker compose up -d
+
+# Or build the Docker image directly from this folder
+docker build -t artist-discography .
+docker run -d -p 3000:3000 -v "$(pwd)/data:/app/data" artist-discography
 ```
+
 

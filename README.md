@@ -218,7 +218,7 @@ artist-discography/data/
 
 ## 🚀 Getting Started
 
-To run the application locally using [Bun](https://bun.sh/):
+### Option 1: Local Development with Bun
 
 1. **Navigate to the application directory**:
    ```bash
@@ -241,6 +241,46 @@ To run the application locally using [Bun](https://bun.sh/):
    ```bash
    bun run build
    ```
+
+---
+
+### Option 2: Docker & Docker Compose (Containerized Deployment)
+
+The application includes a multi-stage production Docker setup with built-in `ffmpeg` support for audio transcoding, dynamic `sharp` image optimization, and non-root process security.
+
+#### Running with Docker Compose (Recommended)
+
+From the repository root:
+```bash
+# Start the container in the background
+docker compose up -d
+
+# View live logs
+docker compose logs -f
+
+# Stop the container
+docker compose down
+```
+
+#### Building and Running Manually with Docker
+
+```bash
+# Build the production image
+docker build -t artist-discography ./artist-discography
+
+# Run the container with persistent data mapping and port 3000
+docker run -d \
+  --name artist-discography \
+  -p 3000:3000 \
+  -v "$(pwd)/artist-discography/data:/app/data" \
+  artist-discography
+```
+
+#### Persistent Data Storage in Docker
+The container maps the host `data/` directory to `/app/data`. This ensures that:
+- `artist-data.json` configuration updates persist across restarts and rebuilds.
+- Uploaded tracks, albums, covers, and logos are safely retained on the host.
+- Transcoded audio variations (`data/cache/audio/`) and optimized WebP/AVIF images (`data/cache/images/`) are cached on disk without re-transcoding.
 
 ---
 

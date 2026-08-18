@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.github
+.gitignore
+plans
+data/cache
+*.log
+.DS_Store
+*.tmp
+.env*.local
