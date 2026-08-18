@@ -25,7 +25,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
 
 # 3. Production runner stage
-FROM node:22-bookworm-slim AS runner
+FROM node:24-bookworm-slim AS runner
 WORKDIR /app
 
 # Install ffmpeg for audio transcoding and curl for container healthcheck
