@@ -29,12 +29,15 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
   - **Single Project Page (`/[project-slug]`)**: Row clicks highlight tracks and update URL state (`/[project-slug]/[track-slug]`) without reloading the page or stopping audio.
   - **Uninterrupted Audio Playback**: Navigating across pages or using browser Back/Forward arrows (`popstate`) preserves active audio playback seamlessly.
 - **Developer Preview Suite & OpenAPI Explorer (`/_sys/_dev`)**:
+  - **Modular Architecture**: Componentized into domain views (`apiExplorer`, `audit`, `overview`, `platforms`, `raw`), custom audio/seeder hooks, and header layout.
   - **OpenAPI 3.1 Live Tester (`DevApiExplorer`)**: Interactive API sandbox testing GET, POST, PUT, and DELETE endpoints with syntax-highlighted response payloads and high-contrast HTTP method badges.
   - **Discography Audit Matrix (`DevDiscographyAuditView`)**: Comprehensive audit matrix displaying all 10 streaming platform links per track, project accordions defaulted to expanded, and density switcher (compact vs. comfortable).
   - **Platforms & Socials View (`DevPlatformsSocialsView`)**: Real-time validation of all artist-level platform and social media links.
   - **Dummy Data Seeder**: Action button to generate rich randomized dummy discography data (`/api/dev/seed-dummy`) for instant testing and layout benchmarking.
   - **System Health Drawer (`DevHealthDrawer`)**: Real-time telemetry monitoring media cache size, active preloads, and response latency.
 - **Admin Management Portal (`/_sys/_admin`)**:
+  - **Modular Component & Hook Architecture**: Decomposed into domain-focused subcomponents (`auth`, `common`, `dialogs`, `layout`, `profile`, `projects`, `tracks`) and encapsulated hooks (`useAdminAuth`, `useArtistProfile`, `useAutoSave`, `useProjectsManager`).
+  - **Artist Logo Management**: Upload, preview, replace, and reset custom artist logos (`/api/admin/logo`) directly within the Artist Profile tab, complete with live dimensions, aspect ratio, file size telemetry, and automatic client cache busting.
   - **Fast Authentication**: Auto-authenticates and hides lock controls when `adminPassword` is unconfigured for effortless local setup.
   - **Track Cloning / Duplication**: Copy tracks between projects (`/api/admin/copy-track`) with automatic slug sanitization.
   - **Deletion Safeguards & Artist Inheritance**: Confirmation modals for destructive actions and automatic artist credit inheritance from parent projects.
@@ -62,7 +65,7 @@ artist-discography/
 │   ├── app/                            # Next.js App Router pages & global theme
 │   │   ├── [[...slug]]/page.js         # Single Page App dynamic route handler
 │   │   ├── api/                        # Next.js Server Route Handlers
-│   │   │   ├── admin/                  # Admin APIs (project, upload, copy-track)
+│   │   │   ├── admin/                  # Admin APIs (artist, auth, copy-track, logo, project, upload)
 │   │   │   ├── audio/[...path]/route.js# Byte-range audio streaming & ETag validator
 │   │   │   ├── dev/                    # Dev APIs (openapi, seed-dummy)
 │   │   │   ├── logo/route.js           # Dynamic logo optimizer & fallback handler
@@ -72,10 +75,10 @@ artist-discography/
 │   │   ├── layout.js                   # Root layout, fonts, & metadata
 │   │   └── theme.js                    # Material UI theme & expanded hit target overrides
 │   ├── components/                     # Modular React UI components
-│   │   ├── admin/                      # Admin Portal management dashboard
+│   │   ├── admin/                      # Modular Admin Portal (auth, dialogs, hooks, layout, profile, projects, tracks)
 │   │   ├── artist/                     # Artist hero banner & social links
 │   │   ├── common/                     # Shared progressive media & asset loaders
-│   │   ├── dev/                        # Developer preview tools, OpenAPI, & health drawer
+│   │   ├── dev/                        # Modular Dev Preview Suite (apiExplorer, audit, hooks, layout, overview, platforms, raw)
 │   │   ├── discography/                # Main app container, catalog grid, & track lists
 │   │   ├── layout/                     # Sticky headers, navbar, logos, & background ambience
 │   │   ├── player/                     # Audio player bar, queue dialog, fullscreen modal, & modular controls
@@ -89,6 +92,7 @@ artist-discography/
 │   │   ├── apiSpec.js                  # OpenAPI 3.1 endpoint specification schema
 │   │   ├── artistData.js               # Data loading, sanitization, & disk persistence
 │   │   ├── audioOptimizer.js           # Audio transcoding, quality tiers, & range validation
+│   │   ├── logoUtils.js                # Artist logo inspection, disk persistence, & fallback handler
 │   │   ├── mediaOptimizer.js           # Sharp dynamic image resizing & format conversion
 │   │   ├── mediaPreloader.js           # Client-side LRU cache media preloader engine
 │   │   ├── mediaWarmer.js              # Media pre-caching & site-load fallback readiness coordinator

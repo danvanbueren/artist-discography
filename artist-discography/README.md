@@ -6,17 +6,17 @@ For full project documentation, technology stack, and comprehensive operator con
 
 ## 🗂️ App Architecture & Subdirectories
 
-- **`app/`**: Next.js App Router root layout, dynamic SPA route `[[...slug]]/page.js`, theme configuration (`theme.js`), and server API routes (`app/api/` for admin, dev, audio streaming, and media optimization).
+- **`app/`**: Next.js App Router root layout, dynamic SPA route `[[...slug]]/page.js`, theme configuration (`theme.js`), and server API routes (`app/api/` for `admin` [artist, auth, copy-track, logo, project, upload], `dev` [openapi, seed-dummy], `audio` streaming, dynamic `logo`, and `media` optimization).
 - **`components/`**: Modular UI components organized by domain:
-  - `components/admin/`: Operator administration dashboard & project manager.
+  - `components/admin/`: Operator administration dashboard & project manager subcomponents (`auth/`, `common/`, `dialogs/`, `hooks/`, `layout/`, `profile/`, `projects/`, `tracks/`).
   - `components/artist/`: Artist hero header, biography, and social links.
   - `components/common/`: Responsive progressive image loaders & media utilities.
-  - `components/dev/`: Developer preview suite, OpenAPI 3.1 explorer, platform link audit matrix, and system health drawer.
+  - `components/dev/`: Developer preview suite (`apiExplorer/`, `audit/`, `hooks/`, `layout/`, `overview/`, `platforms/`, `raw/`).
   - `components/discography/`: Catalog grid, filter bar, project cards, and track lists.
   - `components/layout/`: Sticky headers, floating navigation bar, ambient dynamic background, and responsive logo.
   - `components/player/`: Continuous audio player bar with progressive buffer indicator, volume persistence, and drag-and-drop queue dialog.
   - `components/ui/`: Shared primitive components.
-- **`lib/`**: Business logic, data parsing (`artistData.js`), URL slugs (`slugs.js`), Sharp image pipeline (`mediaOptimizer.js`), audio transcoding (`audioOptimizer.js`), media cache warmer coordinator (`mediaWarmer.js`), client LRU preloader (`mediaPreloader.js`), OpenAPI schema (`apiSpec.js`), and custom React hooks (`lib/hooks/`).
+- **`lib/`**: Business logic, data parsing (`artistData.js`), URL slugs (`slugs.js`), logo utilities (`logoUtils.js`), Sharp image pipeline (`mediaOptimizer.js`), audio transcoding (`audioOptimizer.js`), media cache warmer coordinator (`mediaWarmer.js`), client LRU preloader (`mediaPreloader.js`), OpenAPI schema (`apiSpec.js`), and custom React hooks (`lib/hooks/`).
 - **`data/`**: Operator content directory containing `artist-data.json`, project covers, track audio files, and cached media variants (`data/cache/images/` and `data/cache/audio/`). All media files uploaded via admin are immediately pre-compressed and cached on disk, and verified via an automatic fallback check when users load the site.
 
 ## 🔐 System Routes
@@ -29,7 +29,7 @@ For full project documentation, technology stack, and comprehensive operator con
 All site content is stored in `artist-discography/data/`:
 
 - `data/artist-data.json` - Discography JSON metadata (artist bio, social links, projects, tracks, streaming URLs).
-- `data/logo.png` (or `.jpg`, `.webp`, `.svg`, `.avif`) - *Optional*. Place a custom logo file here or upload/replace it directly in `/admin` (Artist Profile Information) to override the default logo in `public/logo.png`.
+- `data/logo.png` (or `.jpg`, `.webp`, `.svg`, `.avif`) - *Optional*. Place a custom logo file here or upload, replace, and reset it directly in `/_sys/_admin` (Artist Profile -> Artist Logo) to override the default logo in `public/logo.png`.
 - `data/projects/` - Project folders organized by project slug (`data/projects/<project-slug>/`), containing `art.<ext>` for cover artwork and `<track-slug>.<ext>` for track audio.
 
 For full JSON schema instructions and file naming conventions, see the [Operator Content Guide in Root README](../README.md#operator-content-guide-managing--updating-discography-data).
