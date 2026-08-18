@@ -49,9 +49,10 @@ async function asyncPool(items, concurrency, iteratorFn) {
  * Pre-optimizes and caches specific media files immediately (e.g. following upload or update).
  *
  * @param {Array<string>} filePaths - Absolute file paths to optimize
+ * @param {Object} [options={}] - Options including custom job targets
  * @returns {Promise<{ imagesWarmed: number, audioWarmed: number }>}
  */
-export async function warmMediaFiles(filePaths = []) {
+export async function warmMediaFiles(filePaths = [], options = {}) {
   if (!Array.isArray(filePaths) || filePaths.length === 0) {
     return { imagesWarmed: 0, audioWarmed: 0 }
   }
@@ -75,7 +76,9 @@ export async function warmMediaFiles(filePaths = []) {
   // Pre-cache all standard image variants
   await asyncPool(imageFiles, 4, async (imgPath) => {
     try {
-      await optimizeAndCacheImage(imgPath)
+      const fileName = path.basename(imgPath)
+      const targetLabel = options.targetMap?.[imgPath] || (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
+      await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel })
       imagesWarmed++
     } catch (err) {
       console.error(`Error warming image ${imgPath}:`, err)
@@ -85,7 +88,9 @@ export async function warmMediaFiles(filePaths = []) {
   // Pre-transcode audio tiers
   await asyncPool(audioFiles, 2, async (audioPath) => {
     try {
-      await optimizeAndCacheAudio(audioPath)
+      const fileName = path.basename(audioPath)
+      const targetLabel = options.targetMap?.[audioPath] || fileName
+      await optimizeAndCacheAudio(audioPath, undefined, { target: targetLabel })
       audioWarmed++
     } catch (err) {
       console.error(`Error warming audio ${audioPath}:`, err)
@@ -207,7 +212,9 @@ export async function warmAllArtistMedia(artistData = null) {
   if (uncachedImages.length > 0) {
     await asyncPool(uncachedImages, 4, async (imgPath) => {
       try {
-        await optimizeAndCacheImage(imgPath)
+        const fileName = path.basename(imgPath)
+        const targetLabel = fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName
+        await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel })
         imagesWarmed++
       } catch (err) {
         console.error(`Error warming image ${imgPath}:`, err)
@@ -218,7 +225,8 @@ export async function warmAllArtistMedia(artistData = null) {
   if (uncachedAudio.length > 0) {
     await asyncPool(uncachedAudio, 2, async (audioPath) => {
       try {
-        await optimizeAndCacheAudio(audioPath)
+        const fileName = path.basename(audioPath)
+        await optimizeAndCacheAudio(audioPath, undefined, { target: fileName })
         audioWarmed++
       } catch (err) {
         console.error(`Error warming audio ${audioPath}:`, err)

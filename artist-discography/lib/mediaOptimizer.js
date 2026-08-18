@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { createJob, updateJobProgress, completeJob, failJob } from './jobTracker'
 
 const CACHE_DIR = path.join(process.cwd(), 'data', 'cache', 'images')
 const IN_MEMORY_IMAGE_CACHE = new Map()
@@ -289,9 +290,14 @@ export function isImageFullyCached(sourceFilePath) {
  *
  * @param {string} sourceFilePath
  * @param {Array<Object>} [variants=STANDARD_IMAGE_VARIANTS]
+ * @param {Object} [jobOptions={}]
  * @returns {Promise<{ total: number, generated: number, cached: number }>}
  */
-export async function optimizeAndCacheImage(sourceFilePath, variants = STANDARD_IMAGE_VARIANTS) {
+export async function optimizeAndCacheImage(sourceFilePath, variants = STANDARD_IMAGE_VARIANTS, jobOptions = {}) {
+  const fileName = path.basename(sourceFilePath || '')
+  const jobId = jobOptions.jobId || `img_${crypto.createHash('md5').update(sourceFilePath || '').digest('hex').slice(0, 8)}_${Date.now()}`
+  const targetLabel = jobOptions.target || (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
+
   try {
     if (!sourceFilePath || !fs.existsSync(sourceFilePath)) {
       return { total: 0, generated: 0, cached: 0 }
@@ -302,10 +308,33 @@ export async function optimizeAndCacheImage(sourceFilePath, variants = STANDARD_
       return { total: 1, generated: 0, cached: 1 }
     }
 
+    createJob({
+      id: jobId,
+      type: 'image',
+      file: fileName,
+      target: targetLabel,
+      totalSteps: variants.length,
+      details: {
+        sourcePath: sourceFilePath,
+        format: ext,
+      },
+    })
+
     let generated = 0
     let cached = 0
 
-    for (const variant of variants) {
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i]
+      const stepDescription = variant.blur
+        ? `Generating low-res placeholder (${variant.width || 40}px blur, ${i + 1}/${variants.length})`
+        : `Generating WebP ${variant.width ? `${variant.width}px` : 'Full Original'} (Q: ${variant.quality || 80}, ${i + 1}/${variants.length})`
+
+      updateJobProgress(jobId, {
+        currentStep: stepDescription,
+        completedSteps: i,
+        progress: Math.round((i / variants.length) * 100),
+      })
+
       if (isImageVariantCached(sourceFilePath, variant)) {
         cached++
       } else {
@@ -314,9 +343,17 @@ export async function optimizeAndCacheImage(sourceFilePath, variants = STANDARD_
       }
     }
 
+    completeJob(jobId, {
+      summary: `Image optimized (${generated} generated, ${cached} cached)`,
+      generated,
+      cached,
+      total: variants.length,
+    })
+
     return { total: variants.length, generated, cached }
   } catch (err) {
     console.error(`Failed to pre-cache image variants for ${sourceFilePath}:`, err)
+    failJob(jobId, err)
     return { total: variants.length, generated: 0, cached: 0 }
   }
 }

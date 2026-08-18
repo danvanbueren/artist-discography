@@ -195,7 +195,24 @@ export async function POST(request) {
     // Immediately pre-compress and cache all uploaded artwork and audio streams
     if (filesToWarm.length > 0) {
       try {
-        await warmMediaFiles(filesToWarm)
+        const targetMap = {}
+        if (coverFile && typeof coverFile === 'object') {
+          for (const fp of filesToWarm) {
+            if (fp.includes('art.')) {
+              targetMap[fp] = `${name} (Cover Art)`
+            }
+          }
+        }
+        for (let i = 0; i < formattedTracks.length; i++) {
+          const tName = formattedTracks[i]?.name || `Track ${i + 1}`
+          for (const fp of filesToWarm) {
+            const base = path.basename(fp)
+            if (!base.startsWith('art.') && !targetMap[fp]) {
+              targetMap[fp] = `${name} - Track: "${tName}"`
+            }
+          }
+        }
+        await warmMediaFiles(filesToWarm, { targetMap })
       } catch (warmErr) {
         console.warn('Post-upload media warming error:', warmErr)
       }

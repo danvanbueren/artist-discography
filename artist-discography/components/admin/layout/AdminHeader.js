@@ -33,6 +33,7 @@ export default function AdminHeader({
   setErrorMessage,
   activeTab,
   setActiveTab,
+  mediaJobs,
 }) {
   return (
     <>
@@ -67,8 +68,45 @@ export default function AdminHeader({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-          {/* Live Auto-Save Status Badge */}
-          {isAutoSaving ? (
+          {/* Media Processing Live Progress Chip & Trigger */}
+          {mediaJobs?.isProcessing ? (
+            <Chip
+              onClick={() => mediaJobs.setIsDrawerOpen?.(true)}
+              icon={(
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pl: 0.5,
+                  }}
+                >
+                  <SyncIcon
+                    sx={{
+                      fontSize: '18px !important',
+                      animation: 'spin 1s infinite linear',
+                      '@keyframes spin': {
+                        '0%': { transform: 'rotate(0deg)' },
+                        '100%': { transform: 'rotate(-360deg)' },
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+              label={`Processing ${mediaJobs.activeJobs.length} file${mediaJobs.activeJobs.length === 1 ? '' : 's'} (${mediaJobs.overallProgress}%)...`}
+              color="warning"
+              variant="filled"
+              sx={{
+                fontWeight: 700,
+                py: 0.5,
+                cursor: 'pointer',
+                boxShadow: '0 0 12px rgba(255, 152, 0, 0.4)',
+                '&:hover': {
+                  backgroundColor: 'warning.dark',
+                },
+              }}
+            />
+          ) : isAutoSaving ? (
             <Chip
               icon={(
                 <SyncIcon
@@ -117,6 +155,22 @@ export default function AdminHeader({
               sx={{ color: 'text.secondary', py: 0.5 }}
             />
           ) : null}
+
+          {/* Media Center Quick Button */}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => mediaJobs?.setIsDrawerOpen?.(true)}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              color: mediaJobs?.isProcessing ? 'warning.main' : 'text.secondary',
+              borderColor: mediaJobs?.isProcessing ? 'warning.main' : 'rgba(255, 255, 255, 0.15)',
+              fontWeight: 600,
+            }}
+          >
+            Media Queue {mediaJobs?.activeJobs?.length ? `(${mediaJobs.activeJobs.length})` : ''}
+          </Button>
 
           <Button
             variant="outlined"

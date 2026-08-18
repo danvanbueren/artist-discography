@@ -10,7 +10,7 @@ import {
   Divider,
   Button,
   Chip,
-  CircularProgress,
+  LinearProgress,
 } from '@mui/material'
 import PersonIcon from '@mui/icons-material/Person'
 import LinkIcon from '@mui/icons-material/Link'
@@ -19,6 +19,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ImageIcon from '@mui/icons-material/Image'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS, SOCIAL_KEYS } from '../adminConstants'
 import { SOCIAL_ICONS } from '../../artist/ArtistHero'
@@ -46,7 +47,9 @@ export default function ArtistProfileTab({
   isResettingLogo,
   onUploadLogo,
   onResetLogo,
+  mediaJobs,
 }) {
+  const logoJob = mediaJobs?.getJobForFile?.('logo') || null
   return (
     <Box
       sx={{
@@ -184,6 +187,56 @@ export default function ArtistProfileTab({
                     />
                   )}
 
+                  {/* Inline Sharp Logo Optimization Progress Bar */}
+                  {logoJob && (logoJob.status === 'processing' || logoJob.status === 'queued') && (
+                    <Box
+                      sx={{
+                        width: '100%',
+                        p: 1.2,
+                        borderRadius: 1.5,
+                        backgroundColor: 'rgba(2, 136, 209, 0.12)',
+                        border: '1px solid rgba(41, 182, 246, 0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.75,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          sx={{ color: '#81d4fa', fontWeight: 700, fontSize: '0.75rem' }}
+                        >
+                          {logoJob.currentStep || 'Sharp optimizing responsive logo...'}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: '#81d4fa', fontWeight: 800, fontSize: '0.75rem' }}
+                        >
+                          {logoJob.progress || 0}%
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={logoJob.progress || 0}
+                        sx={{
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          '& .MuiLinearProgress-bar': {
+                            borderRadius: 3,
+                            background: 'linear-gradient(90deg, #29b6f6 0%, #0288d1 100%)',
+                          },
+                        }}
+                      />
+                    </Box>
+                  )}
+
                   {/* Actions Bar */}
                   <Box
                     sx={{
@@ -200,13 +253,7 @@ export default function ArtistProfileTab({
                       component="label"
                       size="small"
                       disabled={isUploadingLogo || isResettingLogo}
-                      startIcon={
-                        isUploadingLogo ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : (
-                          <CloudUploadIcon />
-                        )
-                      }
+                      startIcon={<CloudUploadIcon />}
                       sx={{
                         borderRadius: 2,
                         textTransform: 'none',
@@ -234,13 +281,7 @@ export default function ArtistProfileTab({
                         color="error"
                         size="small"
                         disabled={isUploadingLogo || isResettingLogo}
-                        startIcon={
-                          isResettingLogo ? (
-                            <CircularProgress size={16} color="inherit" />
-                          ) : (
-                            <RestartAltIcon />
-                          )
-                        }
+                        startIcon={<RestartAltIcon />}
                         onClick={() => onResetLogo?.()}
                         sx={{
                           borderRadius: 2,

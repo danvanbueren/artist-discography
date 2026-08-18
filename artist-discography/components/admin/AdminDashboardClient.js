@@ -15,6 +15,7 @@ import { useAdminAuth } from './hooks/useAdminAuth'
 import { useAutoSave } from './hooks/useAutoSave'
 import { useArtistProfile } from './hooks/useArtistProfile'
 import { useProjectsManager } from './hooks/useProjectsManager'
+import { useMediaJobs } from './hooks/useMediaJobs'
 
 import AdminAccessDisabled from './auth/AdminAccessDisabled'
 import AdminLoginView from './auth/AdminLoginView'
@@ -26,6 +27,7 @@ import ProjectEditForm from './projects/ProjectEditForm'
 import DeleteProjectDialog from './dialogs/DeleteProjectDialog'
 import DeleteTrackDialog from './dialogs/DeleteTrackDialog'
 import CopyTrackDialog from './dialogs/CopyTrackDialog'
+import MediaProcessingDrawer from './media/MediaProcessingDrawer'
 
 export default function AdminDashboardClient({
   adminAccess = true,
@@ -47,7 +49,10 @@ export default function AdminDashboardClient({
   // 3. Auto-save engine hook
   const autoSave = useAutoSave(editNameBridgeRef)
 
-  // 4. Artist profile state hook
+  // 4. Real-time media processing jobs hook
+  const mediaJobs = useMediaJobs()
+
+  // 5. Artist profile state hook
   const profile = useArtistProfile(
     initialData,
     defaultArtistName,
@@ -55,7 +60,7 @@ export default function AdminDashboardClient({
     autoSave.setStatusMessage
   )
 
-  // 5. Projects & releases manager hook
+  // 6. Projects & releases manager hook
   const projects = useProjectsManager({
     initialData,
     defaultArtistName,
@@ -175,6 +180,7 @@ export default function AdminDashboardClient({
             setErrorMessage={autoSave.setErrorMessage}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
+            mediaJobs={mediaJobs}
           />
 
           {/* Main Workspace Container */}
@@ -227,6 +233,7 @@ export default function AdminDashboardClient({
                   isResettingLogo={profile.isResettingLogo}
                   onUploadLogo={handleUploadLogo}
                   onResetLogo={handleResetLogo}
+                  mediaJobs={mediaJobs}
                 />
               )}
 
@@ -318,6 +325,7 @@ export default function AdminDashboardClient({
                           getFieldSx={autoSave.getFieldSx}
                           markFieldDirty={autoSave.markFieldDirty}
                           executeCreateProject={handleSaveCreateProject}
+                          mediaJobs={mediaJobs}
                           handleUpdateCreateTrackName={(idx, val) => projects.handleUpdateCreateTrackName(idx, val, handleTriggerCreateSave)}
                           handleUpdateCreateTrackArtist={(idx, val) => projects.handleUpdateCreateTrackArtist(idx, val, handleTriggerCreateSave)}
                           handleUpdateCreateTrackLink={(idx, key, val) => projects.handleUpdateCreateTrackLink(idx, key, val, handleTriggerCreateSave)}
@@ -360,6 +368,7 @@ export default function AdminDashboardClient({
                           markFieldDirty={autoSave.markFieldDirty}
                           executeUpdateProject={handleSaveUpdateProject}
                           setDeleteConfirmOpen={projects.setDeleteConfirmOpen}
+                          mediaJobs={mediaJobs}
                           handleUpdateEditTrackName={(idx, val) => projects.handleUpdateEditTrackName(idx, val, handleTriggerEditSave)}
                           handleUpdateEditTrackArtist={(idx, val) => projects.handleUpdateEditTrackArtist(idx, val, handleTriggerEditSave)}
                           handleUpdateEditTrackLink={(idx, key, val) => projects.handleUpdateEditTrackLink(idx, key, val, handleTriggerEditSave)}
@@ -404,6 +413,20 @@ export default function AdminDashboardClient({
             onChangeTargetProjectIndex={projects.setCopyTargetProjectIndex}
             onConfirmCopy={() => projects.handleCopyTrack(auth.password)}
             isCopyingTrack={projects.isCopyingTrack}
+          />
+
+          {/* Media Processing Center Drawer */}
+          <MediaProcessingDrawer
+            open={mediaJobs.isDrawerOpen}
+            onClose={() => mediaJobs.setIsDrawerOpen(false)}
+            activeJobs={mediaJobs.activeJobs}
+            completedJobs={mediaJobs.completedJobs}
+            overallProgress={mediaJobs.overallProgress}
+            isProcessing={mediaJobs.isProcessing}
+            onTriggerWarmAll={mediaJobs.triggerWarmAll}
+            onClearCompleted={mediaJobs.clearCompleted}
+            isTriggeringWarm={mediaJobs.isTriggeringWarm}
+            adminPassword={auth.password}
           />
         </Container>
       </Box>

@@ -13,11 +13,13 @@ import {
   Box,
   Button,
   Chip,
+  LinearProgress,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
 import TrackCreateCard from '../tracks/TrackCreateCard'
 import { PROJECT_TYPES } from '../adminConstants'
@@ -51,6 +53,7 @@ export default function ProjectCreateForm({
   getFieldSx,
   markFieldDirty,
   executeCreateProject,
+  mediaJobs,
   handleUpdateCreateTrackName,
   handleUpdateCreateTrackArtist,
   handleUpdateCreateTrackLink,
@@ -60,6 +63,7 @@ export default function ProjectCreateForm({
   handleMoveCreateTrackDown,
   handleDeleteCreateTrack,
 }) {
+  const coverJob = mediaJobs?.getJobForFile?.(coverFile?.name || `${name} (Cover Art)`) || null
   return (
     <Stack spacing={3}>
       <Paper
@@ -243,7 +247,15 @@ export default function ProjectCreateForm({
             >
               Artwork Cache & Optimization State
             </Typography>
-            {coverFile ? (
+            {coverJob && (coverJob.status === 'processing' || coverJob.status === 'queued') ? (
+              <Chip
+                icon={<AutoFixHighIcon sx={{ fontSize: '14px !important' }} />}
+                label={`Sharp Optimizing (${coverJob.progress || 0}%)...`}
+                color="warning"
+                size="small"
+                sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
+              />
+            ) : coverFile ? (
               <Chip
                 label="Staged for Project Creation"
                 color="warning"
@@ -261,6 +273,55 @@ export default function ProjectCreateForm({
               />
             )}
           </Box>
+
+          {/* Inline Real-Time Sharp Progress Bar */}
+          {coverJob && (coverJob.status === 'processing' || coverJob.status === 'queued') && (
+            <Box
+              sx={{
+                p: 1.2,
+                borderRadius: 1.5,
+                backgroundColor: 'rgba(2, 136, 209, 0.12)',
+                border: '1px solid rgba(41, 182, 246, 0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#81d4fa', fontWeight: 700, fontSize: '0.75rem' }}
+                >
+                  {coverJob.currentStep || 'Sharp generating responsive WebP & AVIF tiers...'}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#81d4fa', fontWeight: 800, fontSize: '0.75rem' }}
+                >
+                  {coverJob.progress || 0}%
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={coverJob.progress || 0}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #29b6f6 0%, #0288d1 100%)',
+                  },
+                }}
+              />
+            </Box>
+          )}
 
           <Box
             sx={{
@@ -372,6 +433,7 @@ export default function ProjectCreateForm({
               isSavedArtist={savedFields.has(`new_track_${index}_artist`)}
               dirtyFields={dirtyFields}
               savedFields={savedFields}
+              processingJob={mediaJobs?.getJobForFile?.(track.name || track.audioFileName)}
               onUpdateName={handleUpdateCreateTrackName}
               onUpdateArtist={handleUpdateCreateTrackArtist}
               onUpdateLink={handleUpdateCreateTrackLink}

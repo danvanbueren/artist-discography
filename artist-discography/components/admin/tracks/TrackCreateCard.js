@@ -14,6 +14,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  LinearProgress,
   InputAdornment,
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
@@ -24,6 +25,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import LinkIcon from '@mui/icons-material/Link'
+import GraphicEqIcon from '@mui/icons-material/GraphicEq'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS } from '../adminConstants'
 import { SOCIAL_ICONS } from '../../artist/ArtistHero'
@@ -40,6 +42,7 @@ const TrackCreateCard = memo(function TrackCreateCard({
   isSavedArtist,
   dirtyFields,
   savedFields,
+  processingJob = null,
   onUpdateName,
   onUpdateArtist,
   onUpdateLink,
@@ -212,7 +215,15 @@ const TrackCreateCard = memo(function TrackCreateCard({
                   >
                     Audio Cache & Streaming State
                   </Typography>
-                  {track.audioFileName || track.audioFile ? (
+                  {processingJob && (processingJob.status === 'processing' || processingJob.status === 'queued') ? (
+                    <Chip
+                      icon={<GraphicEqIcon sx={{ fontSize: '14px !important' }} />}
+                      label={`FFmpeg Transcoding (${processingJob.progress || 0}%)...`}
+                      color="warning"
+                      size="small"
+                      sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
+                    />
+                  ) : track.audioFileName || track.audioFile ? (
                     <Chip
                       label="Staged for Project Creation"
                       color="warning"
@@ -230,6 +241,55 @@ const TrackCreateCard = memo(function TrackCreateCard({
                     />
                   )}
                 </Box>
+
+                {/* Inline Real-Time FFmpeg Progress Bar */}
+                {processingJob && (processingJob.status === 'processing' || processingJob.status === 'queued') && (
+                  <Box
+                    sx={{
+                      p: 1.2,
+                      borderRadius: 1.5,
+                      backgroundColor: 'rgba(156, 39, 176, 0.12)',
+                      border: '1px solid rgba(186, 104, 200, 0.3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 0.75,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#e1bee7', fontWeight: 700, fontSize: '0.75rem' }}
+                      >
+                        {processingJob.currentStep || 'FFmpeg Transcoding audio streams...'}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#e1bee7', fontWeight: 800, fontSize: '0.75rem' }}
+                      >
+                        {processingJob.progress || 0}%
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={processingJob.progress || 0}
+                      sx={{
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 3,
+                          background: 'linear-gradient(90deg, #ba68c8 0%, #ab47bc 100%)',
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
 
                 <Box
                   sx={{

@@ -13,6 +13,7 @@ import {
   Box,
   Button,
   Chip,
+  LinearProgress,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -21,6 +22,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ImageIcon from '@mui/icons-material/Image'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import AddIcon from '@mui/icons-material/Add'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
 import TrackEditCard from '../tracks/TrackEditCard'
 import { PROJECT_TYPES } from '../adminConstants'
@@ -59,6 +61,7 @@ export default function ProjectEditForm({
   markFieldDirty,
   executeUpdateProject,
   setDeleteConfirmOpen,
+  mediaJobs,
   handleUpdateEditTrackName,
   handleUpdateEditTrackArtist,
   handleUpdateEditTrackLink,
@@ -71,6 +74,7 @@ export default function ProjectEditForm({
 }) {
   const currentProject = projectsList[selectedProjIndex] || {}
   const projectSlug = slugify(editName || currentProject.name || '')
+  const coverJob = mediaJobs?.getJobForFile?.(editCoverFile?.name || `${projectSlug} (Cover Art)`) || mediaJobs?.getJobForFile?.('art.')
 
   return (
     <Stack spacing={3}>
@@ -285,7 +289,15 @@ export default function ProjectEditForm({
             >
               Artwork Cache & Optimization State
             </Typography>
-            {editCoverFile ? (
+            {coverJob && (coverJob.status === 'processing' || coverJob.status === 'queued') ? (
+              <Chip
+                icon={<AutoFixHighIcon sx={{ fontSize: '14px !important' }} />}
+                label={`Sharp Optimizing (${coverJob.progress || 0}%)...`}
+                color="warning"
+                size="small"
+                sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
+              />
+            ) : editCoverFile ? (
               <Chip
                 label="Staged (Pending Save)"
                 color="warning"
@@ -310,6 +322,55 @@ export default function ProjectEditForm({
               />
             )}
           </Box>
+
+          {/* Inline Real-Time Sharp Progress Bar */}
+          {coverJob && (coverJob.status === 'processing' || coverJob.status === 'queued') && (
+            <Box
+              sx={{
+                p: 1.2,
+                borderRadius: 1.5,
+                backgroundColor: 'rgba(2, 136, 209, 0.12)',
+                border: '1px solid rgba(41, 182, 246, 0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.75,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#81d4fa', fontWeight: 700, fontSize: '0.75rem' }}
+                >
+                  {coverJob.currentStep || 'Sharp generating responsive WebP & AVIF tiers...'}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#81d4fa', fontWeight: 800, fontSize: '0.75rem' }}
+                >
+                  {coverJob.progress || 0}%
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={coverJob.progress || 0}
+                sx={{
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 3,
+                    background: 'linear-gradient(90deg, #29b6f6 0%, #0288d1 100%)',
+                  },
+                }}
+              />
+            </Box>
+          )}
 
           <Box
             sx={{
@@ -449,6 +510,7 @@ export default function ProjectEditForm({
               dirtyFields={dirtyFields}
               savedFields={savedFields}
               projectSlug={projectSlug}
+              processingJob={mediaJobs?.getJobForFile?.(track.name || track.originalName || track.audioFileName)}
               onUpdateName={handleUpdateEditTrackName}
               onUpdateArtist={handleUpdateEditTrackArtist}
               onUpdateLink={handleUpdateEditTrackLink}

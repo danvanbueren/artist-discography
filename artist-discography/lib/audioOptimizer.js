@@ -3,6 +3,7 @@ import path from 'path'
 import crypto from 'crypto'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { createJob, updateJobProgress, completeJob, failJob } from './jobTracker'
 
 const execFileAsync = promisify(execFile)
 
@@ -377,18 +378,49 @@ export function isAudioFullyCached(sourceFilePath) {
  *
  * @param {string} sourceFilePath
  * @param {Array<Object>} [variants=STANDARD_AUDIO_VARIANTS]
+ * @param {Object} [jobOptions={}]
  * @returns {Promise<{ total: number, generated: number, cached: number }>}
  */
-export async function optimizeAndCacheAudio(sourceFilePath, variants = STANDARD_AUDIO_VARIANTS) {
+export async function optimizeAndCacheAudio(sourceFilePath, variants = STANDARD_AUDIO_VARIANTS, jobOptions = {}) {
+  const fileName = path.basename(sourceFilePath || '')
+  const jobId = jobOptions.jobId || `aud_${crypto.createHash('md5').update(sourceFilePath || '').digest('hex').slice(0, 8)}_${Date.now()}`
+  const targetLabel = jobOptions.target || fileName
+
   try {
     if (!sourceFilePath || !fs.existsSync(sourceFilePath)) {
       return { total: 0, generated: 0, cached: 0 }
     }
 
+    const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
+    createJob({
+      id: jobId,
+      type: 'audio',
+      file: fileName,
+      target: targetLabel,
+      totalSteps: variants.length,
+      details: {
+        sourcePath: sourceFilePath,
+        sourceFormat: ext,
+      },
+    })
+
     let generated = 0
     let cached = 0
 
-    for (const variant of variants) {
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i]
+      const tierName = variant.format === 'flac' || variant.quality === 'lossless'
+        ? 'Lossless FLAC Master'
+        : `${variant.format?.toUpperCase() || 'MP3'} ${variant.bitrate || '320k'}`
+
+      const stepDescription = `Transcoding Tier ${i + 1}/${variants.length}: ${tierName}`
+
+      updateJobProgress(jobId, {
+        currentStep: stepDescription,
+        completedSteps: i,
+        progress: Math.round((i / variants.length) * 100),
+      })
+
       if (isAudioVariantCached(sourceFilePath, variant)) {
         cached++
       } else {
@@ -397,9 +429,17 @@ export async function optimizeAndCacheAudio(sourceFilePath, variants = STANDARD_
       }
     }
 
+    completeJob(jobId, {
+      summary: `Audio transcoding complete (${generated} generated, ${cached} cached)`,
+      generated,
+      cached,
+      total: variants.length,
+    })
+
     return { total: variants.length, generated, cached }
   } catch (err) {
     console.error(`Failed to pre-cache audio variants for ${sourceFilePath}:`, err)
+    failJob(jobId, err)
     return { total: variants.length, generated: 0, cached: 0 }
   }
 }

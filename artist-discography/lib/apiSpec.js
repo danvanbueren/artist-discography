@@ -175,6 +175,40 @@ export const API_ROUTES_SPEC = [
     ],
   },
   {
+    id: 'admin-media-jobs-get',
+    path: '/api/admin/media-jobs',
+    method: 'GET',
+    tag: 'Admin Portal',
+    summary: 'Get Real-Time Media Processing Jobs',
+    description: 'Returns active and recent Sharp image optimization and FFmpeg audio transcoding jobs. Supports SSE streaming with ?stream=1.',
+    requiresAdminAuth: false,
+    responses: [
+      { status: 200, description: 'Active & completed jobs snapshot', example: { success: true, active: [], completed: [], totalCount: 0 } },
+    ],
+  },
+  {
+    id: 'admin-media-jobs-post',
+    path: '/api/admin/media-jobs',
+    method: 'POST',
+    tag: 'Admin Portal',
+    summary: 'Trigger Catalog Media Warming / Clear Jobs',
+    description: 'Triggers background warming/optimization across catalog media or clears completed jobs.',
+    requiresAdminAuth: true,
+    requestFormat: 'json',
+    defaultBody: JSON.stringify(
+      {
+        password: 'admin',
+        action: 'warm-all',
+      },
+      null,
+      2
+    ),
+    responses: [
+      { status: 200, description: 'Action executed', example: { success: true, message: 'Catalog media optimization and pre-transcoding started.' } },
+      { status: 401, description: 'Unauthorized', example: { success: false, error: 'Unauthorized: Invalid admin password' } },
+    ],
+  },
+  {
     id: 'dev-seed-dummy',
     path: '/api/dev/seed-dummy',
     method: 'POST',
