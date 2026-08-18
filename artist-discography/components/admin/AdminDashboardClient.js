@@ -48,7 +48,12 @@ export default function AdminDashboardClient({
   const autoSave = useAutoSave(editNameBridgeRef)
 
   // 4. Artist profile state hook
-  const profile = useArtistProfile(initialData, defaultArtistName, autoSave.setErrorMessage)
+  const profile = useArtistProfile(
+    initialData,
+    defaultArtistName,
+    autoSave.setErrorMessage,
+    autoSave.setStatusMessage
+  )
 
   // 5. Projects & releases manager hook
   const projects = useProjectsManager({
@@ -68,6 +73,14 @@ export default function AdminDashboardClient({
   // Auto-save save callbacks binding authentication password
   const handleSaveArtist = useCallback(() => {
     return profile.executeSaveArtist(auth.password)
+  }, [profile, auth.password])
+
+  const handleUploadLogo = useCallback((file) => {
+    return profile.uploadLogoFile(file, auth.password)
+  }, [profile, auth.password])
+
+  const handleResetLogo = useCallback(() => {
+    return profile.resetLogo(auth.password)
   }, [profile, auth.password])
 
   const handleSaveCreateProject = useCallback(() => {
@@ -208,6 +221,12 @@ export default function AdminDashboardClient({
                   savedFields={autoSave.savedFields}
                   markFieldDirty={autoSave.markFieldDirty}
                   executeSaveArtist={handleSaveArtist}
+                  logoInfo={profile.logoInfo}
+                  logoPreview={profile.logoPreview}
+                  isUploadingLogo={profile.isUploadingLogo}
+                  isResettingLogo={profile.isResettingLogo}
+                  onUploadLogo={handleUploadLogo}
+                  onResetLogo={handleResetLogo}
                 />
               )}
 

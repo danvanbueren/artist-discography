@@ -7,10 +7,18 @@ import {
   Typography,
   Stack,
   InputAdornment,
+  Divider,
+  Button,
+  Chip,
+  CircularProgress,
 } from '@mui/material'
 import PersonIcon from '@mui/icons-material/Person'
 import LinkIcon from '@mui/icons-material/Link'
 import ShareIcon from '@mui/icons-material/Share'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ImageIcon from '@mui/icons-material/Image'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS, SOCIAL_KEYS } from '../adminConstants'
 import { SOCIAL_ICONS } from '../../artist/ArtistHero'
@@ -32,11 +40,23 @@ export default function ArtistProfileTab({
   savedFields,
   markFieldDirty,
   executeSaveArtist,
+  logoInfo,
+  logoPreview,
+  isUploadingLogo,
+  isResettingLogo,
+  onUploadLogo,
+  onResetLogo,
 }) {
   return (
-    <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 0.5 }}>
+    <Box
+      sx={{
+        flexGrow: 1,
+        overflowY: 'auto',
+        pr: 0.5,
+      }}
+    >
       <Grid container spacing={3}>
-        {/* Left Column: Artist Bio & Details */}
+        {/* Left Column: Artist Bio, Details & Logo */}
         <Grid size={{ xs: 12, md: 5 }}>
           <Paper
             variant="outlined"
@@ -88,6 +108,164 @@ export default function ArtistProfileTab({
                 isDirty={dirtyFields.has('artistBio')}
                 isSaved={savedFields.has('artistBio')}
               />
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Artist Logo Upload & Management */}
+              <Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    mb: 1.5,
+                    flexWrap: 'wrap',
+                    gap: 1,
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                    }}
+                  >
+                    <ImageIcon color="primary" sx={{ fontSize: 20 }} /> Artist Logo
+                  </Typography>
+
+                  {logoInfo?.isCustom ? (
+                    <Chip
+                      icon={<CheckCircleIcon />}
+                      label={`Custom Logo (data/${logoInfo?.filename || 'logo.png'})`}
+                      color="success"
+                      size="small"
+                      sx={{ fontWeight: 600, height: 24 }}
+                    />
+                  ) : (
+                    <Chip
+                      icon={<ImageIcon />}
+                      label={`Default Logo (public/${logoInfo?.filename || 'logo.png'})`}
+                      color="default"
+                      variant="outlined"
+                      size="small"
+                      sx={{ fontWeight: 600, height: 24 }}
+                    />
+                  )}
+                </Box>
+
+                {/* Logo Preview Container */}
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    backgroundColor: 'rgba(10, 10, 16, 0.7)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1.5,
+                    minHeight: 110,
+                  }}
+                >
+                  {logoPreview && (
+                    <Box
+                      component="img"
+                      src={logoPreview}
+                      alt="Artist Logo Preview"
+                      sx={{
+                        height: '9rem',
+                        maxWidth: '100%',
+                        objectFit: 'contain',
+                        filter: 'drop-shadow(0px 4px 12px rgba(0,0,0,0.5))',
+                      }}
+                    />
+                  )}
+
+                  {/* Actions Bar */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      gap: 1,
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                      width: '100%',
+                    }}
+                  >
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      size="small"
+                      disabled={isUploadingLogo || isResettingLogo}
+                      startIcon={
+                        isUploadingLogo ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <CloudUploadIcon />
+                        )
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      {logoInfo?.isCustom ? 'Replace Logo' : 'Upload Logo'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,image/avif,image/x-icon"
+                        hidden
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            onUploadLogo?.(file)
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                    </Button>
+
+                    {logoInfo?.isCustom && (
+                      <Button
+                        variant="text"
+                        color="error"
+                        size="small"
+                        disabled={isUploadingLogo || isResettingLogo}
+                        startIcon={
+                          isResettingLogo ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <RestartAltIcon />
+                          )
+                        }
+                        onClick={() => onResetLogo?.()}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        Remove Logo
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                    display: 'block',
+                    mt: 1,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Custom logos saved to <code>data/logo.*</code> automatically override the default logo in navigation headers, dynamic theme gradient filters, and share metadata.
+                </Typography>
+              </Box>
             </Stack>
           </Paper>
         </Grid>

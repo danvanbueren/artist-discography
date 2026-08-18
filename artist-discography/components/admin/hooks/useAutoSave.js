@@ -84,6 +84,8 @@ export function useAutoSave(editNameRef = null) {
         actionLabel = 'Uploading & saving audio...'
       } else if (snapshotKeys.some((k) => k.includes('cover'))) {
         actionLabel = 'Uploading & saving cover...'
+      } else if (snapshotKeys.some((k) => k.includes('logo'))) {
+        actionLabel = 'Uploading & saving logo...'
       } else if (snapshotKeys.some((k) => k.startsWith('new_'))) {
         actionLabel = 'Saving new project...'
       } else if (snapshotKeys.some((k) => k === 'artistName' || k === 'artistBio' || k.startsWith('platform_') || k.startsWith('social_'))) {

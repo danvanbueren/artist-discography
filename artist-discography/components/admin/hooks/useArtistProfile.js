@@ -2,13 +2,25 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist', setErrorMessage) {
+export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist', setErrorMessage, setStatusMessage) {
   const [artistData, setArtistData] = useState(() => initialData?.artist ?? {})
 
   const [artistNameInput, setArtistNameInput] = useState(() => artistData?.name || defaultArtistName)
   const [artistBioInput, setArtistBioInput] = useState(() => artistData?.bio || '')
   const [artistPlatforms, setArtistPlatforms] = useState(() => artistData?.links?.platforms || {})
   const [artistSocials, setArtistSocials] = useState(() => artistData?.links?.socials || {})
+
+  // Logo State
+  const [logoInfo, setLogoInfo] = useState(() => initialData?.logoInfo ?? {
+    exists: true,
+    isCustom: false,
+    filename: 'logo.png',
+    url: '/api/logo',
+  })
+  const [logoTimestamp, setLogoTimestamp] = useState(() => Date.now())
+  const [logoPreview, setLogoPreview] = useState(() => `/api/logo?t=${Date.now()}`)
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
+  const [isResettingLogo, setIsResettingLogo] = useState(false)
 
   const artistNameInputRef = useRef(artistNameInput)
   const artistBioInputRef = useRef(artistBioInput)
@@ -40,6 +52,9 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
       setArtistPlatforms(initialData.artist.links?.platforms || {})
       setArtistSocials(initialData.artist.links?.socials || {})
     }
+    if (initialData?.logoInfo) {
+      setLogoInfo(initialData.logoInfo)
+    }
   }, [initialData, defaultArtistName])
 
   const executeSaveArtist = useCallback(async (password) => {
@@ -68,6 +83,69 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
     }
   }, [setErrorMessage])
 
+  const uploadLogoFile = useCallback(async (file, password) => {
+    if (!file) return false
+    setIsUploadingLogo(true)
+    try {
+      const formData = new FormData()
+      formData.append('password', password || '')
+      formData.append('logoFile', file)
+
+      const res = await fetch('/api/admin/logo', {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(30000),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (res.ok && result.success) {
+        const now = Date.now()
+        setLogoInfo(result.logo || {})
+        setLogoTimestamp(now)
+        setLogoPreview(`/api/logo?t=${now}`)
+        setStatusMessage?.(result.message || 'Logo uploaded successfully!')
+        return true
+      }
+      setErrorMessage?.(result.error || 'Failed to upload logo.')
+      return false
+    } catch (err) {
+      setErrorMessage?.(`Logo upload error: ${err.message}`)
+      return false
+    } finally {
+      setIsUploadingLogo(false)
+    }
+  }, [setErrorMessage, setStatusMessage])
+
+  const resetLogo = useCallback(async (password) => {
+    setIsResettingLogo(true)
+    try {
+      const res = await fetch('/api/admin/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password: password || '',
+          action: 'delete',
+        }),
+        signal: AbortSignal.timeout(20000),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (res.ok && result.success) {
+        const now = Date.now()
+        setLogoInfo(result.logo || {})
+        setLogoTimestamp(now)
+        setLogoPreview(`/api/logo?t=${now}`)
+        setStatusMessage?.(result.message || 'Logo reset to default.')
+        return true
+      }
+      setErrorMessage?.(result.error || 'Failed to reset logo.')
+      return false
+    } catch (err) {
+      setErrorMessage?.(`Logo reset error: ${err.message}`)
+      return false
+    } finally {
+      setIsResettingLogo(false)
+    }
+  }, [setErrorMessage, setStatusMessage])
+
   return {
     artistData,
     setArtistData,
@@ -83,6 +161,14 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
     artistSocials,
     setArtistSocials,
     artistSocialsRef,
+    logoInfo,
+    setLogoInfo,
+    logoPreview,
+    logoTimestamp,
+    isUploadingLogo,
+    isResettingLogo,
+    uploadLogoFile,
+    resetLogo,
     executeSaveArtist,
   }
 }
