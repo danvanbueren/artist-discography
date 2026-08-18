@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, Component } from 'react'
+import { useState, useCallback, memo } from 'react'
 import {
   Box,
   Paper,
@@ -8,92 +8,71 @@ import {
   Chip,
   Button,
   TextField,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Divider,
   Alert,
-  AlertTitle,
-  CircularProgress,
   Stack,
   InputAdornment,
   Grid,
 } from '@mui/material'
-
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import PlayArrowIcon from '@mui/icons-material/PlayArrow'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DownloadIcon from '@mui/icons-material/Download'
 import LaunchIcon from '@mui/icons-material/Launch'
 import SearchIcon from '@mui/icons-material/Search'
 import LockIcon from '@mui/icons-material/Lock'
 import CodeIcon from '@mui/icons-material/Code'
-
 import { API_TAGS, API_ROUTES_SPEC } from '../../lib/apiSpec'
+import ApiExplorerErrorBoundary from './apiExplorer/ApiExplorerErrorBoundary'
+import ApiEndpointAccordion from './apiExplorer/ApiEndpointAccordion'
 
-const METHOD_COLORS = {
-  GET: {
-    textColor: '#81c784',
-    bg: 'rgba(46, 125, 50, 0.35)',
-    border: 'rgba(76, 175, 80, 0.6)',
-    boxShadow: '0 0 10px rgba(76, 175, 80, 0.2)',
-  },
-  POST: {
-    textColor: '#64b5f6',
-    bg: 'rgba(25, 118, 210, 0.35)',
-    border: 'rgba(33, 150, 243, 0.6)',
-    boxShadow: '0 0 10px rgba(33, 150, 243, 0.2)',
-  },
-  PUT: {
-    textColor: '#ffb74d',
-    bg: 'rgba(237, 108, 2, 0.35)',
-    border: 'rgba(255, 152, 0, 0.6)',
-    boxShadow: '0 0 10px rgba(255, 152, 0, 0.2)',
-  },
-  DELETE: {
-    textColor: '#e57373',
-    bg: 'rgba(211, 47, 47, 0.35)',
-    border: 'rgba(244, 67, 54, 0.6)',
-    boxShadow: '0 0 10px rgba(244, 67, 54, 0.2)',
-  },
+function buildTargetUrl(route, pathParams = {}) {
+  try {
+    let url = route?.path ?? ''
+    if (Array.isArray(route?.pathParams)) {
+      route.pathParams.forEach((p) => {
+        if (p?.name) {
+          const val = pathParams?.[p.name] ?? p.example ?? `{${p.name}}`
+          url = url.replace(`{${p.name}}`, encodeURIComponent(String(val)))
+        }
+      })
+    }
+    return url
+  } catch (err) {
+    return route?.path ?? ''
+  }
 }
 
-// React Error Boundary class to guarantee whole-app safety
-class ApiExplorerErrorBoundary extends Component {
-  constructor(props) {
-    super(props)
-    this.state = { hasError: false, error: null }
-  }
+function generateCurlCommand(route, state = {}, adminPassword = '') {
+  try {
+    const targetUrl = buildTargetUrl(route, state?.pathParams ?? {})
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const fullUrl = `${origin}${targetUrl}`
+    const parts = [`curl -X ${route?.method ?? 'GET'} "${fullUrl}"`]
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error }
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('API Explorer Component Error caught by boundary:', error, errorInfo)
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <Paper sx={{ p: 3, borderRadius: 2.5, backgroundColor: 'rgba(244, 67, 54, 0.1)', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-            <AlertTitle sx={{ fontWeight: 700 }}>API Explorer Encountered an Error</AlertTitle>
-            {this.state.error?.message || 'An unexpected rendering error occurred inside the API Explorer console.'}
-          </Alert>
-          <Button
-            variant="outlined"
-            color="error"
-            size="small"
-            onClick={() => this.setState({ hasError: false, error: null })}
-            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-          >
-            Reload API Explorer
-          </Button>
-        </Paper>
-      )
+    if (route?.requiresAdminAuth) {
+      parts.push(`-H "x-admin-password: ${adminPassword || 'YOUR_PASSWORD'}"`)
     }
-    return this.props.children
+
+    if (route?.method === 'POST') {
+      if (route?.requestFormat === 'json') {
+        parts.push('-H "Content-Type: application/json"')
+        if (state?.body) {
+          try {
+            const minified = JSON.stringify(JSON.parse(state.body))
+            parts.push(`-d '${minified}'`)
+          } catch (e) {
+            parts.push(`-d '${state.body}'`)
+          }
+        }
+      } else if (route?.requestFormat === 'formdata') {
+        if (state?.formDataParams) {
+          Object.entries(state.formDataParams).forEach(([k, v]) => {
+            parts.push(`-F "${k}=${v}"`)
+          })
+        }
+      }
+    }
+
+    return parts.join(' \\\n  ')
+  } catch (err) {
+    return `curl -X ${route?.method ?? 'GET'} "${route?.path ?? ''}"`
   }
 }
 
@@ -102,8 +81,6 @@ function DevApiExplorerInner() {
   const [selectedTag, setSelectedTag] = useState('ALL')
   const [expandedId, setExpandedId] = useState(false)
   const [adminPassword, setAdminPassword] = useState('admin')
-  
-  // Endpoint trial state: keyed by endpoint id
   const [requestState, setRequestState] = useState({})
 
   const handleAccordionChange = (id) => (_, isExpanded) => {
@@ -113,8 +90,7 @@ function DevApiExplorerInner() {
   const getEndpointState = (id, route) => {
     try {
       if (requestState?.[id]) return requestState[id]
-      
-      // Safe initial defaults
+
       const initialBody = route?.defaultBody ?? ''
       const initialParams = {}
       if (Array.isArray(route?.pathParams)) {
@@ -155,7 +131,7 @@ function DevApiExplorerInner() {
     }
   }
 
-  const updateEndpointState = (id, updater) => {
+  const updateEndpointState = useCallback((id, updater) => {
     try {
       setRequestState((prev) => {
         const current = prev?.[id] ?? {}
@@ -167,77 +143,20 @@ function DevApiExplorerInner() {
     } catch (err) {
       console.error('Error updating endpoint state:', err)
     }
-  }
-
-  // Construct target URL with path parameters safely evaluated
-  const buildTargetUrl = (route, pathParams = {}) => {
-    try {
-      let url = route?.path ?? ''
-      if (Array.isArray(route?.pathParams)) {
-        route.pathParams.forEach((p) => {
-          if (p?.name) {
-            const val = pathParams?.[p.name] ?? p.example ?? `{${p.name}}`
-            url = url.replace(`{${p.name}}`, encodeURIComponent(String(val)))
-          }
-        })
-      }
-      return url
-    } catch (err) {
-      return route?.path ?? ''
-    }
-  }
-
-  // Generate cURL command string safely
-  const generateCurlCommand = (route, state = {}) => {
-    try {
-      const targetUrl = buildTargetUrl(route, state?.pathParams ?? {})
-      const origin = typeof window !== 'undefined' ? window.location.origin : ''
-      const fullUrl = `${origin}${targetUrl}`
-      const parts = [`curl -X ${route?.method ?? 'GET'} "${fullUrl}"`]
-
-      if (route?.requiresAdminAuth) {
-        parts.push(`-H "x-admin-password: ${adminPassword || 'YOUR_PASSWORD'}"`)
-      }
-
-      if (route?.method === 'POST') {
-        if (route?.requestFormat === 'json') {
-          parts.push('-H "Content-Type: application/json"')
-          if (state?.body) {
-            try {
-              const minified = JSON.stringify(JSON.parse(state.body))
-              parts.push(`-d '${minified}'`)
-            } catch (e) {
-              parts.push(`-d '${state.body}'`)
-            }
-          }
-        } else if (route?.requestFormat === 'formdata') {
-          if (state?.formDataParams) {
-            Object.entries(state.formDataParams).forEach(([k, v]) => {
-              parts.push(`-F "${k}=${v}"`)
-            })
-          }
-        }
-      }
-
-      return parts.join(' \\\n  ')
-    } catch (err) {
-      return `curl -X ${route?.method ?? 'GET'} "${route?.path ?? ''}"`
-    }
-  }
+  }, [])
 
   const handleCopyCurl = (route, id) => {
     try {
       const currentState = getEndpointState(id, route)
-      const cmd = generateCurlCommand(route, currentState)
+      const cmd = generateCurlCommand(route, currentState, adminPassword)
       navigator.clipboard.writeText(cmd)
       updateEndpointState(id, (prev) => ({ ...prev, copiedCurl: true }))
       setTimeout(() => {
         updateEndpointState(id, (prev) => ({ ...prev, copiedCurl: false }))
       }, 2000)
-    } catch (e) {}
+    } catch (e) { }
   }
 
-  // Execute test request against API endpoint
   const handleExecuteRequest = async (route, id) => {
     try {
       const currentState = getEndpointState(id, route)
@@ -251,7 +170,6 @@ function DevApiExplorerInner() {
       }))
 
       const startTime = performance.now()
-
       const headers = {}
       let fetchOptions = {
         method: route?.method ?? 'GET',
@@ -319,7 +237,7 @@ function DevApiExplorerInner() {
         response: {
           status: 0,
           statusText: 'Network Error',
-          durationMs: Math.round(endTime - startTime),
+          durationMs: Math.round(endTime - performance.now()),
           headers: {},
           body: `Error: ${err.message}`,
           isOk: false,
@@ -328,7 +246,6 @@ function DevApiExplorerInner() {
     }
   }
 
-  // Download OpenAPI 3.0 spec JSON file
   const handleDownloadOpenApi = async () => {
     try {
       const res = await fetch('/api/dev/openapi')
@@ -345,7 +262,6 @@ function DevApiExplorerInner() {
     }
   }
 
-  // Filter routes based on search and tag selection safely
   const routesList = Array.isArray(API_ROUTES_SPEC) ? API_ROUTES_SPEC : []
   const filteredRoutes = routesList.filter((route) => {
     try {
@@ -370,7 +286,7 @@ function DevApiExplorerInner() {
 
   return (
     <Stack spacing={3}>
-      {/* Top Header & OpenAPI Download Action Bar */}
+      {/* Top Header & Actions Bar */}
       <Box
         sx={{
           display: 'flex',
@@ -388,7 +304,7 @@ function DevApiExplorerInner() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
             <CodeIcon color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 800 }}>
-              Interactive API Explorer & Console
+              Interactive API Explorer &amp; Console
             </Typography>
           </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -421,7 +337,7 @@ function DevApiExplorerInner() {
         </Box>
       </Box>
 
-      {/* Global Controls & Filter Bar */}
+      {/* Filter & Controls Bar */}
       <Paper
         elevation={2}
         sx={{
@@ -505,286 +421,26 @@ function DevApiExplorerInner() {
       {/* Endpoints Accordion List */}
       {filteredRoutes.length === 0 ? (
         <Alert severity="info" sx={{ borderRadius: 2 }}>
-          No API endpoints found matching search query "{searchQuery}".
+          No API endpoints found matching search query &quot;{searchQuery}&quot;.
         </Alert>
       ) : (
         filteredRoutes.map((route) => {
-          try {
-            if (!route || !route.id) return null
+          if (!route?.id) return null
+          const state = getEndpointState(route.id, route)
+          const isExpanded = expandedId === route.id
 
-            const methodKey = route.method || 'GET'
-            const methodStyle = METHOD_COLORS[methodKey] || METHOD_COLORS.GET
-            const state = getEndpointState(route.id, route)
-            const isExpanded = expandedId === route.id
-
-            const pathParamsList = Array.isArray(route.pathParams) ? route.pathParams : []
-            const defaultParamsList = Array.isArray(route.defaultParams) ? route.defaultParams : []
-
-            return (
-              <Accordion
-                key={route.id}
-                expanded={isExpanded}
-                onChange={handleAccordionChange(route.id)}
-                sx={{
-                  backgroundColor: 'rgba(22, 22, 32, 0.75)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '12px !important',
-                  overflow: 'hidden',
-                  '&:before': { display: 'none' },
-                  mb: 1.5,
-                }}
-              >
-                <AccordionSummary
-                  expandIcon={<ExpandMoreIcon />}
-                  sx={{
-                    px: 2.5,
-                    py: 1,
-                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.02)' },
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', flexWrap: 'wrap' }}>
-                    <Chip
-                      label={methodKey}
-                      size="small"
-                      sx={{
-                        fontWeight: 900,
-                        fontSize: '0.78rem',
-                        minWidth: 68,
-                        color: methodStyle.textColor,
-                        backgroundColor: methodStyle.bg,
-                        border: `1px solid ${methodStyle.border}`,
-                        boxShadow: methodStyle.boxShadow,
-                        letterSpacing: '0.04em',
-                      }}
-                    />
-
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        fontFamily: 'monospace',
-                        fontWeight: 700,
-                        color: 'primary.light',
-                        fontSize: '0.95rem',
-                      }}
-                    >
-                      {route.path || '/api'}
-                    </Typography>
-
-                    <Typography variant="body2" sx={{ color: 'text.secondary', flexGrow: 1 }}>
-                      {route.summary || ''}
-                    </Typography>
-
-                    {route.requiresAdminAuth && (
-                      <Chip
-                        icon={<LockIcon fontSize="small" />}
-                        label="Admin Auth"
-                        color="warning"
-                        variant="outlined"
-                        size="small"
-                        sx={{ fontWeight: 600 }}
-                      />
-                    )}
-
-                    <Chip
-                      label={route.tag || 'API'}
-                      variant="outlined"
-                      size="small"
-                      sx={{ color: 'text.secondary', borderColor: 'rgba(255,255,255,0.1)' }}
-                    />
-                  </Box>
-                </AccordionSummary>
-
-                <AccordionDetails sx={{ px: 3, pb: 3, pt: 1 }}>
-                  <Divider sx={{ mb: 2.5 }} />
-
-                  <Typography variant="body2" sx={{ color: 'text.primary', mb: 3 }}>
-                    {route.description || ''}
-                  </Typography>
-
-                  {/* Path Parameters Section */}
-                  {pathParamsList.length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
-                        Path Parameters
-                      </Typography>
-                      <Grid container spacing={2}>
-                        {pathParamsList.map((p) => {
-                          if (!p || !p.name) return null
-                          const paramName = p.name
-                          const paramDesc = p.description || ''
-                          const paramExample = p.example || ''
-                          const currentVal = state?.pathParams?.[paramName] ?? paramExample
-
-                          return (
-                            <Grid key={paramName} size={{ xs: 12, sm: 6 }}>
-                              <TextField
-                                fullWidth
-                                size="small"
-                                label={`{${paramName}} (${paramDesc})`}
-                                value={currentVal}
-                                onChange={(e) => {
-                                  const val = e.target.value
-                                  updateEndpointState(route.id, (prev) => ({
-                                    ...prev,
-                                    pathParams: { ...(prev?.pathParams ?? {}), [paramName]: val },
-                                  }))
-                                }}
-                              />
-                            </Grid>
-                          )
-                        })}
-                      </Grid>
-                    </Box>
-                  )}
-
-                  {/* Request Body Builder Section */}
-                  {route.method === 'POST' && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
-                        Request Body ({route.requestFormat === 'json' ? 'JSON' : 'Multipart Form-Data'})
-                      </Typography>
-
-                      {route.requestFormat === 'json' && (
-                        <TextField
-                          fullWidth
-                          multiline
-                          rows={6}
-                          size="small"
-                          value={state?.body ?? ''}
-                          onChange={(e) => {
-                            const val = e.target.value
-                            updateEndpointState(route.id, (prev) => ({ ...prev, body: val }))
-                          }}
-                          slotProps={{
-                            htmlInput: {
-                              sx: {
-                                fontFamily: 'monospace',
-                                fontSize: '0.85rem',
-                                backgroundColor: '#0c0c12',
-                                color: '#90caf9',
-                              },
-                            },
-                          }}
-                        />
-                      )}
-
-                      {route.requestFormat === 'formdata' && (
-                        <Grid container spacing={2}>
-                          {defaultParamsList.map((p) => {
-                            if (!p || !p.key) return null
-                            const pKey = p.key
-                            const pDesc = p.description || ''
-                            const currentFormVal = state?.formDataParams?.[pKey] ?? ''
-
-                            return (
-                              <Grid key={pKey} size={{ xs: 12, sm: 6 }}>
-                                <TextField
-                                  fullWidth
-                                  size="small"
-                                  label={`${pKey} (${pDesc})`}
-                                  value={currentFormVal}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    updateEndpointState(route.id, (prev) => ({
-                                      ...prev,
-                                      formDataParams: {
-                                        ...(prev?.formDataParams ?? {}),
-                                        [pKey]: val,
-                                      },
-                                    }))
-                                  }}
-                                />
-                              </Grid>
-                            )
-                          })}
-                        </Grid>
-                      )}
-                    </Box>
-                  )}
-
-                  {/* Action Buttons: Execute & cURL Generator */}
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, alignItems: 'center' }}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={state?.isLoading ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
-                      disabled={Boolean(state?.isLoading)}
-                      onClick={() => handleExecuteRequest(route, route.id)}
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 3 }}
-                    >
-                      {state?.isLoading ? 'Sending Request...' : 'Try It Out (Execute)'}
-                    </Button>
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<ContentCopyIcon />}
-                      onClick={() => handleCopyCurl(route, route.id)}
-                      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                    >
-                      {state?.copiedCurl ? 'Copied cURL!' : 'Copy cURL'}
-                    </Button>
-                  </Box>
-
-                  {/* Live Response Panel */}
-                  {state?.response && (
-                    <Paper
-                      variant="outlined"
-                      sx={{
-                        p: 2.5,
-                        borderRadius: 2,
-                        backgroundColor: '#0a0a0f',
-                        borderColor: state.response.isOk ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Chip
-                            label={`Status: ${state.response.status ?? 0} ${state.response.statusText ?? ''}`}
-                            color={state.response.isOk ? 'success' : 'error'}
-                            size="small"
-                            sx={{ fontWeight: 800 }}
-                          />
-                          <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-                            Time: {state.response.durationMs ?? 0} ms
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5 }}>
-                        Response Body:
-                      </Typography>
-
-                      <Typography
-                        component="pre"
-                        sx={{
-                          fontFamily: 'monospace',
-                          fontSize: '0.85rem',
-                          color: state.response.isOk ? '#a5d6a7' : '#ef9a9a',
-                          m: 0,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          maxHeight: 400,
-                          overflowY: 'auto',
-                          p: 1.5,
-                          backgroundColor: 'rgba(0,0,0,0.4)',
-                          borderRadius: 1.5,
-                        }}
-                      >
-                        {state.response.body || ''}
-                      </Typography>
-                    </Paper>
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            )
-          } catch (routeRenderErr) {
-            console.error(`Error rendering route card for ${route?.id}:`, routeRenderErr)
-            return (
-              <Alert key={route?.id || Math.random()} severity="warning" sx={{ mb: 1.5, borderRadius: 2 }}>
-                Error rendering endpoint card for {route?.path || 'route'}: {routeRenderErr.message}
-              </Alert>
-            )
-          }
+          return (
+            <ApiEndpointAccordion
+              key={route.id}
+              route={route}
+              isExpanded={isExpanded}
+              onAccordionChange={handleAccordionChange(route.id)}
+              state={state}
+              onUpdateState={(updater) => updateEndpointState(route.id, updater)}
+              onExecuteRequest={() => handleExecuteRequest(route, route.id)}
+              onCopyCurl={() => handleCopyCurl(route, route.id)}
+            />
+          )
         })
       )}
     </Stack>
@@ -799,4 +455,4 @@ function DevApiExplorer(props) {
   )
 }
 
-export default React.memo(DevApiExplorer)
+export default memo(DevApiExplorer)
