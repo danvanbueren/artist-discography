@@ -264,3 +264,14 @@ Inside the container, test that data folder is writable:
 ```bash
 touch /app/data/test.tmp && rm /app/data/test.tmp
 ```
+
+### Issue 6: Cannot Access Server on Local LAN IP (`http://192.168.x.x:3000`)
+- **Cause**: Port is bound to `127.0.0.1:3000:3000` (loopback only) for security.
+- **Solution**: To allow LAN access, change `ports: - "127.0.0.1:3000:3000"` to `ports: - "3000:3000"` in `docker-compose.yml` and run `docker compose up -d`.
+
+### Issue 7: Domain Still Loads Registrar Holding Page
+- **Cause**: DNS cache TTL, pending nameserver delegation, or conflicting `A` records in Cloudflare DNS.
+- **Solution**:
+  1. Go to Cloudflare Dashboard → **DNS** → **Records** and delete any old `A` records pointing to your registrar's default IP.
+  2. Verify Cloudflare automatically created the `CNAME` record for your tunnel.
+  3. Test with a mobile device on cellular data or an incognito browser window.
