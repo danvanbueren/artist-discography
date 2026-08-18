@@ -248,6 +248,8 @@ artist-discography/data/
 
 The application includes a multi-stage production Docker setup with built-in `ffmpeg` support for audio transcoding, dynamic `sharp` image optimization, and non-root process security.
 
+> 📖 **Full DevOps & Homelab Guide**: For complete end-to-end setup instructions (including Cloudflare Tunnel, domain configuration, host permissions, and troubleshooting), see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 #### Running with Docker Compose (Recommended)
 
 From the repository root:
