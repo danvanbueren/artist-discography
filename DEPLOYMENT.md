@@ -47,17 +47,17 @@ Comprehensive setup, deployment, and troubleshooting guide for self-hosting **Ar
 
 ---
 
-## 2. Domain & DNS Setup (Squarespace to Cloudflare)
+## 2. Domain & DNS Setup (Registrar to Cloudflare)
 
-If your domain (e.g. `polybitmusic.com`) was purchased on Squarespace or another registrar:
+If your domain (e.g. `yourdomain.com`) was purchased on a registrar like Squarespace, Namecheap, Google, or GoDaddy:
 
 1. **Add Domain to Cloudflare**:
    - Log into the [Cloudflare Dashboard](https://dash.cloudflare.com/).
-   - Click **Add a domain** / **Add Site**, enter `polybitmusic.com`, and select the **Free** plan.
+   - Click **Add a domain** / **Add Site**, enter `yourdomain.com`, and select the **Free** plan.
    - Note the two assigned Cloudflare Nameservers (e.g. `aria.ns.cloudflare.com`, `todd.ns.cloudflare.com`).
 
-2. **Delegate Nameservers in Squarespace**:
-   - Log into **Squarespace Domains** → Select your domain → **DNS Settings** (or **Nameservers**).
+2. **Delegate Nameservers in Registrar**:
+   - Log into your domain registrar → Select your domain → **DNS Settings** (or **Nameservers**).
    - Select **Use custom nameservers**.
    - Enter both Cloudflare nameserver addresses and save.
    - DNS propagation typically takes between 5 to 30 minutes.
@@ -70,7 +70,7 @@ If your domain (e.g. `polybitmusic.com`) was purchased on Squarespace or another
 1. Go to the [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/).
 2. Navigate to **Networks** → **Tunnels** → Click **Create a Tunnel**.
 3. Select **Cloudflared** as the connector type.
-4. Name the tunnel (e.g. `polybit-discography-beelink-server`).
+4. Name the tunnel (e.g. `artist-discography-server`).
 5. Copy the **Tunnel Token** (long base64 string provided in the setup screen).
 
 ### 3.2 Configure Public Hostname Routing
@@ -78,7 +78,7 @@ Under the **Public Hostname** tab in your tunnel:
 
 | Field | Setting for Root Domain | Setting for WWW (Optional) |
 |---|---|---|
-| **Public Hostname** | `polybitmusic.com` | `www.polybitmusic.com` |
+| **Public Hostname** | `yourdomain.com` | `www.yourdomain.com` |
 | **Path** | *Leave completely empty / blank* | *Leave completely empty / blank* |
 | **Type** | `HTTP` | `HTTP` |
 | **URL** | `app:3000` | `app:3000` |
@@ -91,7 +91,7 @@ To prevent unauthorized access or automated brute-forcing against `/_sys/_admin`
 1. In Cloudflare Zero Trust, navigate to **Access** → **Applications** → **Add an application** → **Self-hosted**.
 2. **Settings**:
    - **Application Name**: `Artist Discography Admin`
-   - **Application domain**: `polybitmusic.com`
+   - **Application domain**: `yourdomain.com`
    - **Path**: `_sys/_admin*` (add another for `sys/admin*`)
 3. **Policy**:
    - **Action**: `Allow`
