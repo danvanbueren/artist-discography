@@ -27,10 +27,9 @@ export function isHighResCached(url) {
 }
 
 class MediaPreloadManager {
-  constructor(maxAudioChunks = 8, maxImagePreloads = 24) {
-    this.audioCache = new Map() // url -> Blob
-    this.maxAudioChunks = maxAudioChunks
-    this.activeAudioPreloads = new Set()
+  constructor(maxImagePreloads = 24) {
+    this.preloadAudioElement = null
+    this.currentPreloadUrl = null
     this.preloadedImages = new Set()
     this.maxImagePreloads = maxImagePreloads
     this.isAudioBuffering = false
@@ -46,28 +45,43 @@ class MediaPreloadManager {
   }
 
   /**
-   * Preload initial byte ranges of an audio track to buffer metadata and immediate audio start.
-   * Uses high network fetch priority so audio packets take precedence over background images.
+   * Preload initial audio bytes of the upcoming queue track to guarantee instant zero-latency start.
+   * Maintains a single managed Audio element and explicitly unloads prior preloads to prevent memory buildup.
    *
    * @param {string} audioUrl
    */
   preloadAudioChunk(audioUrl) {
-    if (
-      !audioUrl ||
-      typeof window === 'undefined' ||
-      this.activeAudioPreloads.has(audioUrl)
-    ) {
+    if (!audioUrl || typeof window === 'undefined') {
       return
     }
 
-    this.activeAudioPreloads.add(audioUrl)
+    if (this.currentPreloadUrl === audioUrl) {
+      return
+    }
+
+    // Explicitly release any prior preloaded audio buffer to free browser memory
+    this.clearAudioPreload()
+
+    this.currentPreloadUrl = audioUrl
 
     const schedule = 'requestIdleCallback' in window
       ? window.requestIdleCallback
       : (cb) => setTimeout(cb, 200)
 
     schedule(() => {
+      // Check if URL changed while waiting for idle tick
+      if (this.currentPreloadUrl !== audioUrl) return
+
       try {
+        if (this.preloadAudioElement) {
+          try {
+            this.preloadAudioElement.pause()
+            this.preloadAudioElement.removeAttribute('src')
+            this.preloadAudioElement.load()
+          } catch {}
+          this.preloadAudioElement = null
+        }
+
         const audio = new Audio()
         audio.preload = 'auto'
         audio.muted = true
@@ -75,19 +89,26 @@ class MediaPreloadManager {
         audio.src = audioUrl
         audio.load()
 
-        const cleanup = () => {
-          this.activeAudioPreloads.delete(audioUrl)
-          audio.removeEventListener('canplay', cleanup)
-          audio.removeEventListener('error', cleanup)
-        }
-
-        audio.addEventListener('canplay', cleanup, { once: true })
-        audio.addEventListener('error', cleanup, { once: true })
-        setTimeout(cleanup, 5000)
+        this.preloadAudioElement = audio
       } catch {
-        this.activeAudioPreloads.delete(audioUrl)
+        this.currentPreloadUrl = null
       }
     })
+  }
+
+  /**
+   * Explicitly unloads and frees the preloaded HTMLAudioElement from browser memory.
+   */
+  clearAudioPreload() {
+    if (this.preloadAudioElement) {
+      try {
+        this.preloadAudioElement.pause()
+        this.preloadAudioElement.removeAttribute('src')
+        this.preloadAudioElement.load()
+      } catch {}
+      this.preloadAudioElement = null
+    }
+    this.currentPreloadUrl = null
   }
 
   /**
@@ -129,21 +150,10 @@ class MediaPreloadManager {
   }
 
   /**
-   * Returns cached audio chunk blob if available.
-   *
-   * @param {string} audioUrl
-   * @returns {Blob|null}
-   */
-  getCachedAudioChunk(audioUrl) {
-    return this.audioCache.get(audioUrl) || null
-  }
-
-  /**
-   * Clears all memory caches
+   * Clears all memory caches and releases media resources.
    */
   clear() {
-    this.audioCache.clear()
-    this.activeAudioPreloads.clear()
+    this.clearAudioPreload()
     this.preloadedImages.clear()
     HIGH_RES_CACHE_SET.clear()
     this.isAudioBuffering = false

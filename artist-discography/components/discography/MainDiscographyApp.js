@@ -270,7 +270,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     } catch { }
   }, [availablePlatformIds])
 
-  // Preload top project cover artwork and initial audio chunk during idle browser time
+  // Preload top project cover artwork during idle browser time
   useEffect(() => {
     if (!projects || projects.length === 0) return
     const topProjects = projects.slice(0, 4)
@@ -278,10 +278,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       if (proj?.cover && typeof proj.cover === 'string' && proj.cover.startsWith('/api/media')) {
         mediaPreloader.preloadImage(`${proj.cover}${proj.cover.includes('?') ? '&' : '?'}w=400&q=80&fmt=webp`)
       }
-    }
-    const firstAudioTrack = projects.flatMap(p => p.tracks || []).find(t => t?.audioUrl)
-    if (firstAudioTrack?.audioUrl) {
-      mediaPreloader.preloadAudioChunk(firstAudioTrack.audioUrl)
     }
   }, [projects])
 
@@ -1413,6 +1409,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           onStutterChange={setIsPlaybackStuttering}
           onTogglePlay={() => setIsPlaying(prev => !prev)}
           onClosePlayer={() => {
+            mediaPreloader.clearAudioPreload()
             setPlayingTrack(null)
             setIsPlaying(false)
           }}

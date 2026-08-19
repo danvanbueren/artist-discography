@@ -10,8 +10,8 @@
 - [x] ✅ Send HTTP request with `If-None-Match: [etag]`. Verify `304 Not Modified` is returned immediately with zero payload body.
 - [x] ✅ Dynamic Sharp image optimization: Request `/api/media/.../?w=400&q=80&fmt=webp` and `/api/logo/?w=256&fmt=webp`. Verify responsive transcoding, sizing, and in-memory LRU caching.
 - [x] ✅ Client-side progressive image delivery: [`ProgressiveImage.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/common/ProgressiveImage.js) renders blur-up placeholder, low-res preview, and transitions smoothly on high-res load.
-- [x] ✅ Background audio chunk preloading: [`mediaPreloader.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/mediaPreloader.js) pre-fetches initial 256KB-512KB range chunks (`Range: bytes=0-262143`) during idle time (`requestIdleCallback`) without contending with active UI operations.
-- [x] ✅ Memory safety: LRU cache is capped at 8 tracks (`maxAudioChunks = 8`) to ensure zero unbounded memory growth.
+- [x] ✅ Background audio preloading: [`mediaPreloader.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/mediaPreloader.js) pre-buffers initial bytes of the immediate upcoming track during idle time (`requestIdleCallback`) matching the active quality tier without contending with active UI operations.
+- [x] ✅ Memory safety & lifecycle management: Preloader is strictly bounded to a single slot (`preloadAudioElement`) with explicit buffer teardown (`pause()`, `removeAttribute('src')`, `load()`) on track transition, player close, or queue clear to prevent unbounded memory growth.
 - [x] ✅ Audio player bar progressive buffer visualization: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js) tracks buffered ranges and displays progressive buffer bar alongside current playback position.
 - [x] ✅ Automated unused cache removal: [`cacheCleaner.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/cacheCleaner.js) sweeps orphaned cache files and stale temporary artifacts with a 1-hour periodic cooldown and 60-second in-flight safety grace period.
 
@@ -23,7 +23,7 @@ This plan covers high-performance media delivery optimizations for audio and ima
 
 ### Key Objectives:
 1. **Server Hash Validation & HTTP 304 Caching**: Add strong `ETag` and `Last-Modified` validation to server API routes, returning `304 Not Modified` when assets are unchanged.
-2. **Audio Pre-loading & Chunk Buffering**: Create a client-side `MediaPreloadManager` that fetches initial 256KB-512KB audio chunks of upcoming queue tracks using `Range: bytes=0-262143` headers, stored in a memory-capped LRU cache (max 8 tracks).
+2. **Audio Pre-loading & Memory Management**: Create a client-side `MediaPreloadManager` that pre-buffers initial audio bytes for the immediate upcoming track using the active quality tier, strictly bounded to 1 slot with explicit teardown.
 3. **Adaptive Image Compression & Sizing**: Support dynamic query parameters (`?w=width&q=quality&fmt=webp|avif`) via Sharp in `/api/media/[...path]` and `/api/logo` for responsive thumbnail and artwork delivery.
 4. **Strict Delivery Prioritization**: Prioritize immediate UI rendering and active track playback over background preloading (using `requestIdleCallback` / low-priority fetch).
 
@@ -64,52 +64,61 @@ if (ifNoneMatch === etag) {
 
 ### Target File: [`lib/mediaPreloader.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/mediaPreloader.js)
 
-A lightweight client LRU cache preloader module that coordinates background asset fetching:
+A lightweight client preloader module managing background asset fetching with strict memory cleanup:
 
 ```javascript
 class MediaPreloadManager {
-  constructor(maxAudioChunks = 8) {
-    this.audioCache = new Map() // url -> Blob
-    this.maxAudioChunks = maxAudioChunks
-    this.activePreloads = new Set()
+  constructor(maxImagePreloads = 24) {
+    this.preloadAudioElement = null
+    this.currentPreloadUrl = null
+    this.preloadedImages = new Set()
+    this.maxImagePreloads = maxImagePreloads
+    this.isAudioBuffering = false
   }
 
-  // Preload initial byte range (first 256KB) for instant audio start
-  async preloadAudioChunk(audioUrl) {
-    if (!audioUrl || this.audioCache.has(audioUrl) || this.activePreloads.has(audioUrl)) return
+  // Preload initial bytes for the single upcoming queue track matching active tier
+  preloadAudioChunk(audioUrl) {
+    if (!audioUrl || typeof window === 'undefined' || this.currentPreloadUrl === audioUrl) return
 
-    this.activePreloads.add(audioUrl)
+    this.clearAudioPreload()
+    this.currentPreloadUrl = audioUrl
 
     const schedule = typeof window !== 'undefined' && 'requestIdleCallback' in window
       ? window.requestIdleCallback
       : (cb) => setTimeout(cb, 200)
 
-    schedule(async () => {
-      try {
-        const res = await fetch(audioUrl, {
-          headers: { Range: 'bytes=0-262143' },
-          priority: 'low',
-        })
-        if (res.status === 200 || res.status === 206) {
-          const blob = await res.blob()
-          
-          if (this.audioCache.size >= this.maxAudioChunks) {
-            const oldestKey = this.audioCache.keys().next().value
-            this.audioCache.delete(oldestKey)
-          }
+    schedule(() => {
+      if (this.currentPreloadUrl !== audioUrl) return
 
-          this.audioCache.set(audioUrl, blob)
+      try {
+        if (this.preloadAudioElement) {
+          this.clearAudioPreload()
         }
-      } catch (err) {
-        console.warn('Background audio chunk preload failed:', err)
-      } finally {
-        this.activePreloads.delete(audioUrl)
+
+        const audio = new Audio()
+        audio.preload = 'auto'
+        audio.muted = true
+        audio.volume = 0
+        audio.src = audioUrl
+        audio.load()
+
+        this.preloadAudioElement = audio
+      } catch {
+        this.currentPreloadUrl = null
       }
     })
   }
 
-  getCachedChunk(audioUrl) {
-    return this.audioCache.get(audioUrl) || null
+  clearAudioPreload() {
+    if (this.preloadAudioElement) {
+      try {
+        this.preloadAudioElement.pause()
+        this.preloadAudioElement.removeAttribute('src')
+        this.preloadAudioElement.load()
+      } catch {}
+      this.preloadAudioElement = null
+    }
+    this.currentPreloadUrl = null
   }
 }
 
@@ -122,7 +131,7 @@ export const mediaPreloader = new MediaPreloadManager()
 
 1. **Active Playback**: Full priority HTTP GET / Range stream directly on the active `<audio>` element.
 2. **Visible Images**: Progressive rendering using [`ProgressiveImage.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/common/ProgressiveImage.js) with immediate blur placeholder, priority decoding for hero elements, and lazy loading for off-screen cards.
-3. **Background Preloading**: Defer preloading of upcoming 2-3 tracks in `autoplayTracks` using `requestIdleCallback` so network and CPU never contend with user navigation or playback.
+3. **Background Preloading**: Defer preloading of the immediate upcoming track in `autoplayTracks` using `requestIdleCallback` so network and CPU never contend with user navigation or playback. Cleanly teardown prior preloaded audio buffers when tracks switch or the player is closed.
 
 ---
 

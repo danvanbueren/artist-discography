@@ -179,6 +179,7 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Standard**: Heavy background transcoding tasks (such as FFmpeg and Sharp batch generations) should never block synchronous HTTP CRUD responses. Persist metadata and raw staged files immediately, return HTTP 200, and broadcast live transcoding progress over Server-Sent Events (SSE).
 - **Layout Integrity**: Notification banners (success / error alerts) in dashboard views must use floating ephemeral toast overlays (such as MUI `Snackbar`) rather than in-flow block elements that push down tabs or induce vertical layout shifts.
 - **Album Art Consistency**: All album art across admin panels, cards, headers, and media players must strictly enforce a 1:1 square aspect ratio (`aspectRatio: '1 / 1'`, `objectFit: 'cover'`) and request scaled thumbnail variants (`?w=80` or `?w=160`) for preview rendering.
+- **Audio Element Lifecycle & Memory Management**: Never instantiate unmanaged, disposable `new Audio()` elements with `preload = 'auto'` without an explicit teardown mechanism. In Chromium/Blink, media elements retain native demuxer buffers and decoded audio streams unless explicitly unloaded via `audio.pause(); audio.removeAttribute('src'); audio.load()`. Preloading audio for upcoming queue tracks must be bounded to a single upcoming track in a managed slot, and cleared on track switch, player close, or component unmount.
 
 ---
 

@@ -22,8 +22,13 @@ import MobileMiniPlayer from './MobileMiniPlayer'
 import DesktopPlayerBar from './DesktopPlayerBar'
 import FullScreenPlayerModal from './FullScreenPlayerModal'
 
-const MIN_LISTENABLE_VOLUME = 10
-const DEFAULT_UNMUTE_VOLUME = 80
+function getOptimizedAudioSrc(rawUrl, tier = '320k') {
+  if (!rawUrl) return undefined
+  const sep = rawUrl.includes('?') ? '&' : '?'
+  if (tier === 'lossless') return `${rawUrl}${sep}q=lossless`
+  if (tier === '320k') return `${rawUrl}${sep}b=320k`
+  return `${rawUrl}${sep}b=${tier}`
+}
 
 /**
  * AudioPlayerBar
@@ -98,11 +103,7 @@ export default function AudioPlayerBar({
 
   // Compute audio source URL based on active quality tier
   const activeAudioSrc = useMemo(() => {
-    if (!rawAudioUrl) return undefined
-    const sep = rawAudioUrl.includes('?') ? '&' : '?'
-    if (activeTier === 'lossless') return `${rawAudioUrl}${sep}q=lossless`
-    if (activeTier === '320k') return `${rawAudioUrl}${sep}b=320k`
-    return `${rawAudioUrl}${sep}b=${activeTier}`
+    return getOptimizedAudioSrc(rawAudioUrl, activeTier)
   }, [rawAudioUrl, activeTier])
 
   // Dynamic Quality Label for Pill
@@ -243,29 +244,61 @@ export default function AudioPlayerBar({
     }
   }, [])
 
+  // Clean up media resources on unmount
+  useEffect(() => {
+    return () => {
+      mediaPreloader.clearAudioPreload()
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause()
+          audioRef.current.removeAttribute('src')
+          audioRef.current.load()
+        } catch {}
+      }
+    }
+  }, [])
+
   // Reset player state when playing track changes
   useEffect(() => {
     setRealDuration(0)
     pendingResumeTimeRef.current = null
-    if (rawAudioUrl) {
-      mediaPreloader.preloadAudioChunk(rawAudioUrl)
-    }
   }, [rawAudioUrl, playingTrack?.name])
 
-  // Pre-buffer initial audio chunks and artwork for upcoming queue tracks during idle time
+  // Pre-buffer initial audio bytes for the immediate upcoming track and artwork for upcoming queue tracks
   useEffect(() => {
-    const upcoming = [...(manualQueue || []), ...(autoplayTracks || [])].slice(0, 3)
-    for (const item of upcoming) {
-      const trackObj = item?.track || item
-      if (trackObj?.audioUrl) {
-        mediaPreloader.preloadAudioChunk(trackObj.audioUrl)
+    const upcoming = [...(manualQueue || []), ...(autoplayTracks || [])]
+    const nextItem = upcoming[0]
+    const nextTrackObj = nextItem?.track || nextItem
+
+    if (nextTrackObj?.audioUrl && nextTrackObj.audioUrl !== rawAudioUrl) {
+      const nextAudioSrc = getOptimizedAudioSrc(nextTrackObj.audioUrl, activeTier)
+      if (nextAudioSrc) {
+        mediaPreloader.preloadAudioChunk(nextAudioSrc)
       }
+    } else if (!nextItem) {
+      mediaPreloader.clearAudioPreload()
+    }
+
+    for (const item of upcoming.slice(0, 3)) {
+      const trackObj = item?.track || item
       const coverUrl = item?.project?.cover || item?.track?.cover || trackObj?.projectCover || trackObj?.cover
       if (coverUrl && typeof coverUrl === 'string' && coverUrl.startsWith('/api/media')) {
         mediaPreloader.preloadImage(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}w=120&q=75&fmt=webp`)
       }
     }
-  }, [manualQueue, autoplayTracks, rawAudioUrl])
+  }, [manualQueue, autoplayTracks, rawAudioUrl, activeTier])
+
+  const handleClosePlayer = useCallback(() => {
+    mediaPreloader.clearAudioPreload()
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause()
+        audioRef.current.removeAttribute('src')
+        audioRef.current.load()
+      } catch {}
+    }
+    if (onClosePlayer) onClosePlayer()
+  }, [onClosePlayer])
 
   // Sync playback state with audio element
   useEffect(() => {
@@ -559,7 +592,7 @@ export default function AudioPlayerBar({
                 onShareTrack={handleShareTrack}
                 onOpenQueue={() => setQueueOpen(true)}
                 onOpenFullScreen={() => setMobileFullScreenOpen(true)}
-                onClosePlayer={onClosePlayer}
+                onClosePlayer={handleClosePlayer}
                 onToggleMute={handleToggleMute}
                 onVolumeChange={handleVolumeChange}
                 VolumeIconComponent={VolumeIconComponent}
@@ -674,7 +707,7 @@ export default function AudioPlayerBar({
         copiedShare={copiedShare}
         manualQueue={manualQueue}
         autoplayTracks={autoplayTracks}
-        onClosePlayer={onClosePlayer}
+        onClosePlayer={handleClosePlayer}
         onNavigateToCurrentTrack={onNavigateToCurrentTrack}
         onOpenQualityModal={onOpenQualityModal}
         onShareTrack={handleShareTrack}
