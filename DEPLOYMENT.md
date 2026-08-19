@@ -195,13 +195,32 @@ Check [`artist-discography/data/artist-data.json`](file:///c:/Users/Dan/App%20De
 
 ## 7. Maintenance & Routine Operations
 
-### Pulling Updates & Redeploying
-When new features or bugfixes are pushed to GitHub:
+### Pulling Updates & Redeploying (Safe Upgrades)
+When new features or bugfixes are pushed to GitHub, you can upgrade the running application without losing your `.env` configuration or discography data:
+
 ```bash
 cd ~/artist-discography
 git pull origin main
 docker compose up -d --build
 ```
+
+#### Why `.env` and `./artist-discography/data` Are Safe:
+- **Bind-Mount Persistence**: In `docker-compose.yml`, `./artist-discography/data` is mounted to `/app/data`. The host directory remains persistent even when images and containers are torn down or rebuilt.
+- **Ignored by Git**: Both `.env` and `data/` are listed in `.gitignore`, so `git pull` will only update tracked source code and will never overwrite local configuration or discography database files.
+
+#### Recommended Maintenance Steps:
+```bash
+# 1. (Optional) Create a quick pre-update snapshot backup:
+tar -czvf "discography_backup_$(date +%F).tar.gz" ./artist-discography/data .env
+
+# 2. Reclaim disk space by pruning old/dangling build images:
+docker image prune -f
+```
+
+> [!CAUTION]
+> **Commands to Avoid During Maintenance**:
+> - **Do NOT run `git clean -fdx`**: This forcefully deletes all untracked and gitignored files (including `.env` and `./artist-discography/data`).
+> - **Do NOT run `docker compose down -v`**: The `-v` flag removes volumes.
 
 ### Restarting Containers
 ```bash
@@ -228,9 +247,9 @@ docker compose logs -f tunnel
 ```
 
 ### Backing Up Data
-All artist data, covers, audio, and configurations live in `artist-discography/data/`. To back up:
+All artist data, covers, audio, and configurations live in `artist-discography/data/`. To back up data and environment settings:
 ```bash
-tar -czvf discography_backup_$(date +%F).tar.gz ./artist-discography/data/
+tar -czvf discography_backup_$(date +%F).tar.gz ./artist-discography/data/ .env
 ```
 
 ---
