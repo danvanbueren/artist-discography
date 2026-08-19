@@ -4,6 +4,7 @@ import path from 'path'
 import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
 import { warmMediaFiles } from '../../../../lib/mediaWarmer'
+import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
 
 export async function POST(request) {
   try {
@@ -217,6 +218,9 @@ export async function POST(request) {
         })
       }, 10)
     }
+
+    // Schedule background cache cleanup to remove superseded variants after warming settles
+    scheduleAutomatedCachePrune(15000)
 
     const timestamp = Date.now()
     const resolvedCover = coverProp

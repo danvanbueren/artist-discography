@@ -262,9 +262,15 @@ export function ensureAllMediaReadyFallback(artistData = null) {
 
   lastWarmingCheckTimestamp = now
 
-  activeBackgroundWarmingPromise = (async () => {
+    activeBackgroundWarmingPromise = (async () => {
     try {
       await warmAllArtistMedia(artistData)
+      try {
+        const { ensureAutomatedCachePruning } = await import('./cacheCleaner')
+        ensureAutomatedCachePruning(artistData)
+      } catch (pruneErr) {
+        console.warn('Background automated cache pruning check warning:', pruneErr.message)
+      }
     } catch (err) {
       console.warn('Background media warming check failed:', err)
     } finally {

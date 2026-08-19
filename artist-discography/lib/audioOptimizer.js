@@ -7,8 +7,59 @@ import { createJob, updateJobProgress, completeJob, failJob } from './jobTracker
 
 const execFileAsync = promisify(execFile)
 
-const AUDIO_CACHE_DIR = path.join(process.cwd(), 'data', 'cache', 'audio')
+export const AUDIO_CACHE_DIR = path.join(process.cwd(), 'data', 'cache', 'audio')
 const ACTIVE_TRANSCODE_PROMISES = new Map()
+
+/**
+ * Computes deterministic cache key, filename, and format parameters for an audio transcode variant.
+ */
+export function computeAudioCacheKey(sourceFilePath, stat, options = {}) {
+  const {
+    quality = 'high',
+    bitrate = null,
+    format = 'mp3',
+  } = options
+
+  const isLosslessRequested =
+    quality === 'original' ||
+    quality === 'lossless' ||
+    bitrate === 'original' ||
+    bitrate === 'lossless' ||
+    format === 'flac'
+
+  let targetFormat = 'mp3'
+  let targetBitrate = bitrate
+
+  if (isLosslessRequested) {
+    targetFormat = 'flac'
+    targetBitrate = null
+  } else if (format === 'm4a' || format === 'aac') {
+    targetFormat = 'm4a'
+  } else if (format === 'flac') {
+    targetFormat = 'flac'
+    targetBitrate = null
+  } else {
+    targetFormat = 'mp3'
+  }
+
+  if (targetFormat !== 'flac') {
+    if (targetBitrate) {
+      targetBitrate = targetBitrate.endsWith('k') ? targetBitrate : `${targetBitrate}k`
+    } else if (quality === 'fast' || quality === 'low' || quality === 'preview') {
+      targetBitrate = '128k'
+    } else if (quality === 'medium' || quality === 'standard') {
+      targetBitrate = '192k'
+    } else {
+      targetBitrate = '320k'
+    }
+  }
+
+  const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:fmt=${targetFormat}:b=${targetBitrate || 'lossless'}`
+  const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
+  const cacheFileName = `${cacheHash}.${targetFormat}`
+
+  return { cacheHash, cacheFileName, targetFormat, targetBitrate, isLosslessRequested }
+}
 
 const AUDIO_MIME_MAP = {
   mp3: 'audio/mpeg',
@@ -89,35 +140,7 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
     }
   }
 
-  // Determine target format & bitrate
-  let targetFormat = 'mp3'
-  let targetBitrate = bitrate
-
-  if (isLosslessRequested) {
-    targetFormat = 'flac'
-    targetBitrate = null
-  } else if (format === 'm4a' || format === 'aac') {
-    targetFormat = 'm4a'
-  } else if (format === 'flac') {
-    targetFormat = 'flac'
-    targetBitrate = null
-  } else {
-    targetFormat = 'mp3'
-  }
-
-  if (targetFormat !== 'flac') {
-    if (targetBitrate) {
-      targetBitrate = targetBitrate.endsWith('k') ? targetBitrate : `${targetBitrate}k`
-    } else if (quality === 'fast' || quality === 'low' || quality === 'preview') {
-      targetBitrate = '128k'
-    } else if (quality === 'medium' || quality === 'standard') {
-      targetBitrate = '192k'
-    } else if (quality === 'high') {
-      targetBitrate = '320k'
-    } else {
-      targetBitrate = '320k'
-    }
-  }
+  const { cacheHash, cacheFileName, targetFormat, targetBitrate } = computeAudioCacheKey(sourceFilePath, stat, options)
 
   const hasFfmpeg = await isFfmpegAvailable()
   if (!hasFfmpeg) {
@@ -133,10 +156,6 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
 
   ensureAudioCacheDir()
 
-  // Generate deterministic cache hash based on source mtime, size, and transcode parameters
-  const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:fmt=${targetFormat}:b=${targetBitrate || 'lossless'}`
-  const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
-  const cacheFileName = `${cacheHash}.${targetFormat}`
   const cacheFilePath = path.join(AUDIO_CACHE_DIR, cacheFileName)
 
   // 1. Check if cached audio file already exists and has valid non-zero content
@@ -320,36 +339,7 @@ export function isAudioVariantCached(sourceFilePath, options = {}) {
       return true
     }
 
-    let targetFormat = 'mp3'
-    let targetBitrate = bitrate
-
-    if (isLosslessRequested) {
-      targetFormat = 'flac'
-      targetBitrate = null
-    } else if (format === 'm4a' || format === 'aac') {
-      targetFormat = 'm4a'
-    } else if (format === 'flac') {
-      targetFormat = 'flac'
-      targetBitrate = null
-    } else {
-      targetFormat = 'mp3'
-    }
-
-    if (targetFormat !== 'flac') {
-      if (targetBitrate) {
-        targetBitrate = targetBitrate.endsWith('k') ? targetBitrate : `${targetBitrate}k`
-      } else if (quality === 'fast' || quality === 'low' || quality === 'preview') {
-        targetBitrate = '128k'
-      } else if (quality === 'medium' || quality === 'standard') {
-        targetBitrate = '192k'
-      } else {
-        targetBitrate = '320k'
-      }
-    }
-
-    const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:fmt=${targetFormat}:b=${targetBitrate || 'lossless'}`
-    const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
-    const cacheFileName = `${cacheHash}.${targetFormat}`
+    const { cacheFileName } = computeAudioCacheKey(sourceFilePath, stat, options)
     const cacheFilePath = path.join(AUDIO_CACHE_DIR, cacheFileName)
 
     return fs.existsSync(cacheFilePath) && fs.statSync(cacheFilePath).size > 0

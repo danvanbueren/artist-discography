@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingExcludes: {
+    '*': ['./data/cache/**/*'],
+  },
   serverExternalPackages: ['sharp'],
   async rewrites() {
     return [

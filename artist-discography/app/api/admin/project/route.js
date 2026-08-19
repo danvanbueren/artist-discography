@@ -4,6 +4,7 @@ import path from 'path'
 import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
 import { warmMediaFiles } from '../../../../lib/mediaWarmer'
+import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
 
 export async function POST(request) {
   try {
@@ -78,6 +79,10 @@ export async function POST(request) {
           { status: 500 }
         )
       }
+
+      // Schedule automated background cleanup to remove orphaned media cache files
+      scheduleAutomatedCachePrune(3000)
+
       return NextResponse.json({
         success: true,
         message: `Project "${removedProject?.name || 'Project'}" deleted successfully.`,
@@ -391,6 +396,9 @@ export async function POST(request) {
         })
       }, 10)
     }
+
+    // Schedule background cache cleanup to remove superseded variants after warming settles
+    scheduleAutomatedCachePrune(15000)
 
     const timestamp = Date.now()
     const resolvedCover = coverProp

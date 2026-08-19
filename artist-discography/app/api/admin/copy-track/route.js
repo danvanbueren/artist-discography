@@ -4,6 +4,7 @@ import path from 'path'
 import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
 import { warmMediaFiles } from '../../../../lib/mediaWarmer'
+import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
 
 const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
 
@@ -189,6 +190,8 @@ export async function POST(request) {
         console.warn('Post-copy media warming error:', warmErr)
       }
     }
+
+    scheduleAutomatedCachePrune(15000)
 
     const timestamp = Date.now()
     const enrichedTargetTracks = targetProject.tracks.map((t) => {

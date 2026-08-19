@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { loadArtistData } from '../../../../lib/artistData'
 import { getLogoDetails, saveCustomLogo, deleteCustomLogo } from '../../../../lib/logoUtils'
+import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
 
 function authenticateAdmin(password, request) {
   const dataResult = loadArtistData()
@@ -80,6 +81,7 @@ export async function POST(request) {
           { status: 500 }
         )
       }
+      scheduleAutomatedCachePrune(5000)
       return NextResponse.json({
         success: true,
         logo: deleteResult.logo,
@@ -103,6 +105,8 @@ export async function POST(request) {
         { status: 500 }
       )
     }
+
+    scheduleAutomatedCachePrune(10000)
 
     return NextResponse.json({
       success: true,
@@ -138,6 +142,8 @@ export async function DELETE(request) {
         { status: 500 }
       )
     }
+
+    scheduleAutomatedCachePrune(5000)
 
     return NextResponse.json({
       success: true,

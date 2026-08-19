@@ -13,6 +13,7 @@
 - [x] ✅ Background audio chunk preloading: [`mediaPreloader.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/mediaPreloader.js) pre-fetches initial 256KB-512KB range chunks (`Range: bytes=0-262143`) during idle time (`requestIdleCallback`) without contending with active UI operations.
 - [x] ✅ Memory safety: LRU cache is capped at 8 tracks (`maxAudioChunks = 8`) to ensure zero unbounded memory growth.
 - [x] ✅ Audio player bar progressive buffer visualization: [`AudioPlayerBar.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/components/player/AudioPlayerBar.js) tracks buffered ranges and displays progressive buffer bar alongside current playback position.
+- [x] ✅ Automated unused cache removal: [`cacheCleaner.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/cacheCleaner.js) sweeps orphaned cache files and stale temporary artifacts with a 1-hour periodic cooldown and 60-second in-flight safety grace period.
 
 ---
 

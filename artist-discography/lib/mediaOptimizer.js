@@ -33,7 +33,48 @@ const MIME_MAP = {
   ico: 'image/x-icon',
 }
 
-function ensureCacheDir() {
+export const IMAGE_CACHE_DIR = CACHE_DIR
+
+/**
+ * Computes deterministic cache key and filename for an image transformation.
+ */
+export function computeImageCacheKey(sourceFilePath, stat, options = {}) {
+  const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
+  const {
+    width = null,
+    quality = null,
+    format = 'webp',
+    blur = null,
+  } = options
+
+  const targetFormat = format === 'original' ? (ext === 'jpg' ? 'jpeg' : ext) : format
+  const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : (blur ? 30 : 80)
+  const targetWidth = width ? Math.min(3840, Math.max(16, parseInt(width, 10))) : null
+  const targetBlur = blur ? Math.min(50, Math.max(0.3, parseFloat(blur))) : null
+
+  const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:w=${targetWidth}:q=${targetQuality}:fmt=${targetFormat}:b=${targetBlur}`
+  const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
+  const cacheFileName = `${cacheHash}.${targetFormat}`
+
+  return { cacheHash, cacheFileName, targetFormat }
+}
+
+/**
+ * Purges memory cache entries that are not in the valid hashes set.
+ */
+export function purgeInvalidMemoryCache(validHashesSet) {
+  if (!validHashesSet || !(validHashesSet instanceof Set)) return 0
+  let evicted = 0
+  for (const key of IN_MEMORY_IMAGE_CACHE.keys()) {
+    if (!validHashesSet.has(key)) {
+      IN_MEMORY_IMAGE_CACHE.delete(key)
+      evicted++
+    }
+  }
+  return evicted
+}
+
+export function ensureCacheDir() {
   try {
     if (!fs.existsSync(CACHE_DIR)) {
       fs.mkdirSync(CACHE_DIR, { recursive: true })
@@ -86,15 +127,11 @@ export async function getOptimizedImage(sourceFilePath, options = {}) {
   }
 
   const stat = fs.statSync(/*turbopackIgnore: true*/ sourceFilePath)
-  const targetFormat = format === 'original' ? (ext === 'jpg' ? 'jpeg' : ext) : format
   const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : (blur ? 30 : 80)
   const targetWidth = width ? Math.min(3840, Math.max(16, parseInt(width, 10))) : null
   const targetBlur = blur ? Math.min(50, Math.max(0.3, parseFloat(blur))) : null
 
-  // Compute a deterministic cache key based on file modification, size, and transformation parameters
-  const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:w=${targetWidth}:q=${targetQuality}:fmt=${targetFormat}:b=${targetBlur}`
-  const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
-  const cacheFileName = `${cacheHash}.${targetFormat}`
+  const { cacheHash, cacheFileName, targetFormat } = computeImageCacheKey(sourceFilePath, stat, options)
   const cacheFilePath = path.join(CACHE_DIR, cacheFileName)
 
   // 1. In-memory fast tier check
@@ -219,11 +256,16 @@ export const STANDARD_IMAGE_VARIANTS = [
   { width: 100, quality: 80, format: 'webp' },
   { width: 120, quality: 80, format: 'webp' },
   { width: 120, quality: 75, format: 'webp' },
+  { width: 160, quality: 80, format: 'webp' },
+  { width: 320, quality: 80, format: 'webp' },
   // Card, Header, and Modal sizes
   { width: 400, quality: 80, format: 'webp' },
   { width: 600, quality: 80, format: 'webp' },
   { width: 600, quality: 85, format: 'webp' },
+  { width: 640, quality: 80, format: 'webp' },
   { width: 800, quality: 80, format: 'webp' },
+  { width: 1080, quality: 80, format: 'webp' },
+  { width: 1920, quality: 80, format: 'webp' },
   // Full original dimensions in WebP
   { width: null, quality: 80, format: 'webp' },
 ]
@@ -249,16 +291,9 @@ export function isImageVariantCached(sourceFilePath, options = {}) {
       blur = null,
     } = options
 
-    if (['svg', 'ico', 'gif'].includes(ext) && !width && !blur) return true
+    if (['svg', 'ico', 'gif'].includes(ext) && !options.width && !options.blur) return true
 
-    const targetFormat = format === 'original' ? (ext === 'jpg' ? 'jpeg' : ext) : format
-    const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : (blur ? 30 : 80)
-    const targetWidth = width ? Math.min(3840, Math.max(16, parseInt(width, 10))) : null
-    const targetBlur = blur ? Math.min(50, Math.max(0.3, parseFloat(blur))) : null
-
-    const hashInput = `${sourceFilePath}:${stat.mtimeMs}:${stat.size}:w=${targetWidth}:q=${targetQuality}:fmt=${targetFormat}:b=${targetBlur}`
-    const cacheHash = crypto.createHash('md5').update(hashInput).digest('hex')
-    const cacheFileName = `${cacheHash}.${targetFormat}`
+    const { cacheFileName } = computeImageCacheKey(sourceFilePath, stat, options)
     const cacheFilePath = path.join(CACHE_DIR, cacheFileName)
 
     return fs.existsSync(cacheFilePath) && fs.statSync(cacheFilePath).size > 0

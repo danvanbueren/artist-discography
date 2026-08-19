@@ -20,6 +20,7 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
 - **Progressive Media Delivery & Caching**:
   - **Immediate Post-Upload Media Compression & Pre-Caching**: All uploaded covers and audio tracks are immediately pre-compressed into standard WebP resolutions and audio quality tiers (320k, 192k, 128k, Lossless FLAC) upon upload/edit/copy, ready to serve with zero latency.
   - **Automatic Site-Load Cache Readiness Fallback**: Background readiness coordinator (`mediaWarmer.js`) verifies all catalog media on site load, auto-generating any missing cache variants as a seamless fallback.
+  - **Automated Unused Cache File Removal & Lifecycle Management**: Automated cleanup engine (`cacheCleaner.js`) periodically scans and prunes orphaned, superseded, and temporary cache files from `data/cache/images/` and `data/cache/audio/` without blocking HTTP requests or generating excessive overhead.
   - **Server-Side Dynamic Image Optimization**: Sharp-powered on-the-fly image transcoding (`/api/media/[...path]` and `/api/logo`) supporting WebP/AVIF formatting, responsive sizing (`?w=...&q=...`), and in-memory LRU caching.
   - **HTTP 304 ETags & Partial Content Streaming**: Fast HTTP 304 cache validation for unchanged assets, plus full HTTP 206 `Range` byte-range audio streaming with `If-Range` header handling.
   - **Background Chunk Preloader**: Client `mediaPreloader` fetches initial 256KB-512KB audio chunks during idle time (`requestIdleCallback`) to deliver instant playback for upcoming queue tracks without UI lag.
@@ -92,6 +93,7 @@ artist-discography/
 │   │   ├── apiSpec.js                  # OpenAPI 3.1 endpoint specification schema
 │   │   ├── artistData.js               # Data loading, sanitization, & disk persistence
 │   │   ├── audioOptimizer.js           # Audio transcoding, quality tiers, & range validation
+│   │   ├── cacheCleaner.js             # Automated unused media cache removal & lifecycle coordinator
 │   │   ├── logoUtils.js                # Artist logo inspection, disk persistence, & fallback handler
 │   │   ├── mediaOptimizer.js           # Sharp dynamic image resizing & format conversion
 │   │   ├── mediaPreloader.js           # Client-side LRU cache media preloader engine
