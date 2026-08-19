@@ -7,6 +7,7 @@ import {
   Chip,
   Button,
   Alert,
+  Snackbar,
   Tabs,
   Tab,
 } from '@mui/material'
@@ -196,25 +197,48 @@ export default function AdminHeader({
         </Box>
       </Paper>
 
-      {/* Global Status Messages */}
-      {statusMessage && (
+      {/* Global Status Messages (Floating Ephemeral Toasts - Zero Layout Shift) */}
+      <Snackbar
+        open={Boolean(statusMessage)}
+        autoHideDuration={5000}
+        onClose={() => setStatusMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ zIndex: 2000 }}
+      >
         <Alert
           severity="success"
+          variant="filled"
           onClose={() => setStatusMessage(null)}
-          sx={{ mb: 2, flexShrink: 0, borderRadius: 2 }}
+          sx={{
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            fontWeight: 600,
+          }}
         >
           {statusMessage}
         </Alert>
-      )}
-      {errorMessage && (
+      </Snackbar>
+
+      <Snackbar
+        open={Boolean(errorMessage)}
+        autoHideDuration={6000}
+        onClose={() => setErrorMessage('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ zIndex: 2000 }}
+      >
         <Alert
           severity="error"
+          variant="filled"
           onClose={() => setErrorMessage('')}
-          sx={{ mb: 2, flexShrink: 0, borderRadius: 2 }}
+          sx={{
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            fontWeight: 600,
+          }}
         >
           {errorMessage}
         </Alert>
-      )}
+      </Snackbar>
 
       {/* Tabs */}
       <Tabs

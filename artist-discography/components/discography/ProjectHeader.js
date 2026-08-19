@@ -1,7 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Stack, Typography, IconButton, Chip, Dialog, Tooltip, Skeleton, useTheme } from '@mui/material'
+import {
+  Box,
+  Stack,
+  Typography,
+  IconButton,
+  Chip,
+  Dialog,
+  Tooltip,
+  Skeleton,
+  CircularProgress,
+  useTheme,
+} from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
@@ -11,6 +22,7 @@ import { isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
 import SubduedText from '../ui/SubduedText'
 import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
 import { formatProjectDate } from '../../lib/dateUtils'
+import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
 
 const PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -34,8 +46,8 @@ export default function ProjectHeader({
 }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
+  const isTouch = useTouchDevice()
   const [artModalOpen, setArtModalOpen] = useState(false)
-  const [isModalArtLoaded, setIsModalArtLoaded] = useState(false)
 
   const name = project?.name ?? ''
   const pArtist = project?.artist || artistName || ''
@@ -74,7 +86,6 @@ export default function ProjectHeader({
     ? (cover.includes('?') ? `${cover}&fmt=original` : `${cover}?fmt=original`)
     : (cover || '')
 
-  const [modalImgSrc, setModalImgSrc] = useState('')
   const [isMasterLoaded, setIsMasterLoaded] = useState(false)
 
   // Asynchronously upgrade to the highest quality original media when the modal opens
@@ -82,13 +93,10 @@ export default function ProjectHeader({
     if (!artModalOpen || !cover) return
 
     if (isHighResCached(masterHighResUrl)) {
-      setModalImgSrc(masterHighResUrl)
       setIsMasterLoaded(true)
       return
     }
 
-    // Immediately show the already cached preview thumbnail to prevent blank screens
-    setModalImgSrc(previewUrl || cover)
     setIsMasterLoaded(false)
 
     // Load full uncompressed master in background
@@ -98,7 +106,6 @@ export default function ProjectHeader({
     masterImg.onload = () => {
       if (isCurrent) {
         markHighResCached(masterHighResUrl)
-        setModalImgSrc(masterHighResUrl)
         setIsMasterLoaded(true)
       }
     }
@@ -111,9 +118,17 @@ export default function ProjectHeader({
     return () => {
       isCurrent = false
     }
-  }, [artModalOpen, cover, masterHighResUrl, previewUrl])
+  }, [artModalOpen, cover, masterHighResUrl])
+
+  const canOpenModal = Boolean(cover && (isSingleView || !isTouch))
 
   const handleCoverClick = (e) => {
+    if (!isSingleView && isTouch) {
+      if (onSelectProject) {
+        onSelectProject(project)
+      }
+      return
+    }
     if (cover) {
       e.stopPropagation()
       setArtModalOpen(true)
@@ -141,7 +156,12 @@ export default function ProjectHeader({
         }}
       >
         {/* Left: Album Cover Art (Larger on Mobile) */}
-        <Tooltip title={cover ? 'Click to view full album art' : ''} arrow disableHoverListener={!cover}>
+        <Tooltip
+          title={canOpenModal ? 'Click to view full album art' : ''}
+          arrow
+          disableHoverListener={!canOpenModal}
+          disableTouchListener={!canOpenModal}
+        >
           <Box
             onClick={handleCoverClick}
             sx={{
@@ -161,8 +181,8 @@ export default function ProjectHeader({
               transition: 'transform 0.22s ease, box-shadow 0.22s ease',
               '&:hover': cover
                 ? {
-                    transform: 'scale(1.04)',
-                    boxShadow: '0 12px 36px rgba(0,0,0,0.5)',
+                    transform: canOpenModal ? 'scale(1.04)' : undefined,
+                    boxShadow: canOpenModal ? '0 12px 36px rgba(0,0,0,0.5)' : undefined,
                     '& .cover-zoom-icon': {
                       opacity: 1,
                     },
@@ -180,21 +200,23 @@ export default function ProjectHeader({
                   priority
                   sx={{ width: '100%', height: '100%' }}
                 />
-                <Box
-                  className="cover-zoom-icon"
-                  sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    bgcolor: 'rgba(0, 0, 0, 0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0,
-                    transition: 'opacity 0.2s ease',
-                  }}
-                >
-                  <ZoomInRoundedIcon sx={{ color: 'common.white', fontSize: 32 }} />
-                </Box>
+                {canOpenModal && (
+                  <Box
+                    className="cover-zoom-icon"
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      bgcolor: 'rgba(0, 0, 0, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.2s ease',
+                    }}
+                  >
+                    <ZoomInRoundedIcon sx={{ color: 'common.white', fontSize: 32 }} />
+                  </Box>
+                )}
               </>
             ) : (
               <AlbumRoundedIcon
@@ -369,7 +391,6 @@ export default function ProjectHeader({
         <Dialog
           open={artModalOpen}
           onClose={() => setArtModalOpen(false)}
-          maxWidth="md"
           slotProps={{
             backdrop: {
               sx: {
@@ -385,9 +406,9 @@ export default function ProjectHeader({
                 boxShadow: 'none',
                 overflow: 'visible',
                 position: 'relative',
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                m: 1,
+                maxWidth: 'none',
+                maxHeight: 'none',
+                m: { xs: 1.5, sm: 2 },
               },
             },
           }}
@@ -406,8 +427,8 @@ export default function ProjectHeader({
               onClick={() => setArtModalOpen(false)}
               sx={{
                 position: 'absolute',
-                top: -16,
-                right: -16,
+                top: { xs: -12, sm: -16 },
+                right: { xs: -12, sm: -16 },
                 bgcolor: 'rgba(30, 30, 40, 0.9)',
                 color: 'common.white',
                 zIndex: 10,
@@ -423,26 +444,112 @@ export default function ProjectHeader({
               <CloseRoundedIcon />
             </IconButton>
 
-            {modalImgSrc && (
-              <Box
-                component="img"
-                src={modalImgSrc}
-                alt={name || 'Project Cover Art'}
-                draggable={false}
+            {/* Consistent Sized Album Art Frame */}
+            <Box
+              sx={{
+                position: 'relative',
+                width: 'min(85vw, 82vh, 800px)',
+                height: 'min(85vw, 82vh, 800px)',
+                aspectRatio: '1 / 1',
+                borderRadius: 4,
+                overflow: 'hidden',
+                boxShadow: '0 32px 64px rgba(0,0,0,0.75)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                bgcolor: 'rgba(20, 20, 28, 0.95)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {/* 1. Base Skeleton Wave Background */}
+              <Skeleton
+                variant="rectangular"
+                animation="wave"
                 sx={{
-                  maxWidth: '85vw',
-                  maxHeight: '82vh',
-                  width: 'auto',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  borderRadius: 4,
-                  boxShadow: '0 32px 64px rgba(0,0,0,0.75)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  display: 'block',
-                  transition: 'opacity 0.25s ease',
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  bgcolor: 'rgba(255, 255, 255, 0.08)',
+                  zIndex: 1,
                 }}
               />
-            )}
+
+              {/* 2. Fast Preview Image Layer */}
+              {previewUrl && (
+                <Box
+                  component="img"
+                  src={previewUrl}
+                  alt={name || 'Project Cover Preview'}
+                  draggable={false}
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    zIndex: 2,
+                  }}
+                />
+              )}
+
+              {/* 3. Ultra High-Res Master Image Layer */}
+              {masterHighResUrl && (
+                <Box
+                  component="img"
+                  src={masterHighResUrl}
+                  alt={name || 'Project Cover Art'}
+                  draggable={false}
+                  onLoad={() => {
+                    markHighResCached(masterHighResUrl)
+                    setIsMasterLoaded(true)
+                  }}
+                  onError={() => {
+                    setIsMasterLoaded(true)
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    opacity: isMasterLoaded ? 1 : 0,
+                    transition: isMasterLoaded ? 'opacity 0.3s ease-in-out' : 'none',
+                    zIndex: 3,
+                  }}
+                />
+              )}
+
+              {/* 4. Animated Loading Indicator in Bottom Right */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: { xs: 14, sm: 18 },
+                  right: { xs: 14, sm: 18 },
+                  zIndex: 5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: { xs: 36, sm: 40 },
+                  height: { xs: 36, sm: 40 },
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(15, 15, 25, 0.78)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.55)',
+                  pointerEvents: 'none',
+                  transition: 'opacity 0.35s ease, transform 0.35s ease',
+                  opacity: isMasterLoaded ? 0 : 1,
+                  transform: isMasterLoaded ? 'scale(0.7)' : 'scale(1)',
+                }}
+              >
+                <CircularProgress
+                  size={20}
+                  thickness={4.5}
+                  sx={{ color: '#90caf9' }}
+                />
+              </Box>
+            </Box>
           </Box>
         </Dialog>
       )}

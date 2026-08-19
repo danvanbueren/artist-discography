@@ -23,6 +23,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS, SOCIAL_KEYS } from '../adminConstants'
 import { SOCIAL_ICONS } from '../../artist/ArtistHero'
+import { getMediaThumbnailUrl } from '../adminUtils'
 
 export default function ArtistProfileTab({
   artistNameInput,
@@ -176,7 +177,7 @@ export default function ArtistProfileTab({
                   {logoPreview && (
                     <Box
                       component="img"
-                      src={logoPreview}
+                      src={getMediaThumbnailUrl(logoPreview, 400)}
                       alt="Artist Logo Preview"
                       sx={{
                         height: '9rem',

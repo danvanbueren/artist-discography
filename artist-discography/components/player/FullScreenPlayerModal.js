@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef } from 'react'
+import { forwardRef, useRef } from 'react'
 import {
   Box,
   Typography,
@@ -57,6 +57,7 @@ export default function FullScreenPlayerModal({
   duration,
   formatTime,
   audioQualityLabel,
+  isStuttering = false,
   isShuffle,
   repeatMode,
   isTouch,
@@ -66,6 +67,7 @@ export default function FullScreenPlayerModal({
   manualQueue = [],
   autoplayTracks = [],
   onClosePlayer,
+  onNavigateToCurrentTrack,
   onOpenQualityModal,
   onShareTrack,
   onOpenQueue,
@@ -98,6 +100,55 @@ export default function FullScreenPlayerModal({
     }
   }
 
+  const touchStartY = useRef(0)
+  const touchStartX = useRef(0)
+  const isSwiping = useRef(false)
+
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches.length === 1) {
+      if (e.target && e.target.closest && e.target.closest('.MuiSlider-root')) {
+        isSwiping.current = false
+        return
+      }
+      touchStartY.current = e.touches[0].clientY
+      touchStartX.current = e.touches[0].clientX
+      isSwiping.current = true
+    }
+  }
+
+  const handleTouchMove = (e) => {
+    if (!isSwiping.current || !e.touches || e.touches.length !== 1) return
+    const currentY = e.touches[0].clientY
+    const currentX = e.touches[0].clientX
+    const deltaY = currentY - touchStartY.current
+    const deltaX = currentX - touchStartX.current
+
+    if (deltaY < -10 || Math.abs(deltaX) > deltaY + 20) {
+      isSwiping.current = false
+    }
+  }
+
+  const handleTouchEnd = (e) => {
+    if (!isSwiping.current) return
+    isSwiping.current = false
+
+    if (e.changedTouches && e.changedTouches.length === 1) {
+      const endY = e.changedTouches[0].clientY
+      const endX = e.changedTouches[0].clientX
+      const deltaY = endY - touchStartY.current
+      const deltaX = endX - touchStartX.current
+
+      // Downward swipe of at least 60px with predominantly vertical direction
+      if (deltaY > 60 && deltaY > Math.abs(deltaX) * 1.2) {
+        if (onClose) onClose()
+      }
+    }
+  }
+
+  const ambientCover = coverArt && typeof coverArt === 'string' && (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
+    ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=48&q=20&blur=8&fmt=webp`
+    : coverArt
+
   return (
     <Dialog
       fullScreen
@@ -122,6 +173,9 @@ export default function FullScreenPlayerModal({
           },
         },
         paper: {
+          onTouchStart: handleTouchStart,
+          onTouchMove: handleTouchMove,
+          onTouchEnd: handleTouchEnd,
           sx: {
             bgcolor: playerBgColor,
             backgroundImage: 'none',
@@ -129,8 +183,8 @@ export default function FullScreenPlayerModal({
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            px: { xs: 2, sm: 4, md: 6, lg: 5, xl: 6 },
-            py: { xs: 2, sm: 2.5, md: 3 },
+            px: { xs: 2.5, sm: 4, md: 6, lg: 5, xl: 6 },
+            py: { xs: 2.5, sm: 3, md: 3 },
             height: '100dvh',
             maxHeight: '100dvh',
             position: 'relative',
@@ -146,13 +200,13 @@ export default function FullScreenPlayerModal({
       }}
     >
       {/* Ambient background glow matching artwork */}
-      {coverArt && (
+      {ambientCover && (
         <Box
           aria-hidden
           sx={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url(${coverArt})`,
+            backgroundImage: `url(${ambientCover})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(40px)',
@@ -185,7 +239,8 @@ export default function FullScreenPlayerModal({
             alignItems: 'center',
             justifyContent: 'space-between',
             width: '100%',
-            pt: { xs: 0.25, sm: 0.5 },
+            pt: { xs: 2, sm: 1.5, md: 1 },
+            pb: { xs: 1, sm: 0.5 },
             position: 'relative',
             zIndex: 1,
             flexShrink: 0,
@@ -209,49 +264,96 @@ export default function FullScreenPlayerModal({
             <CloseRoundedIcon sx={{ fontSize: { xs: 22, sm: 26 } }} />
           </IconButton>
 
-          {/* Center: Track Context Stack */}
-          <Stack
-            spacing={0.25}
+          {/* Center: Track Context Button (navigates to project page & selects current track) */}
+          <Box
             sx={{
+              flexGrow: 1,
+              display: 'flex',
               alignItems: 'center',
-              textAlign: 'center',
+              justifyContent: 'center',
               minWidth: 0,
               px: 1,
-              flexGrow: 1,
             }}
           >
-            <Typography
-              variant="subtitle2"
-              fontWeight={700}
+            <Stack
+              component="button"
+              type="button"
+              onClick={() => {
+                if (onClose) onClose()
+                if (onNavigateToCurrentTrack) onNavigateToCurrentTrack()
+              }}
+              spacing={0.25}
               sx={{
-                color: 'text.primary',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: { xs: 200, sm: 300, md: 450, lg: 600 },
-                fontSize: { xs: '0.875rem', sm: '0.95rem' },
-                lineHeight: 1.2,
+                display: 'inline-flex',
+                alignItems: 'center',
+                textAlign: 'center',
+                minWidth: 0,
+                width: 'fit-content',
+                maxWidth: '100%',
+                px: { xs: 1.25, sm: 1.5 },
+                py: 0.4,
+                bgcolor: 'transparent',
+                border: 'none',
+                borderRadius: 2,
+                cursor: 'pointer',
+                userSelect: 'none',
+                transition: 'background-color 0.15s ease, transform 0.15s ease',
+                '&:hover': {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.08)'
+                      : 'rgba(0, 0, 0, 0.05)',
+                  transform: 'scale(1.02)',
+                },
+                '&:hover .top-project-title': {
+                  color: 'primary.main',
+                  textDecoration: 'underline',
+                },
+                '&:hover .top-project-artist': {
+                  color: 'text.primary',
+                },
+                '&:active': {
+                  transform: 'scale(0.98)',
+                },
               }}
             >
-              {playingTrack?.project || 'Discography'}
-            </Typography>
+              <Typography
+                className="top-project-title"
+                variant="subtitle2"
+                fontWeight={700}
+                sx={{
+                  color: 'text.primary',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: { xs: 200, sm: 300, md: 450, lg: 600 },
+                  fontSize: { xs: '0.875rem', sm: '0.95rem' },
+                  lineHeight: 1.2,
+                  transition: 'color 0.15s ease',
+                }}
+              >
+                {playingTrack?.project || 'Discography'}
+              </Typography>
 
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'text.secondary',
-                fontWeight: 500,
-                fontSize: { xs: '0.725rem', sm: '0.8rem' },
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: { xs: 200, sm: 300, md: 450, lg: 600 },
-              }}
-            >
-              {playingTrack?.projectArtist || playingTrack?.artist || 'Artist'}
-            </Typography>
-          </Stack>
+              <Typography
+                className="top-project-artist"
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 500,
+                  fontSize: { xs: '0.725rem', sm: '0.8rem' },
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: { xs: 200, sm: 300, md: 450, lg: 600 },
+                  transition: 'color 0.15s ease',
+                }}
+              >
+                {playingTrack?.projectArtist || playingTrack?.artist || 'Artist'}
+              </Typography>
+            </Stack>
+          </Box>
 
           {/* Right: Down chevron collapse/minimize modal button */}
           <IconButton
@@ -287,16 +389,16 @@ export default function FullScreenPlayerModal({
           <Box
             sx={{
               width: {
-                xs: 'min(70dvw, calc(100dvh - 300px))',
-                sm: 'min(70dvw, calc(100dvh - 310px))',
-                md: 'min(70dvw, calc(100dvh - 320px), 480px)',
+                xs: 'min(68dvw, calc(100dvh - 340px))',
+                sm: 'min(68dvw, calc(100dvh - 350px))',
+                md: 'min(70dvw, calc(100dvh - 360px), 480px)',
                 lg: 'min(70dvw, calc(100dvh - 270px), 520px)',
                 xl: 'min(70dvw, calc(100dvh - 270px), 580px)',
               },
               height: {
-                xs: 'min(70dvw, calc(100dvh - 300px))',
-                sm: 'min(70dvw, calc(100dvh - 310px))',
-                md: 'min(70dvw, calc(100dvh - 320px), 480px)',
+                xs: 'min(68dvw, calc(100dvh - 340px))',
+                sm: 'min(68dvw, calc(100dvh - 350px))',
+                md: 'min(70dvw, calc(100dvh - 360px), 480px)',
                 lg: 'min(70dvw, calc(100dvh - 270px), 520px)',
                 xl: 'min(70dvw, calc(100dvh - 270px), 580px)',
               },
@@ -338,7 +440,7 @@ export default function FullScreenPlayerModal({
             width: '100%',
             position: 'relative',
             zIndex: 1,
-            pb: { xs: 1.5, sm: 2 },
+            pb: { xs: 2.5, sm: 3 },
             flexShrink: 0,
           }}
         >
@@ -349,7 +451,7 @@ export default function FullScreenPlayerModal({
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              mb: { xs: 2, sm: 2.5 },
+              mb: { xs: 3, sm: 3.5 },
               gap: 1.5,
             }}
           >
@@ -362,7 +464,7 @@ export default function FullScreenPlayerModal({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  fontSize: { xs: '1.25rem', sm: '1.45rem', md: '1.65rem' },
+                  fontSize: { xs: '1.35rem', sm: '1.55rem', md: '1.75rem' },
                   lineHeight: 1.2,
                   pb: 0.5,
                 }}
@@ -372,7 +474,7 @@ export default function FullScreenPlayerModal({
 
               <Stack
                 direction="row"
-                spacing={1}
+                spacing={1.25}
                 sx={{
                   alignItems: 'center',
                   minWidth: 0,
@@ -386,7 +488,7 @@ export default function FullScreenPlayerModal({
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     fontWeight: 500,
-                    fontSize: { xs: '0.9rem', sm: '1.025rem' },
+                    fontSize: { xs: '0.95rem', sm: '1.05rem' },
                     lineHeight: 1.2,
                   }}
                 >
@@ -396,15 +498,16 @@ export default function FullScreenPlayerModal({
                 <AudioQualityPill
                   label={audioQualityLabel}
                   size="large"
+                  isStuttering={isStuttering}
                   onClick={onOpenQualityModal}
                 />
               </Stack>
             </Box>
 
-            {/* Right Action Icons */}
+            {/* Right Action Icons (Share & Queue) */}
             <Stack
               direction="row"
-              spacing={{ xs: 0.5, sm: 1 }}
+              spacing={{ xs: 1.5, sm: 2 }}
               sx={{
                 alignItems: 'center',
                 flexShrink: 0,
@@ -413,29 +516,29 @@ export default function FullScreenPlayerModal({
               {/* Share track */}
               <IconButton
                 onClick={onShareTrack}
-                size="small"
+                size="medium"
                 sx={{
                   color: copiedShare ? 'success.main' : 'text.secondary',
-                  p: { xs: 0.75, sm: 1 },
+                  p: { xs: 1.25, sm: 1.5 },
                   '&:hover': {
                     color: 'text.primary',
                   },
                 }}
               >
                 {copiedShare ? (
-                  <CheckRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
+                  <CheckRoundedIcon sx={{ fontSize: { xs: 26, sm: 28 } }} />
                 ) : (
-                  <ShareRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
+                  <ShareRoundedIcon sx={{ fontSize: { xs: 26, sm: 28 } }} />
                 )}
               </IconButton>
 
               {/* Queue button */}
               <IconButton
-                size="small"
+                size="medium"
                 onClick={onOpenQueue}
                 sx={{
                   color: 'text.secondary',
-                  p: { xs: 0.75, sm: 1 },
+                  p: { xs: 1.25, sm: 1.5 },
                   '&:hover': {
                     color: 'text.primary',
                   },
@@ -444,8 +547,17 @@ export default function FullScreenPlayerModal({
                 <Badge
                   badgeContent={manualQueue.length > 0 ? manualQueue.length : null}
                   color="primary"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.75rem',
+                      height: 18,
+                      minWidth: 18,
+                      top: 4,
+                      right: 4,
+                    },
+                  }}
                 >
-                  <QueueMusicRoundedIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
+                  <QueueMusicRoundedIcon sx={{ fontSize: { xs: 26, sm: 28 } }} />
                 </Badge>
               </IconButton>
 
@@ -506,40 +618,39 @@ export default function FullScreenPlayerModal({
             sx={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              justifyContent: 'space-between',
               width: '100%',
-              maxWidth: { xs: 320, sm: 400, md: 460 },
+              maxWidth: { xs: '100%', sm: 480, md: 520 },
               mx: 'auto',
-              px: { xs: 0, sm: 2 },
-              gap: { xs: 1.5, sm: 2.5, md: 3 },
-              mb: { xs: 2, sm: 2.5 },
+              px: { xs: 1, sm: 2 },
+              mb: { xs: 3, sm: 3.5 },
             }}
           >
             {/* Shuffle */}
             <IconButton
               onClick={onToggleShuffle}
-              size="small"
+              size="medium"
               sx={{
                 color: isShuffle ? 'primary.main' : 'text.secondary',
-                p: { xs: 0.6, sm: 1 },
+                p: { xs: 1.25, sm: 1.5 },
                 '&:hover': { color: 'text.primary' },
               }}
             >
-              <ShuffleRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+              <ShuffleRoundedIcon sx={{ fontSize: { xs: 26, sm: 30 } }} />
             </IconButton>
 
             {/* Skip Prev */}
             <IconButton
               onClick={handleSkipBackClick}
-              size="small"
+              size="medium"
               sx={{
                 color: 'text.primary',
-                p: { xs: 0.6, sm: 1 },
+                p: { xs: 1.25, sm: 1.5 },
                 '&:hover': { transform: 'scale(1.08)' },
                 transition: 'transform 0.15s ease',
               }}
             >
-              <SkipPreviousRoundedIcon sx={{ fontSize: { xs: 28, sm: 36 } }} />
+              <SkipPreviousRoundedIcon sx={{ fontSize: { xs: 36, sm: 42 } }} />
             </IconButton>
 
             {/* Play / Pause */}
@@ -549,50 +660,50 @@ export default function FullScreenPlayerModal({
               sx={{
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
-                p: { xs: 1.25, sm: 1.75 },
-                boxShadow: '0 6px 20px rgba(144, 202, 249, 0.45)',
+                p: { xs: 1.75, sm: 2.25 },
+                boxShadow: '0 8px 24px rgba(144, 202, 249, 0.45)',
                 '&:hover': {
                   bgcolor: 'primary.dark',
-                  transform: 'scale(1.05)',
+                  transform: 'scale(1.06)',
                 },
                 transition: 'all 0.2s ease',
               }}
             >
               {isPlaying ? (
-                <PauseRoundedIcon sx={{ fontSize: { xs: 28, sm: 38 } }} />
+                <PauseRoundedIcon sx={{ fontSize: { xs: 36, sm: 44 } }} />
               ) : (
-                <PlayArrowRoundedIcon sx={{ fontSize: { xs: 28, sm: 38 } }} />
+                <PlayArrowRoundedIcon sx={{ fontSize: { xs: 36, sm: 44 } }} />
               )}
             </IconButton>
 
             {/* Skip Next */}
             <IconButton
               onClick={handleSkipForwardClick}
-              size="small"
+              size="medium"
               sx={{
                 color: 'text.primary',
-                p: { xs: 0.6, sm: 1 },
+                p: { xs: 1.25, sm: 1.5 },
                 '&:hover': { transform: 'scale(1.08)' },
                 transition: 'transform 0.15s ease',
               }}
             >
-              <SkipNextRoundedIcon sx={{ fontSize: { xs: 28, sm: 36 } }} />
+              <SkipNextRoundedIcon sx={{ fontSize: { xs: 36, sm: 42 } }} />
             </IconButton>
 
             {/* Repeat */}
             <IconButton
               onClick={onCycleRepeat}
-              size="small"
+              size="medium"
               sx={{
                 color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
-                p: { xs: 0.6, sm: 1 },
+                p: { xs: 1.25, sm: 1.5 },
                 '&:hover': { color: 'text.primary' },
               }}
             >
               {repeatMode === 'one' ? (
-                <RepeatOneRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                <RepeatOneRoundedIcon sx={{ fontSize: { xs: 26, sm: 30 } }} />
               ) : (
-                <RepeatRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                <RepeatRoundedIcon sx={{ fontSize: { xs: 26, sm: 30 } }} />
               )}
             </IconButton>
           </Box>
@@ -605,6 +716,7 @@ export default function FullScreenPlayerModal({
               alignItems: 'center',
               width: '100%',
               px: { xs: 0.5, sm: 1 },
+              pt: { xs: 0.5, sm: 1 },
             }}
           >
             <Typography
@@ -612,8 +724,8 @@ export default function FullScreenPlayerModal({
               sx={{
                 color: 'text.secondary',
                 fontFamily: 'monospace',
-                fontSize: { xs: '0.675rem', sm: '0.75rem' },
-                minWidth: { xs: 34, sm: 38 },
+                fontSize: { xs: '0.725rem', sm: '0.8rem' },
+                minWidth: { xs: 36, sm: 40 },
                 textAlign: 'right',
               }}
             >
@@ -628,13 +740,13 @@ export default function FullScreenPlayerModal({
                 if (onSeek) onSeek(val)
               }}
               sx={{
-                py: { xs: 0.75, sm: 1 },
+                py: { xs: 1.25, sm: 1.5 },
                 mx: { xs: 0.5, sm: 0.75 },
-                height: 3,
+                height: 4,
                 flexGrow: 1,
                 '& .MuiSlider-thumb': {
-                  width: { xs: 12, sm: 14 },
-                  height: { xs: 12, sm: 14 },
+                  width: { xs: 14, sm: 16 },
+                  height: { xs: 14, sm: 16 },
                   '&:hover, &.Mui-focused, &.Mui-active': {
                     boxShadow: '0 0 0 8px rgba(144, 202, 249, 0.2)',
                   },
@@ -653,8 +765,8 @@ export default function FullScreenPlayerModal({
               sx={{
                 color: 'text.secondary',
                 fontFamily: 'monospace',
-                fontSize: { xs: '0.675rem', sm: '0.75rem' },
-                minWidth: { xs: 34, sm: 38 },
+                fontSize: { xs: '0.725rem', sm: '0.8rem' },
+                minWidth: { xs: 36, sm: 40 },
                 textAlign: 'left',
               }}
             >
@@ -728,6 +840,7 @@ export default function FullScreenPlayerModal({
               <AudioQualityPill
                 label={audioQualityLabel}
                 size="large"
+                isStuttering={isStuttering}
                 onClick={onOpenQualityModal}
               />
             </Stack>

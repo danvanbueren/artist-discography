@@ -18,12 +18,14 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import AlbumIcon from '@mui/icons-material/Album'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
 import TrackCreateCard from '../tracks/TrackCreateCard'
 import { PROJECT_TYPES } from '../adminConstants'
-import { createEmptyTrack } from '../adminUtils'
+import { createEmptyTrack, getMediaThumbnailUrl } from '../adminUtils'
+import { slugify } from '../../../lib/slugs'
 
 export default function ProjectCreateForm({
   name,
@@ -63,7 +65,11 @@ export default function ProjectCreateForm({
   handleMoveCreateTrackDown,
   handleDeleteCreateTrack,
 }) {
-  const coverJob = mediaJobs?.getJobForFile?.(coverFile?.name || `${name} (Cover Art)`) || null
+  const projectSlug = slugify(name || '')
+  const coverJob = mediaJobs?.getJobForCover?.({
+    projectSlug,
+    fileName: coverFile?.name || 'art.jpg',
+  }) || mediaJobs?.getJobForFile?.(coverFile?.name) || null
   return (
     <Stack spacing={3}>
       <Paper
@@ -172,14 +178,43 @@ export default function ProjectCreateForm({
           Cover Artwork
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          {coverPreview && (
+          {coverPreview ? (
             <Box
               component="img"
-              src={coverPreview}
+              src={getMediaThumbnailUrl(coverPreview, 160)}
               alt="Cover preview"
-              sx={{ width: 64, height: 64, borderRadius: 1.5, objectFit: 'cover' }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallbackEl = document.getElementById('new-cover-fallback')
+                if (fallbackEl) fallbackEl.style.display = 'flex'
+              }}
+              sx={{
+                width: 64,
+                height: 64,
+                aspectRatio: '1 / 1',
+                borderRadius: 1.5,
+                objectFit: 'cover',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                display: 'block',
+              }}
             />
-          )}
+          ) : null}
+          <Box
+            id="new-cover-fallback"
+            sx={{
+              width: 64,
+              height: 64,
+              aspectRatio: '1 / 1',
+              borderRadius: 1.5,
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: coverPreview ? 'none' : 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AlbumIcon sx={{ fontSize: 32, color: 'text.secondary' }} />
+          </Box>
           <Button
             variant="contained"
             component="label"
@@ -433,7 +468,12 @@ export default function ProjectCreateForm({
               isSavedArtist={savedFields.has(`new_track_${index}_artist`)}
               dirtyFields={dirtyFields}
               savedFields={savedFields}
-              processingJob={mediaJobs?.getJobForFile?.(track.name || track.audioFileName)}
+              processingJob={mediaJobs?.getJobForTrack?.({
+                projectSlug,
+                trackSlug: slugify(track.name || ''),
+                trackName: track.name,
+                fileName: track.audioFileName,
+              }) || mediaJobs?.getJobForFile?.(track.audioFileName)}
               onUpdateName={handleUpdateCreateTrackName}
               onUpdateArtist={handleUpdateCreateTrackArtist}
               onUpdateLink={handleUpdateCreateTrackLink}

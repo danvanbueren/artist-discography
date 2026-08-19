@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Box,
   Dialog,
   DialogTitle,
   DialogContent,
-  Divider,
   IconButton,
   List,
   ListItem,
@@ -14,9 +13,7 @@ import {
   Paper,
   Stack,
   Typography,
-  useTheme,
 } from '@mui/material'
-import { alpha } from '@mui/material/styles'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
@@ -24,6 +21,7 @@ import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import ProgressiveImage from '../common/ProgressiveImage'
+import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
 
 export default function PlaybackQueueDialog({
   open,
@@ -35,12 +33,192 @@ export default function PlaybackQueueDialog({
   onRemoveFromAutoplay,
   onPlayQueuedTrack,
 }) {
-  const theme = useTheme()
+  const isTouch = useTouchDevice()
+  const contentRef = useRef(null)
 
   // Drag-and-drop state — fully local to this dialog
   const [draggedItem, setDraggedItem] = useState(null) // { listType: 'queue'|'autoplay', index: number }
   const [dragOverItem, setDragOverItem] = useState(null) // { listType: 'queue'|'autoplay', targetIndex: number, itemIndex: number, position: 'top'|'bottom' }
 
+  // Refs for touch dragging and auto-scrolling without stale closures
+  const dragOverItemRef = useRef(null)
+  dragOverItemRef.current = dragOverItem
+
+  const touchDragStateRef = useRef({
+    active: false,
+    fromList: null,
+    fromIndex: -1,
+  })
+
+  const autoScrollAnimRef = useRef(null)
+  const scrollSpeedRef = useRef(0)
+  const lastTouchPosRef = useRef(null)
+
+  const stopAutoScroll = useCallback(() => {
+    scrollSpeedRef.current = 0
+    if (autoScrollAnimRef.current) {
+      cancelAnimationFrame(autoScrollAnimRef.current)
+      autoScrollAnimRef.current = null
+    }
+  }, [])
+
+  // Auto-scroll loop when dragging near top/bottom boundary
+  const autoScrollLoop = useCallback(() => {
+    if (scrollSpeedRef.current !== 0 && contentRef.current) {
+      contentRef.current.scrollTop += scrollSpeedRef.current
+      if (lastTouchPosRef.current) {
+        updateDropTargetFromCoords(lastTouchPosRef.current.x, lastTouchPosRef.current.y)
+      }
+      autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
+    } else {
+      if (autoScrollAnimRef.current) {
+        cancelAnimationFrame(autoScrollAnimRef.current)
+        autoScrollAnimRef.current = null
+      }
+    }
+  }, [])
+
+  const checkAndTriggerAutoScroll = useCallback((clientY) => {
+    if (!contentRef.current) return
+
+    const rect = contentRef.current.getBoundingClientRect()
+    const threshold = 64
+
+    if (clientY < rect.top + threshold) {
+      const dist = Math.max(0, rect.top + threshold - clientY)
+      const ratio = Math.min(1, dist / threshold)
+      scrollSpeedRef.current = -Math.round(ratio * 12 + 3)
+      if (!autoScrollAnimRef.current) {
+        autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
+      }
+    } else if (clientY > rect.bottom - threshold) {
+      const dist = Math.max(0, clientY - (rect.bottom - threshold))
+      const ratio = Math.min(1, dist / threshold)
+      scrollSpeedRef.current = Math.round(ratio * 12 + 3)
+      if (!autoScrollAnimRef.current) {
+        autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
+      }
+    } else {
+      stopAutoScroll()
+    }
+  }, [autoScrollLoop, stopAutoScroll])
+
+  // Helper to determine drop target from (clientX, clientY) coordinates
+  const updateDropTargetFromCoords = useCallback((clientX, clientY) => {
+    if (!contentRef.current) return
+
+    const queueContainer = contentRef.current.querySelector('[data-queue-section="queue"]')
+    const autoplayContainer = contentRef.current.querySelector('[data-queue-section="autoplay"]')
+
+    const autoplayRect = autoplayContainer?.getBoundingClientRect()
+    let targetList = 'queue'
+    if (autoplayRect && clientY >= autoplayRect.top) {
+      targetList = 'autoplay'
+    }
+
+    const listItems = contentRef.current.querySelectorAll(`[data-list-type="${targetList}"]`)
+    if (listItems.length === 0) {
+      setDragOverItem({ listType: targetList, targetIndex: 0, itemIndex: 0, position: 'top' })
+      return
+    }
+
+    let found = false
+    listItems.forEach((el, index) => {
+      const rect = el.getBoundingClientRect()
+      if (clientY >= rect.top && clientY <= rect.bottom) {
+        const position = clientY < rect.top + rect.height / 2 ? 'top' : 'bottom'
+        const targetIndex = position === 'top' ? index : index + 1
+        setDragOverItem({ listType: targetList, targetIndex, itemIndex: index, position })
+        found = true
+      }
+    })
+
+    if (!found) {
+      const firstRect = listItems[0].getBoundingClientRect()
+      const lastRect = listItems[listItems.length - 1].getBoundingClientRect()
+      if (clientY < firstRect.top) {
+        setDragOverItem({ listType: targetList, targetIndex: 0, itemIndex: 0, position: 'top' })
+      } else if (clientY > lastRect.bottom) {
+        setDragOverItem({
+          listType: targetList,
+          targetIndex: listItems.length,
+          itemIndex: listItems.length - 1,
+          position: 'bottom',
+        })
+      }
+    }
+  }, [])
+
+  // Clean up auto scroll on unmount or dialog close
+  useEffect(() => {
+    if (!open) {
+      stopAutoScroll()
+      setDraggedItem(null)
+      setDragOverItem(null)
+    }
+    return () => {
+      stopAutoScroll()
+    }
+  }, [open, stopAutoScroll])
+
+  // --- Touch Drag Gesture Handlers ---
+  const handleTouchDragStart = (e, listType, index) => {
+    const touch = e.touches[0]
+    if (!touch) return
+
+    setDraggedItem({ listType, index })
+    touchDragStateRef.current = {
+      active: true,
+      fromList: listType,
+      fromIndex: index,
+    }
+    lastTouchPosRef.current = { x: touch.clientX, y: touch.clientY }
+    updateDropTargetFromCoords(touch.clientX, touch.clientY)
+
+    const onTouchMove = (moveEvent) => {
+      const t = moveEvent.touches[0]
+      if (!t) return
+      lastTouchPosRef.current = { x: t.clientX, y: t.clientY }
+      updateDropTargetFromCoords(t.clientX, t.clientY)
+      checkAndTriggerAutoScroll(t.clientY)
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault()
+      }
+    }
+
+    const onTouchEnd = () => {
+      stopAutoScroll()
+      const currentDragOver = dragOverItemRef.current
+      const fromState = touchDragStateRef.current
+
+      if (fromState.active && onQueueDragDrop) {
+        const targetList = currentDragOver?.listType || fromState.fromList
+        const fallbackIndex = targetList === 'queue' ? manualQueue.length : autoplayTracks.length
+        const toIndex = currentDragOver ? currentDragOver.targetIndex : fallbackIndex
+
+        onQueueDragDrop({
+          fromList: fromState.fromList,
+          fromIndex: fromState.fromIndex,
+          toList: targetList,
+          toIndex: toIndex,
+        })
+      }
+
+      touchDragStateRef.current = { active: false, fromList: null, fromIndex: -1 }
+      setDraggedItem(null)
+      setDragOverItem(null)
+
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchcancel', onTouchEnd)
+    }
+
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onTouchEnd)
+    window.addEventListener('touchcancel', onTouchEnd)
+  }
+
+  // --- Desktop HTML5 Drag Handlers ---
   const handleDragStart = (e, listType, index) => {
     e.stopPropagation()
     setDraggedItem({ listType, index })
@@ -54,6 +232,8 @@ export default function PlaybackQueueDialog({
     e.preventDefault()
     e.stopPropagation()
     e.dataTransfer.dropEffect = 'move'
+
+    checkAndTriggerAutoScroll(e.clientY)
 
     const rect = e.currentTarget.getBoundingClientRect()
     const position = e.clientY - rect.top < rect.height / 2 ? 'top' : 'bottom'
@@ -73,6 +253,8 @@ export default function PlaybackQueueDialog({
     e.preventDefault()
     e.stopPropagation()
     e.dataTransfer.dropEffect = 'move'
+
+    checkAndTriggerAutoScroll(e.clientY)
 
     const listElement = e.currentTarget
     const itemElements = Array.from(listElement.children)
@@ -119,6 +301,7 @@ export default function PlaybackQueueDialog({
   const handleDrop = (e, targetListType, fallbackIndex) => {
     e.preventDefault()
     e.stopPropagation()
+    stopAutoScroll()
     if (draggedItem && onQueueDragDrop) {
       const toIndex = dragOverItem && dragOverItem.listType === targetListType
         ? dragOverItem.targetIndex
@@ -136,6 +319,7 @@ export default function PlaybackQueueDialog({
 
   const handleDragEnd = (e) => {
     if (e && e.stopPropagation) e.stopPropagation()
+    stopAutoScroll()
     setDraggedItem(null)
     setDragOverItem(null)
   }
@@ -217,10 +401,17 @@ export default function PlaybackQueueDialog({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 2, maxHeight: '80vh', overflowY: 'auto' }}>
+      <DialogContent
+        ref={contentRef}
+        sx={{
+          p: 2,
+          maxHeight: '80vh',
+          overflowY: 'auto',
+        }}
+      >
 
         {/* SECTION 1: QUEUE */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 3 }} data-queue-section="queue">
           <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1 }}>
             Queue ({manualQueue.length})
           </Typography>
@@ -230,6 +421,7 @@ export default function PlaybackQueueDialog({
               variant="outlined"
               onDragOver={(e) => {
                 e.preventDefault()
+                checkAndTriggerAutoScroll(e.clientY)
                 setDragOverItem({ listType: 'queue', targetIndex: 0, itemIndex: 0, position: 'top' })
               }}
               onDrop={(e) => handleDrop(e, 'queue', 0)}
@@ -275,51 +467,69 @@ export default function PlaybackQueueDialog({
                   dragOverItem?.itemIndex === idx &&
                   dragOverItem?.position === 'bottom'
 
+                const isCurrentlyDragged =
+                  draggedItem?.listType === 'queue' && draggedItem?.index === idx
+
                 return (
                   <ListItem
                     key={idx}
-                    draggable={true}
+                    data-list-type="queue"
+                    data-item-index={idx}
+                    draggable={!isTouch}
                     onDragStart={(e) => handleDragStart(e, 'queue', idx)}
                     onDragOver={(e) => handleDragOver(e, 'queue', idx)}
                     onDragLeave={(e) => handleDragLeave(e, 'queue', idx)}
                     onDrop={(e) => handleDrop(e, 'queue', idx)}
                     onDragEnd={handleDragEnd}
+                    onClick={() => {
+                      if (isTouch) {
+                        if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
+                        onClose()
+                      }
+                    }}
                     sx={{
                       position: 'relative',
                       borderRadius: 2,
                       mb: 1,
                       py: 1,
-                      px: 1.5,
-                      cursor: 'grab',
-                      WebkitUserDrag: 'element',
+                      pl: 1.5,
+                      pr: isTouch ? '52px' : '88px',
+                      cursor: isTouch ? 'pointer' : 'grab',
+                      WebkitUserDrag: isTouch ? 'none' : 'element',
                       userSelect: 'none',
+                      touchAction: 'pan-y',
                       transition: 'background-color 0.15s ease, opacity 0.15s ease',
-                      opacity: draggedItem?.listType === 'queue' && draggedItem?.index === idx ? 0.4 : 1,
+                      opacity: isCurrentlyDragged ? 0.4 : 1,
                       bgcolor: 'action.hover',
                       border: '1px solid transparent',
                       '&:hover': { bgcolor: 'action.selected' },
-                      '&:active': { cursor: 'grabbing' },
+                      '&:active': {
+                        bgcolor: 'action.selected',
+                        cursor: isTouch ? 'pointer' : 'grabbing',
+                      },
                     }}
                     secondaryAction={
                       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          title="Play Track"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
-                            onClose()
-                          }}
-                          sx={{
-                            '&:hover': {
-                              bgcolor: 'action.selected',
-                              transform: 'scale(1.12)',
-                            },
-                          }}
-                        >
-                          <PlayArrowRoundedIcon fontSize="small" />
-                        </IconButton>
+                        {!isTouch && (
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            title="Play Track"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
+                              onClose()
+                            }}
+                            sx={{
+                              '&:hover': {
+                                bgcolor: 'action.selected',
+                                transform: 'scale(1.12)',
+                              },
+                            }}
+                          >
+                            <PlayArrowRoundedIcon fontSize="small" />
+                          </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           title="Remove from Queue"
@@ -344,13 +554,20 @@ export default function PlaybackQueueDialog({
                       </Box>
                     )}
                     <Box
+                      onTouchStart={(e) => handleTouchDragStart(e, 'queue', idx)}
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         mr: 1.5,
                         color: 'text.secondary',
                         cursor: 'grab',
                         userSelect: 'none',
+                        touchAction: 'none',
+                        p: 0.5,
+                        m: -0.5,
+                        borderRadius: 1,
+                        '&:active': { color: 'primary.main' },
                       }}
                     >
                       <DragIndicatorRoundedIcon />
@@ -399,8 +616,33 @@ export default function PlaybackQueueDialog({
                         })()
                       }
                       slotProps={{
-                        primary: { variant: 'body1', fontWeight: 600, noWrap: true },
-                        secondary: { variant: 'caption', noWrap: true },
+                        primary: {
+                          variant: 'body1',
+                          fontWeight: 600,
+                          noWrap: true,
+                          sx: {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                          },
+                        },
+                        secondary: {
+                          variant: 'caption',
+                          noWrap: true,
+                          sx: {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                          },
+                        },
+                      }}
+                      sx={{
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        my: 0,
+                        mr: 1,
                       }}
                     />
                   </ListItem>
@@ -411,7 +653,7 @@ export default function PlaybackQueueDialog({
         </Box>
 
         {/* SECTION 2: AUTOPLAY */}
-        <Box>
+        <Box data-queue-section="autoplay">
           <Typography variant="subtitle1" fontWeight={700} color="text.secondary" sx={{ mb: 1 }}>
             Autoplay
           </Typography>
@@ -421,6 +663,7 @@ export default function PlaybackQueueDialog({
               variant="outlined"
               onDragOver={(e) => {
                 e.preventDefault()
+                checkAndTriggerAutoScroll(e.clientY)
                 setDragOverItem({ listType: 'autoplay', targetIndex: 0, itemIndex: 0, position: 'top' })
               }}
               onDrop={(e) => handleDrop(e, 'autoplay', 0)}
@@ -453,51 +696,69 @@ export default function PlaybackQueueDialog({
                   dragOverItem?.itemIndex === idx &&
                   dragOverItem?.position === 'bottom'
 
+                const isCurrentlyDragged =
+                  draggedItem?.listType === 'autoplay' && draggedItem?.index === idx
+
                 return (
                   <ListItem
                     key={idx}
-                    draggable={true}
+                    data-list-type="autoplay"
+                    data-item-index={idx}
+                    draggable={!isTouch}
                     onDragStart={(e) => handleDragStart(e, 'autoplay', idx)}
                     onDragOver={(e) => handleDragOver(e, 'autoplay', idx)}
                     onDragLeave={(e) => handleDragLeave(e, 'autoplay', idx)}
                     onDrop={(e) => handleDrop(e, 'autoplay', idx)}
                     onDragEnd={handleDragEnd}
+                    onClick={() => {
+                      if (isTouch) {
+                        if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
+                        onClose()
+                      }
+                    }}
                     sx={{
                       position: 'relative',
                       borderRadius: 2,
                       mb: 0.75,
                       py: 0.75,
-                      px: 1.5,
-                      cursor: 'grab',
-                      WebkitUserDrag: 'element',
+                      pl: 1.5,
+                      pr: isTouch ? '52px' : '88px',
+                      cursor: isTouch ? 'pointer' : 'grab',
+                      WebkitUserDrag: isTouch ? 'none' : 'element',
                       userSelect: 'none',
+                      touchAction: 'pan-y',
                       transition: 'background-color 0.15s ease, opacity 0.15s ease',
-                      opacity: draggedItem?.listType === 'autoplay' && draggedItem?.index === idx ? 0.4 : 1,
+                      opacity: isCurrentlyDragged ? 0.4 : 1,
                       bgcolor: 'action.hover',
                       border: '1px solid transparent',
                       '&:hover': { bgcolor: 'action.selected' },
-                      '&:active': { cursor: 'grabbing' },
+                      '&:active': {
+                        bgcolor: 'action.selected',
+                        cursor: isTouch ? 'pointer' : 'grabbing',
+                      },
                     }}
                     secondaryAction={
                       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          title="Play Track"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
-                            onClose()
-                          }}
-                          sx={{
-                            '&:hover': {
-                              bgcolor: 'action.selected',
-                              transform: 'scale(1.12)',
-                            },
-                          }}
-                        >
-                          <PlayArrowRoundedIcon fontSize="small" />
-                        </IconButton>
+                        {!isTouch && (
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            title="Play Track"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
+                              onClose()
+                            }}
+                            sx={{
+                              '&:hover': {
+                                bgcolor: 'action.selected',
+                                transform: 'scale(1.12)',
+                              },
+                            }}
+                          >
+                            <PlayArrowRoundedIcon fontSize="small" />
+                          </IconButton>
+                        )}
                         <IconButton
                           size="small"
                           title="Remove from Autoplay"
@@ -522,13 +783,20 @@ export default function PlaybackQueueDialog({
                       </Box>
                     )}
                     <Box
+                      onTouchStart={(e) => handleTouchDragStart(e, 'autoplay', idx)}
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         mr: 1.5,
                         color: 'text.secondary',
                         cursor: 'grab',
                         userSelect: 'none',
+                        touchAction: 'none',
+                        p: 0.5,
+                        m: -0.5,
+                        borderRadius: 1,
+                        '&:active': { color: 'primary.main' },
                       }}
                     >
                       <DragIndicatorRoundedIcon />
@@ -577,8 +845,33 @@ export default function PlaybackQueueDialog({
                         })()
                       }
                       slotProps={{
-                        primary: { variant: 'body1', fontWeight: 600, noWrap: true },
-                        secondary: { variant: 'caption', noWrap: true },
+                        primary: {
+                          variant: 'body1',
+                          fontWeight: 600,
+                          noWrap: true,
+                          sx: {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                          },
+                        },
+                        secondary: {
+                          variant: 'caption',
+                          noWrap: true,
+                          sx: {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                          },
+                        },
+                      }}
+                      sx={{
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        my: 0,
+                        mr: 1,
                       }}
                     />
                   </ListItem>

@@ -1,10 +1,96 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Box } from '@mui/material'
 import { useVibrantColors } from '../../lib/hooks/useVibrantColors'
+import { isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
+
+function getLowResUrl(src) {
+  if (!src || typeof src !== 'string') return ''
+  if (src.startsWith('/api/media') || src.startsWith('/api/logo')) {
+    const separator = src.includes('?') ? '&' : '?'
+    return `${src}${separator}w=48&q=20&blur=8&fmt=webp`
+  }
+  return src
+}
+
+function getHighResUrl(src) {
+  if (!src || typeof src !== 'string') return ''
+  if (src.startsWith('/api/media') || src.startsWith('/api/logo')) {
+    if (src.includes('w=')) return src
+    const separator = src.includes('?') ? '&' : '?'
+    return `${src}${separator}w=600&q=80&fmt=webp`
+  }
+  return src
+}
 
 export default function AmbientBackground({ ambientImage, darkMode }) {
-  const { colors, isMonochrome } = useVibrantColors(ambientImage)
+  const lowResSrc = getLowResUrl(ambientImage)
+  const highResSrc = getHighResUrl(ambientImage)
+
+  // Use low-res source for vibrant palette extraction so it samples in milliseconds
+  const { colors, isMonochrome } = useVibrantColors(lowResSrc || ambientImage)
+
+  const [lowResLoaded, setLowResLoaded] = useState(() => isHighResCached(lowResSrc) || isHighResCached(highResSrc))
+  const [highResLoaded, setHighResLoaded] = useState(() => isHighResCached(highResSrc))
+
+  useEffect(() => {
+    if (!ambientImage) {
+      setLowResLoaded(false)
+      setHighResLoaded(false)
+      return
+    }
+
+    const isCachedHigh = isHighResCached(highResSrc)
+    if (isCachedHigh) {
+      setLowResLoaded(true)
+      setHighResLoaded(true)
+      return
+    }
+
+    let isCancelled = false
+    setLowResLoaded(isHighResCached(lowResSrc))
+    setHighResLoaded(false)
+
+    // 1. Immediately load lightweight compressed low-res variant
+    if (lowResSrc) {
+      const lowImg = new Image()
+      lowImg.src = lowResSrc
+      lowImg.onload = () => {
+        if (!isCancelled) {
+          markHighResCached(lowResSrc)
+          setLowResLoaded(true)
+          if (highResSrc === lowResSrc) {
+            setHighResLoaded(true)
+          }
+        }
+      }
+      lowImg.onerror = () => {
+        if (!isCancelled) {
+          setLowResLoaded(true)
+        }
+      }
+    }
+
+    // 2. Concurrently load full/higher resolution variant
+    if (highResSrc && highResSrc !== lowResSrc) {
+      const highImg = new Image()
+      highImg.src = highResSrc
+      highImg.onload = () => {
+        if (!isCancelled) {
+          markHighResCached(highResSrc)
+          setHighResLoaded(true)
+        }
+      }
+      highImg.onerror = () => {
+        // High-res failure is non-fatal; low-res layer remains visible
+      }
+    }
+
+    return () => {
+      isCancelled = true
+    }
+  }, [ambientImage, lowResSrc, highResSrc])
 
   const c1 = colors[0] || 'hsl(220, 12%, 35%)'
   const c2 = colors[1] || 'hsl(220, 10%, 55%)'
@@ -44,17 +130,38 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
           willChange: 'transform',
         }}
       >
-        {/* Layer 1: Base Cover Art Image */}
-        {ambientImage && (
+        {/* Layer 1a: Lightweight compressed background (loads instantly on poor connections) */}
+        {ambientImage && lowResLoaded && (
           <Box
-            key={ambientImage}
+            key={`low_${lowResSrc}`}
             sx={{
               position: 'absolute',
               inset: 0,
-              backgroundImage: `url(${ambientImage})`,
+              backgroundImage: `url(${lowResSrc})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              animation: 'ambientFadeIn 1.2s ease forwards',
+              opacity: highResLoaded ? 0 : 1,
+              transition: 'opacity 0.8s ease-in-out',
+              animation: 'ambientFadeIn 0.6s ease forwards',
+              '@keyframes ambientFadeIn': {
+                from: { opacity: 0 },
+                to: { opacity: 1 },
+              },
+            }}
+          />
+        )}
+
+        {/* Layer 1b: Higher resolution background (smoothly fades in once loaded) */}
+        {ambientImage && highResLoaded && (
+          <Box
+            key={`high_${highResSrc}`}
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${highResSrc})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              animation: 'ambientFadeIn 0.8s ease forwards',
               '@keyframes ambientFadeIn': {
                 from: { opacity: 0 },
                 to: { opacity: 1 },

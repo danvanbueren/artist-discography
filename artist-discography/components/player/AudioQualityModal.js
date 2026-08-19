@@ -17,6 +17,7 @@ import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUnch
 import GraphicEqRoundedIcon from '@mui/icons-material/GraphicEqRounded'
 import HighQualityRoundedIcon from '@mui/icons-material/HighQualityRounded'
 import DataSaverOnRoundedIcon from '@mui/icons-material/DataSaverOnRounded'
+import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded'
 import { QUALITY_TIER_CONFIG } from '../../lib/networkProbe'
 
 const QUALITY_OPTIONS = [
@@ -38,7 +39,7 @@ const QUALITY_OPTIONS = [
   },
   {
     id: '128k',
-    title: 'High Compression (128 kbps)',
+    title: 'Compressed (128 kbps)',
     tag: 'Low Data',
     tagColor: 'default',
     desc: 'Lightweight audio stream. Saves mobile data on metered or slower cellular connections.',
@@ -50,6 +51,7 @@ export default function AudioQualityModal({
   open,
   onClose,
   activeQuality = '320k',
+  isStuttering = false,
   onSelectQuality,
 }) {
   const handleSelect = (tierId) => {
@@ -101,6 +103,57 @@ export default function AudioQualityModal({
       </DialogTitle>
 
       <DialogContent sx={{ px: { xs: 1.5, sm: 2 }, py: 1.5 }}>
+        {isStuttering && (
+          <Box
+            sx={{
+              p: 1.5,
+              mb: 1.5,
+              borderRadius: 2.5,
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'rgba(245, 158, 11, 0.16)'
+                  : 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid',
+              borderColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'rgba(245, 158, 11, 0.4)'
+                  : 'rgba(217, 119, 6, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.25,
+            }}
+          >
+            <Box
+              sx={{
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                bgcolor: (theme) =>
+                  theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706',
+                color: (theme) =>
+                  theme.palette.mode === 'dark' ? '#1a1400' : '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <PriorityHighRoundedIcon sx={{ fontSize: 13, color: 'inherit' }} />
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                color: (theme) =>
+                  theme.palette.mode === 'dark' ? '#fbbf24' : '#b45309',
+                fontWeight: 600,
+                lineHeight: 1.35,
+              }}
+            >
+              Playback is struggling. Switching to a lower bitrate will reduce buffering delays.
+            </Typography>
+          </Box>
+        )}
+
         <Stack spacing={1.5}>
           {QUALITY_OPTIONS.map((opt) => {
             const isSelected = activeQuality === opt.id
@@ -146,31 +199,49 @@ export default function AudioQualityModal({
                   </Box>
 
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                      <Typography variant="subtitle2" fontWeight={700} sx={{ fontSize: '0.95rem', color: isSelected ? 'primary.main' : 'text.primary' }}>
-                        {opt.title}
-                      </Typography>
-                      {opt.tag && (
-                        <Box
-                          component="span"
-                          sx={{
-                            fontSize: '0.625rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                            textTransform: 'uppercase',
-                            px: 0.75,
-                            py: 0.15,
-                            borderRadius: 9999,
-                            bgcolor: isSelected ? 'primary.main' : 'action.selected',
-                            color: isSelected ? 'primary.contrastText' : 'text.secondary',
-                          }}
-                        >
-                          {opt.tag}
-                        </Box>
-                      )}
-                    </Stack>
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={700}
+                      sx={{
+                        fontSize: '0.95rem',
+                        lineHeight: 1,
+                        color: isSelected ? 'primary.main' : 'text.primary',
+                      }}
+                    >
+                      {opt.title}
+                    </Typography>
 
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
+                    {opt.tag && (
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          fontSize: '0.625rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          px: 0.75,
+                          py: 0.15,
+                          borderRadius: 9999,
+                          bgcolor: isSelected ? 'primary.main' : 'action.selected',
+                          color: isSelected ? 'primary.contrastText' : 'text.secondary',
+                          mb: 1.2,
+                          whiteSpace: 'nowrap',
+                          width: 'fit-content',
+                        }}
+                      >
+                        {opt.tag}
+                      </Box>
+                    )}
+
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        display: 'block',
+                        lineHeight: 1.35,
+                      }}
+                    >
                       {opt.desc}
                     </Typography>
                   </Box>

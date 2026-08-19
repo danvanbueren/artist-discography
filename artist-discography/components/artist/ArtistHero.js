@@ -83,7 +83,7 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
       maxWidth="md"
       sx={{
         textAlign: 'center',
-        px: { xs: 2, sm: 3 },
+        px: { xs: 4, sm: 3 },
         py: { xs: 5, sm: 8, md: 10 },
         minHeight: { xs: 'max(460px, 60dvh)', sm: 'max(540px, 70dvh)', md: 'max(600px, 75dvh)' },
         display: 'flex',

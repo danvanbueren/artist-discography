@@ -92,6 +92,8 @@ export async function POST(request) {
     }
 
     const filesToWarm = []
+    const targetMap = {}
+    const detailsMap = {}
 
     // Process Cover File
     let coverProp = coverUrl
@@ -105,6 +107,13 @@ export async function POST(request) {
       // When art.<ext> exists in projects/<projectSlug>, artistData auto-resolves it. Leaving cover empty or set to art.<ext>
       coverProp = `art${ext}`
       filesToWarm.push(artPath)
+      targetMap[artPath] = `${name} (Cover Art)`
+      detailsMap[artPath] = {
+        projectSlug,
+        projectName: name,
+        isCover: true,
+        fileName: `art${ext}`,
+      }
     }
 
     // Process Tracks
@@ -127,6 +136,14 @@ export async function POST(request) {
         fs.writeFileSync(audioPath, buffer)
         writtenAudioFilename = `${trackSlug}${ext}`
         filesToWarm.push(audioPath)
+        targetMap[audioPath] = `${name} - Track: "${trackName || `Track ${i + 1}`}"`
+        detailsMap[audioPath] = {
+          projectSlug,
+          projectName: name,
+          trackSlug,
+          trackName: trackName || `Track ${i + 1}`,
+          fileName: `${trackSlug}${ext}`,
+        }
       }
 
       const defaultLinks = {
@@ -192,30 +209,13 @@ export async function POST(request) {
       )
     }
 
-    // Immediately pre-compress and cache all uploaded artwork and audio streams
+    // Immediately pre-compress and cache all uploaded artwork and audio streams in the background without blocking HTTP response
     if (filesToWarm.length > 0) {
-      try {
-        const targetMap = {}
-        if (coverFile && typeof coverFile === 'object') {
-          for (const fp of filesToWarm) {
-            if (fp.includes('art.')) {
-              targetMap[fp] = `${name} (Cover Art)`
-            }
-          }
-        }
-        for (let i = 0; i < formattedTracks.length; i++) {
-          const tName = formattedTracks[i]?.name || `Track ${i + 1}`
-          for (const fp of filesToWarm) {
-            const base = path.basename(fp)
-            if (!base.startsWith('art.') && !targetMap[fp]) {
-              targetMap[fp] = `${name} - Track: "${tName}"`
-            }
-          }
-        }
-        await warmMediaFiles(filesToWarm, { targetMap })
-      } catch (warmErr) {
-        console.warn('Post-upload media warming error:', warmErr)
-      }
+      setTimeout(() => {
+        warmMediaFiles(filesToWarm, { targetMap, detailsMap }).catch((warmErr) => {
+          console.warn('Post-upload media warming error:', warmErr)
+        })
+      }, 10)
     }
 
     const timestamp = Date.now()

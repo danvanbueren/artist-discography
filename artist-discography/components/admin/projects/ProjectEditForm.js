@@ -20,13 +20,14 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ImageIcon from '@mui/icons-material/Image'
+import AlbumIcon from '@mui/icons-material/Album'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import AddIcon from '@mui/icons-material/Add'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
 import TrackEditCard from '../tracks/TrackEditCard'
 import { PROJECT_TYPES } from '../adminConstants'
-import { formatMediaPath, createEmptyTrack } from '../adminUtils'
+import { formatMediaPath, createEmptyTrack, getMediaThumbnailUrl } from '../adminUtils'
 import { slugify } from '../../../lib/slugs'
 
 export default function ProjectEditForm({
@@ -74,7 +75,10 @@ export default function ProjectEditForm({
 }) {
   const currentProject = projectsList[selectedProjIndex] || {}
   const projectSlug = slugify(editName || currentProject.name || '')
-  const coverJob = mediaJobs?.getJobForFile?.(editCoverFile?.name || `${projectSlug} (Cover Art)`) || mediaJobs?.getJobForFile?.('art.')
+  const coverJob = mediaJobs?.getJobForCover?.({
+    projectSlug,
+    fileName: editCoverFile?.name || 'art.jpg',
+  }) || mediaJobs?.getJobForFile?.(editCoverFile?.name) || null
 
   return (
     <Stack spacing={3}>
@@ -195,14 +199,43 @@ export default function ProjectEditForm({
           Cover Artwork
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          {editCoverPreview && (
+          {editCoverPreview ? (
             <Box
               component="img"
-              src={editCoverPreview}
+              src={getMediaThumbnailUrl(editCoverPreview, 160)}
               alt="Cover preview"
-              sx={{ width: 64, height: 64, borderRadius: 1.5, objectFit: 'cover' }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallbackEl = document.getElementById(`cover-fallback-${projectSlug}`)
+                if (fallbackEl) fallbackEl.style.display = 'flex'
+              }}
+              sx={{
+                width: 64,
+                height: 64,
+                aspectRatio: '1 / 1',
+                borderRadius: 1.5,
+                objectFit: 'cover',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                display: 'block',
+              }}
             />
-          )}
+          ) : null}
+          <Box
+            id={`cover-fallback-${projectSlug}`}
+            sx={{
+              width: 64,
+              height: 64,
+              aspectRatio: '1 / 1',
+              borderRadius: 1.5,
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: editCoverPreview ? 'none' : 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AlbumIcon sx={{ fontSize: 32, color: 'text.secondary' }} />
+          </Box>
           <Button
             variant="outlined"
             component="label"
@@ -510,7 +543,12 @@ export default function ProjectEditForm({
               dirtyFields={dirtyFields}
               savedFields={savedFields}
               projectSlug={projectSlug}
-              processingJob={mediaJobs?.getJobForFile?.(track.name || track.originalName || track.audioFileName)}
+              processingJob={mediaJobs?.getJobForTrack?.({
+                projectSlug,
+                trackSlug: slugify(track.name || track.originalName || ''),
+                trackName: track.name || track.originalName,
+                fileName: track.audioFileName,
+              }) || mediaJobs?.getJobForFile?.(track.audioFileName)}
               onUpdateName={handleUpdateEditTrackName}
               onUpdateArtist={handleUpdateEditTrackArtist}
               onUpdateLink={handleUpdateEditTrackLink}

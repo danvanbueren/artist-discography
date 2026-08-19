@@ -36,6 +36,7 @@ export default function DesktopPlayerBar({
   duration,
   formatTime,
   audioQualityLabel,
+  isStuttering = false,
   isShuffle,
   repeatMode,
   effectiveVolume,
@@ -97,7 +98,6 @@ export default function DesktopPlayerBar({
           alignItems: 'center',
           minWidth: 0,
           width: '100%',
-          overflow: 'hidden',
         }}
       >
         <Box
@@ -133,6 +133,7 @@ export default function DesktopPlayerBar({
             sx={{
               width: { xs: 52, sm: 58 },
               height: { xs: 52, sm: 58 },
+              aspectRatio: '1 / 1',
               borderRadius: 2.5,
               bgcolor: 'primary.main',
               display: 'flex',
@@ -168,7 +169,6 @@ export default function DesktopPlayerBar({
             sx={{
               minWidth: 0,
               flexGrow: 1,
-              overflow: 'hidden',
               justifyContent: 'center',
             }}
           >
@@ -212,6 +212,7 @@ export default function DesktopPlayerBar({
             <AudioQualityPill
               label={audioQualityLabel}
               size="medium"
+              isStuttering={isStuttering}
               onClick={onOpenQualityModal}
             />
           </Stack>

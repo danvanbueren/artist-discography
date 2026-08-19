@@ -175,6 +175,11 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Standard**: Do not dispatch external callbacks that trigger state updates for other components (e.g., parent update callbacks like `onCommit`, `onLayoutCommit`, etc.) inside a React state updater callback function (e.g. `setValue((c) => { onCommit(c); return c; })`). This results in React warnings (`Cannot update a component while rendering a different component`).
 - **Implementation**: Calculate state values first, trigger local state updates (e.g., `setValue(value)`), and then invoke the parent callbacks directly from within event handlers (like click, change, or finish listeners).
 
+### Non-Blocking Media Pipelines & Ephemeral Overlays
+- **Standard**: Heavy background transcoding tasks (such as FFmpeg and Sharp batch generations) should never block synchronous HTTP CRUD responses. Persist metadata and raw staged files immediately, return HTTP 200, and broadcast live transcoding progress over Server-Sent Events (SSE).
+- **Layout Integrity**: Notification banners (success / error alerts) in dashboard views must use floating ephemeral toast overlays (such as MUI `Snackbar`) rather than in-flow block elements that push down tabs or induce vertical layout shifts.
+- **Album Art Consistency**: All album art across admin panels, cards, headers, and media players must strictly enforce a 1:1 square aspect ratio (`aspectRatio: '1 / 1'`, `objectFit: 'cover'`) and request scaled thumbnail variants (`?w=80` or `?w=160`) for preview rendering.
+
 ---
 
 ## Project Workflows & Processes

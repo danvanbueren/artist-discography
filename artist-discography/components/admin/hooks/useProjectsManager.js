@@ -49,6 +49,11 @@ export function useProjectsManager({
   const [copyTargetProjectIndex, setCopyTargetProjectIndex] = useState(0)
   const [isCopyingTrack, setIsCopyingTrack] = useState(false)
 
+  const selectedProjIndexRef = useRef(selectedProjIndex)
+  const isCreatingNewRef = useRef(isCreatingNew)
+  useEffect(() => { selectedProjIndexRef.current = selectedProjIndex }, [selectedProjIndex])
+  useEffect(() => { isCreatingNewRef.current = isCreatingNew }, [isCreatingNew])
+
   // Stable Refs for Auto-Save
   const nameRef = useRef(name)
   const typeRef = useRef(type)
@@ -95,6 +100,9 @@ export function useProjectsManager({
 
     clearPendingAutoSave()
     setIsCreatingNew(false)
+    isCreatingNewRef.current = false
+    setSelectedProjIndex(idx)
+    selectedProjIndexRef.current = idx
 
     const proj = projectsList[idx]
     const primaryName = (artistNameInputRef?.current || artistData?.name || defaultArtistName).trim()
@@ -136,8 +144,6 @@ export function useProjectsManager({
     editDateRef.current = proj.date || new Date().toISOString().split('T')[0]
     editCoverFileRef.current = null
     editTracksRef.current = formattedTracks
-
-    setSelectedProjIndex(idx)
   }, [projectsList, artistData?.name, defaultArtistName, artistNameInputRef, clearPendingAutoSave])
 
   // Start create new project handler
@@ -348,6 +354,7 @@ export function useProjectsManager({
 
   // Auto-Save: Update Existing Project
   const executeUpdateProject = useCallback(async (password, overrideTracks = null) => {
+    const targetIndex = selectedProjIndexRef.current
     const currentName = editNameRef.current
     const currentType = editTypeRef.current
     const currentArtist = editArtistRef.current
@@ -355,8 +362,8 @@ export function useProjectsManager({
     const currentCoverFile = editCoverFileRef.current
     const currentTracks = overrideTracks || editTracksRef.current
 
-    if (!currentName?.trim() || selectedProjIndex < 0 || selectedProjIndex >= projectsList.length) return false
-    if (isProjectSlugDuplicate(currentName, projectsList, selectedProjIndex)) {
+    if (!currentName?.trim() || targetIndex < 0 || targetIndex >= projectsList.length) return false
+    if (isProjectSlugDuplicate(currentName, projectsList, targetIndex)) {
       setErrorMessage?.(`Cannot save: A project named "${currentName.trim()}" (slug: "${slugify(currentName)}") already exists.`)
       return false
     }
@@ -370,7 +377,7 @@ export function useProjectsManager({
       const formData = new FormData()
       formData.append('password', password)
       formData.append('action', 'update')
-      formData.append('projectIndex', selectedProjIndex)
+      formData.append('projectIndex', targetIndex)
       formData.append('name', currentName.trim())
       formData.append('type', currentType)
       formData.append('artist', currentArtist.trim())
@@ -408,63 +415,68 @@ export function useProjectsManager({
         if (result.updatedProject) {
           setProjectsList((prev) => {
             const next = [...prev]
-            next[selectedProjIndex] = result.updatedProject
+            next[targetIndex] = result.updatedProject
             return next
           })
-          if (result.updatedProject.cover) {
-            setEditCoverPreview(result.updatedProject.cover)
-          }
 
-          const primaryName = (artistNameInputRef?.current || artistData?.name || defaultArtistName).trim()
-          const currentLocalTracks = editTracksRef.current
-          const updatedFormattedTracks = (result.updatedProject.tracks ?? []).map((t, idx) => {
-            const local = currentLocalTracks[idx]
-            const uploadedFileForTrack = uploadedFileMap.get(idx)
-            const isSameUploadedFile = uploadedFileForTrack && local?.audioFile === uploadedFileForTrack
-            const audioFile = isSameUploadedFile ? null : (local?.audioFile || null)
-            const audioFileName = isSameUploadedFile ? '' : (local?.audioFileName || '')
-
-            return {
-              id: local?.id || `edit-track-${idx}-${Date.now()}`,
-              name: local ? local.name : (t.name || ''),
-              originalName: t.name || local?.originalName || '',
-              artist: local ? local.artist : resolveOverrideArtist(t.artist, primaryName, result.updatedProject.artist),
-              audio: t.audio || t.audioUrl || local?.audio || '',
-              hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl || local?.hasAudio),
-              audioUrl: t.audioUrl || local?.audioUrl || '',
-              audioFile,
-              audioFileName,
-              links: {
-                spotify: '',
-                apple: '',
-                youtube: '',
-                soundcloud: '',
-                amazon: '',
-                bandcamp: '',
-                deezer: '',
-                itunes: '',
-                pandora: '',
-                tidal: '',
-                ...(t.links || {}),
-                ...(local?.links || {}),
-              },
+          // ONLY update active edit form fields if the user is STILL viewing that project!
+          if (selectedProjIndexRef.current === targetIndex && !isCreatingNewRef.current) {
+            if (result.updatedProject.cover) {
+              setEditCoverPreview(result.updatedProject.cover)
+            } else {
+              setEditCoverPreview(null)
             }
-          })
-          setEditTracks(updatedFormattedTracks)
-          editTracksRef.current = updatedFormattedTracks
+
+            const primaryName = (artistNameInputRef?.current || artistData?.name || defaultArtistName).trim()
+            const currentLocalTracks = editTracksRef.current
+            const updatedFormattedTracks = (result.updatedProject.tracks ?? []).map((t, idx) => {
+              const local = currentLocalTracks[idx]
+              const uploadedFileForTrack = uploadedFileMap.get(idx)
+              const isSameUploadedFile = uploadedFileForTrack && local?.audioFile === uploadedFileForTrack
+              const audioFile = isSameUploadedFile ? null : (local?.audioFile || null)
+              const audioFileName = isSameUploadedFile ? '' : (local?.audioFileName || '')
+
+              return {
+                id: local?.id || `edit-track-${idx}-${Date.now()}`,
+                name: local ? local.name : (t.name || ''),
+                originalName: t.name || local?.originalName || '',
+                artist: local ? local.artist : resolveOverrideArtist(t.artist, primaryName, result.updatedProject.artist),
+                audio: t.audio || t.audioUrl || local?.audio || '',
+                hasAudio: Boolean(t.audio || t.hasAudio || t.audioUrl || local?.hasAudio),
+                audioUrl: t.audioUrl || local?.audioUrl || '',
+                audioFile,
+                audioFileName,
+                links: {
+                  spotify: '',
+                  apple: '',
+                  youtube: '',
+                  soundcloud: '',
+                  amazon: '',
+                  bandcamp: '',
+                  deezer: '',
+                  itunes: '',
+                  pandora: '',
+                  tidal: '',
+                  ...(t.links || {}),
+                  ...(local?.links || {}),
+                },
+              }
+            })
+            setEditTracks(updatedFormattedTracks)
+            editTracksRef.current = updatedFormattedTracks
+            setEditCoverFile(null)
+            editCoverFileRef.current = null
+          }
         }
-        setEditCoverFile(null)
         return true
       }
       setErrorMessage?.(result.error || 'Failed to update project.')
-      setEditCoverFile(null)
       return false
     } catch (err) {
       setErrorMessage?.(`Auto-save update error: ${err.message}`)
-      setEditCoverFile(null)
       return false
     }
-  }, [projectsList, selectedProjIndex, defaultArtistName, artistNameInputRef, artistData?.name, setErrorMessage])
+  }, [projectsList, defaultArtistName, artistNameInputRef, artistData?.name, setErrorMessage])
 
   // Track Handlers: Create Form
   const handleUpdateCreateTrackName = useCallback((index, val, onTriggerSave) => {

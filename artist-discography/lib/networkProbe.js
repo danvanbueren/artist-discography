@@ -9,7 +9,7 @@ export const QUALITY_TIERS = {
 export const QUALITY_TIER_CONFIG = {
   '128k': {
     id: '128k',
-    label: 'High Compression',
+    label: 'Compressed (128 kbps)',
     bitrateLabel: '128 kbps',
     description: 'Minimal data usage, fastest loading on cellular or constrained networks.',
   },

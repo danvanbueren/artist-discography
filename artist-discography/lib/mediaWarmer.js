@@ -78,7 +78,8 @@ export async function warmMediaFiles(filePaths = [], options = {}) {
     try {
       const fileName = path.basename(imgPath)
       const targetLabel = options.targetMap?.[imgPath] || (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
-      await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel })
+      const details = options.detailsMap?.[imgPath] || {}
+      await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel, details })
       imagesWarmed++
     } catch (err) {
       console.error(`Error warming image ${imgPath}:`, err)
@@ -90,7 +91,8 @@ export async function warmMediaFiles(filePaths = [], options = {}) {
     try {
       const fileName = path.basename(audioPath)
       const targetLabel = options.targetMap?.[audioPath] || fileName
-      await optimizeAndCacheAudio(audioPath, undefined, { target: targetLabel })
+      const details = options.detailsMap?.[audioPath] || {}
+      await optimizeAndCacheAudio(audioPath, undefined, { target: targetLabel, details })
       audioWarmed++
     } catch (err) {
       console.error(`Error warming audio ${audioPath}:`, err)

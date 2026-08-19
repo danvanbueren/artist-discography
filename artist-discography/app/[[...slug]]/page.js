@@ -38,8 +38,11 @@ export async function generateMetadata({ params }) {
     if (project) {
       const track = (project.tracks || []).find(t => slugify(t.name || '') === trkSlug)
       if (track?.name) {
+        const title = project.name
+          ? `${artistName} | ${track.name} (${project.name})`
+          : `${artistName} | ${track.name}`
         return {
-          title: `${artistName} | ${track.name}`,
+          title,
           description: `Listen to ${track.name} from ${project.name} by ${artistName}.`,
         }
       }

@@ -10,7 +10,7 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
 - **Multi-Platform Streaming Links**: Direct links to listen on all major platforms (Spotify, Apple Music, YouTube, SoundCloud, Bandcamp, Tidal, Deezer, Pandora, Amazon Music, iTunes).
 - **Contained Audio Player Bar & Progressive Streaming**:
   - Direct in-app streaming with play/pause, seek scrubber, volume control, manual queueing, autoplay derivation, shuffle, and repeat modes.
-  - **Network-Aware Quality Modes & User Settings**: Initial network performance probe detects optimal starting tier (High Quality 320 kbps, Lossless FLAC, or High Compression 128 kbps), with user-configurable settings and uninterrupted playback.
+  - **Network-Aware Quality Modes & User Settings**: Initial network performance probe detects optimal starting tier (High Quality 320 kbps, Lossless FLAC, or Compressed 128 kbps), with user-configurable settings and uninterrupted playback.
   - **Unified Hover & Click Container**: Cover art, song title, and artist name scale and highlight together; clicking anywhere navigates directly to the track page.
   - **Volume Persistence & 10% Floor Guard**: Storage-backed volume settings (`MIN_LISTENABLE_VOLUME = 10%`) ensure unmuting always restores audio to a listenable level.
   - **Elevated Button Z-Index & Expanded Hit Targets**: Mute icon button (`zIndex: 2`) is elevated above the volume slider thumb (`zIndex: 1`), and expanded hit targets (`theme.js`) make icon buttons effortless to click.

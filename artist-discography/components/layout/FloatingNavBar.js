@@ -32,6 +32,7 @@ import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
 import HighQualityRoundedIcon from '@mui/icons-material/HighQualityRounded'
+import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded'
 import { SOCIAL_ICONS } from '../artist/ArtistHero'
 
 export const FILTER_OPTIONS = [
@@ -128,6 +129,7 @@ export default function FloatingNavBar({
   onOpenPlatformModal,
   hasAvailablePlatforms = true,
   audioQuality = '320k',
+  isStuttering = false,
   onOpenQualityModal,
   showScrollTop = false,
   onScrollToTop,
@@ -471,18 +473,44 @@ export default function FloatingNavBar({
                 if (mainDrag.hasDraggedRef.current) return
                 setNavMode('settings')
               }}
-              startIcon={<SettingsRoundedIcon />}
+              startIcon={
+                isStuttering ? (
+                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <SettingsRoundedIcon />
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -2,
+                        right: -2,
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: (theme) =>
+                          theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706',
+                        border: '1.5px solid',
+                        borderColor: (theme) =>
+                          theme.palette.mode === 'dark' ? '#181822' : '#ffffff',
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <SettingsRoundedIcon />
+                )
+              }
               sx={{
                 flexShrink: 0,
                 whiteSpace: 'nowrap',
                 textTransform: 'none',
-                fontWeight: 600,
+                fontWeight: isStuttering ? 700 : 600,
                 fontSize: { xs: '0.85rem', sm: '0.95rem' },
                 borderRadius: 3,
                 px: { xs: 1.25, sm: 2 },
                 py: 1,
                 minWidth: 0,
-                color: 'text.primary',
+                color: isStuttering
+                  ? (theme) =>
+                      theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706'
+                  : 'text.primary',
                 '&:hover': {
                   bgcolor: 'action.hover',
                 },
@@ -742,21 +770,73 @@ export default function FloatingNavBar({
                 if (settingsDrag.hasDraggedRef.current) return
                 if (onOpenQualityModal) onOpenQualityModal()
               }}
-              startIcon={<HighQualityRoundedIcon />}
+              startIcon={
+                isStuttering ? (
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: '50%',
+                      bgcolor: (theme) =>
+                        theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706',
+                      color: (theme) =>
+                        theme.palette.mode === 'dark' ? '#1a1400' : '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <PriorityHighRoundedIcon sx={{ fontSize: 11, color: 'inherit' }} />
+                  </Box>
+                ) : (
+                  <HighQualityRoundedIcon />
+                )
+              }
               sx={{
                 flexShrink: 0,
                 whiteSpace: 'nowrap',
                 borderRadius: 3,
                 textTransform: 'none',
-                fontWeight: 600,
+                fontWeight: isStuttering ? 700 : 600,
                 fontSize: '0.9rem',
                 py: 1,
                 px: 2,
-                color: 'text.primary',
-                borderColor: 'divider',
+                color: isStuttering
+                  ? (theme) =>
+                      theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706'
+                  : 'text.primary',
+                borderColor: isStuttering
+                  ? (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(245, 158, 11, 0.6)'
+                        : 'rgba(217, 119, 6, 0.55)'
+                  : 'divider',
+                bgcolor: isStuttering
+                  ? (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(245, 158, 11, 0.14)'
+                        : 'rgba(245, 158, 11, 0.1)'
+                  : 'transparent',
+                boxShadow: isStuttering
+                  ? (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? '0 0 8px rgba(245, 158, 11, 0.3)'
+                        : '0 0 6px rgba(217, 119, 6, 0.2)'
+                  : 'none',
+                transition: 'all 0.25s ease',
                 '&:hover': {
-                  borderColor: 'text.primary',
-                  bgcolor: 'action.hover',
+                  borderColor: isStuttering
+                    ? (theme) =>
+                        theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706'
+                    : 'text.primary',
+                  bgcolor: isStuttering
+                    ? (theme) =>
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(245, 158, 11, 0.24)'
+                          : 'rgba(245, 158, 11, 0.18)'
+                    : 'action.hover',
                 },
               }}
             >

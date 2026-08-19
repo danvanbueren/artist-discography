@@ -28,8 +28,8 @@ export default function MobileMiniPlayer({
   currentTime,
   duration,
   audioQualityLabel,
+  isStuttering = false,
   onOpenFullScreen,
-  onOpenQualityModal,
   onShareTrack,
   onDirectTogglePlay,
 }) {
@@ -54,6 +54,7 @@ export default function MobileMiniPlayer({
           sx={{
             width: 44,
             height: 44,
+            aspectRatio: '1 / 1',
             borderRadius: 2,
             bgcolor: 'primary.main',
             display: 'flex',
@@ -123,7 +124,7 @@ export default function MobileMiniPlayer({
           <AudioQualityPill
             label={audioQualityLabel}
             size="small"
-            onClick={onOpenQualityModal}
+            isStuttering={isStuttering}
           />
         </Stack>
 

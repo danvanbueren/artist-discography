@@ -16,6 +16,7 @@ import { getCookie, setCookie } from '../../lib/cookies'
 import { mediaPreloader } from '../../lib/mediaPreloader'
 import { useVibrantColors } from '../../lib/hooks/useVibrantColors'
 import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
+import { usePlaybackStutterDetector } from '../../lib/hooks/usePlaybackStutterDetector'
 import PlaybackQueueDialog from './PlaybackQueueDialog'
 import MobileMiniPlayer from './MobileMiniPlayer'
 import DesktopPlayerBar from './DesktopPlayerBar'
@@ -51,6 +52,7 @@ export default function AudioPlayerBar({
   restartCount = 0,
   audioQuality = '320k',
   onOpenQualityModal,
+  onStutterChange,
 }) {
   const theme = useTheme()
   const isTouch = useTouchDevice()
@@ -65,6 +67,28 @@ export default function AudioPlayerBar({
   const [mobileFullScreenOpen, setMobileFullScreenOpen] = useState(false)
   const [realDuration, setRealDuration] = useState(0)
   const activeTier = audioQuality || '320k'
+
+  const trackKey = playingTrack?.audioUrl || playingTrack?.name || ''
+  const {
+    isStuttering,
+    onWaiting: handleStutterWaiting,
+    onStalled: handleStutterStalled,
+    onPlaying: handleStutterPlaying,
+    onCanPlay: handleStutterCanPlay,
+    onSeeking: handleStutterSeeking,
+    onSeeked: handleStutterSeeked,
+  } = usePlaybackStutterDetector({
+    isPlaying,
+    audioQuality: activeTier,
+    trackKey,
+  })
+
+  // Notify parent of stutter status changes
+  useEffect(() => {
+    if (onStutterChange) {
+      onStutterChange(isStuttering)
+    }
+  }, [isStuttering, onStutterChange])
 
   const pendingResumeTimeRef = useRef(null)
   const shouldResumeAfterQualitySwitchRef = useRef(false)
@@ -501,8 +525,8 @@ export default function AudioPlayerBar({
                 currentTime={currentTime}
                 duration={duration}
                 audioQualityLabel={audioQualityLabel}
+                isStuttering={isStuttering}
                 onOpenFullScreen={() => setMobileFullScreenOpen(true)}
-                onOpenQualityModal={onOpenQualityModal}
                 onShareTrack={handleShareTrack}
                 onDirectTogglePlay={handleDirectTogglePlay}
               />
@@ -516,6 +540,7 @@ export default function AudioPlayerBar({
                 duration={duration}
                 formatTime={formatTime}
                 audioQualityLabel={audioQualityLabel}
+                isStuttering={isStuttering}
                 isShuffle={isShuffle}
                 repeatMode={repeatMode}
                 effectiveVolume={effectiveVolume}
@@ -551,9 +576,27 @@ export default function AudioPlayerBar({
                   e.currentTarget.muted = isMuted
                   mediaPreloader.setAudioBuffering(false)
                 }}
-                onPlaying={handleCanPlayOrPlaying}
-                onCanPlay={handleCanPlayOrPlaying}
-                onWaiting={() => mediaPreloader.setAudioBuffering(true)}
+                onPlaying={() => {
+                  handleCanPlayOrPlaying()
+                  handleStutterPlaying()
+                }}
+                onCanPlay={() => {
+                  handleCanPlayOrPlaying()
+                  handleStutterCanPlay()
+                }}
+                onWaiting={() => {
+                  mediaPreloader.setAudioBuffering(true)
+                  handleStutterWaiting()
+                }}
+                onStalled={() => {
+                  handleStutterStalled()
+                }}
+                onSeeking={() => {
+                  handleStutterSeeking()
+                }}
+                onSeeked={() => {
+                  handleStutterSeeked()
+                }}
                 onLoadedMetadata={(e) => {
                   const d = e.currentTarget.duration
                   if (d && !isNaN(d)) setRealDuration(d)
@@ -561,6 +604,7 @@ export default function AudioPlayerBar({
                   e.currentTarget.volume = Math.min(1, Math.max(0, volVal / 100))
                   e.currentTarget.muted = isMuted
                   handleCanPlayOrPlaying()
+                  handleStutterCanPlay()
                 }}
                 onTimeUpdate={(e) => {
                   if (pendingResumeTimeRef.current === null) {
@@ -621,6 +665,7 @@ export default function AudioPlayerBar({
         duration={duration}
         formatTime={formatTime}
         audioQualityLabel={audioQualityLabel}
+        isStuttering={isStuttering}
         isShuffle={isShuffle}
         repeatMode={repeatMode}
         isTouch={isTouch}
@@ -630,6 +675,7 @@ export default function AudioPlayerBar({
         manualQueue={manualQueue}
         autoplayTracks={autoplayTracks}
         onClosePlayer={onClosePlayer}
+        onNavigateToCurrentTrack={onNavigateToCurrentTrack}
         onOpenQualityModal={onOpenQualityModal}
         onShareTrack={handleShareTrack}
         onOpenQueue={() => setQueueOpen(true)}

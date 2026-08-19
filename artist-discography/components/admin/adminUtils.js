@@ -10,6 +10,26 @@ export function resolveOverrideArtist(artistValue, primaryArtist = '', projectAr
   return trimmed
 }
 
+export function getMediaThumbnailUrl(src, width = 120, quality = 80) {
+  if (!src || typeof src !== 'string') return ''
+  const trimmed = src.trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return trimmed
+  }
+  let base = trimmed
+  if (!base.startsWith('http://') && !base.startsWith('https://') && !base.startsWith('/')) {
+    base = `/api/media/${base}`
+  }
+  if (base.startsWith('/api/media/')) {
+    const separator = base.includes('?') ? '&' : '?'
+    if (!base.includes('w=') && !base.includes('fmt=')) {
+      return `${base}${separator}w=${width}&q=${quality}&fmt=webp`
+    }
+  }
+  return base
+}
+
 export function formatMediaPath(urlOrFilename, defaultProjectSlug = '', mediaType = 'media') {
   if (!urlOrFilename || typeof urlOrFilename !== 'string') return ''
   const trimmed = urlOrFilename.trim()

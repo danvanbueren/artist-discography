@@ -14,6 +14,7 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import AlbumIcon from '@mui/icons-material/Album'
 import SyncIcon from '@mui/icons-material/Sync'
+import { getMediaThumbnailUrl } from '../adminUtils'
 
 export default function ProjectSidebarList({
   projectsList = [],
@@ -133,22 +134,38 @@ export default function ProjectSidebarList({
                 py: 1.5,
               }}
             >
-              <ListItemIcon sx={{ minWidth: 44, mr: 1, alignSelf: 'center' }}>
+              <ListItemIcon sx={{ minWidth: 44, mr: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {coverPreview ? (
                   <Box
                     component="img"
-                    src={coverPreview}
+                    src={getMediaThumbnailUrl(coverPreview, 80)}
                     alt="Cover preview"
                     sx={{
                       width: 40,
                       height: 40,
+                      aspectRatio: '1 / 1',
                       borderRadius: 1.5,
                       objectFit: 'cover',
                       border: '1px solid rgba(255, 255, 255, 0.15)',
+                      display: 'block',
                     }}
                   />
                 ) : (
-                  <AlbumIcon color="secondary" />
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      aspectRatio: '1 / 1',
+                      borderRadius: 1.5,
+                      backgroundColor: 'rgba(206, 147, 216, 0.15)',
+                      border: '1px dashed rgba(206, 147, 216, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <AlbumIcon sx={{ fontSize: 24 }} color="secondary" />
+                  </Box>
                 )}
               </ListItemIcon>
               <ListItemText
@@ -211,22 +228,38 @@ export default function ProjectSidebarList({
                   py: 1.5,
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 44, mr: 1, alignSelf: 'center' }}>
+                <ListItemIcon sx={{ minWidth: 44, mr: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {p.cover ? (
                     <Box
                       component="img"
-                      src={p.cover}
+                      src={getMediaThumbnailUrl(p.cover, 80)}
                       alt={p.name || 'Cover'}
                       sx={{
                         width: 40,
                         height: 40,
+                        aspectRatio: '1 / 1',
                         borderRadius: 1.5,
                         objectFit: 'cover',
                         border: '1px solid rgba(255, 255, 255, 0.15)',
+                        display: 'block',
                       }}
                     />
                   ) : (
-                    <AlbumIcon color={isSelected ? 'primary' : 'action'} />
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        aspectRatio: '1 / 1',
+                        borderRadius: 1.5,
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <AlbumIcon sx={{ fontSize: 24 }} color={isSelected ? 'primary' : 'action'} />
+                    </Box>
                   )}
                 </ListItemIcon>
                 <ListItemText

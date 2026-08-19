@@ -151,6 +151,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
   // Audio Quality State & Modal
   const [audioQuality, setAudioQuality] = useState(() => getSavedAudioQuality() || '320k')
   const [qualityModalOpen, setQualityModalOpen] = useState(false)
+  const [isPlaybackStuttering, setIsPlaybackStuttering] = useState(false)
 
   // On mount: Probe network performance on initial app load if no saved preference
   useEffect(() => {
@@ -412,7 +413,10 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
     // Priority 1: Currently Playing Song (Highest Priority)
     if (playingTrack?.name) {
-      document.title = `${artistName} | ${playingTrack.name}`
+      const projName = playingTrack.project || projects?.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()))?.name || ''
+      document.title = projName
+        ? `${artistName} | ${playingTrack.name} (${projName})`
+        : `${artistName} | ${playingTrack.name}`
       return
     }
 
@@ -421,7 +425,10 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       if (highlightedTrackSlug) {
         const matchedTrack = (selectedProject.tracks || []).find(t => slugify(t.name || '') === highlightedTrackSlug)
         if (matchedTrack?.name) {
-          document.title = `${artistName} | ${matchedTrack.name}`
+          const projName = selectedProject.name || matchedTrack.project || ''
+          document.title = projName
+            ? `${artistName} | ${matchedTrack.name} (${projName})`
+            : `${artistName} | ${matchedTrack.name}`
           return
         }
       }
@@ -433,7 +440,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
     // Priority 3: Default Home Base Title
     document.title = `${artistName} | Discography`
-  }, [mounted, currentView, selectedProject, highlightedTrackSlug, artist, playingTrack])
+  }, [mounted, currentView, selectedProject, highlightedTrackSlug, artist, playingTrack, projects])
 
   // Navigation handlers (client-side SPA, uninterrupted audio!)
   const navigateToProject = (project) => {
@@ -568,11 +575,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     const containerTop = scrollRect.top
     const containerHeight = scrollRect.height
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
+
     // Approximate bar heights in px. Nav is only present on the main discography view.
-    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : 88
+    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : (isMobile ? 76 : 88)
     // Player bar total height including container padding from bottom of viewport
-    const PLAYER_H = 120
-    const FADE = 50 // px: length of the fade gradient transition
+    const PLAYER_H = isMobile ? 80 : 120
+    const FADE = isMobile ? 24 : 50 // px: length of the fade gradient transition
 
     // 1. Top fade: Trigger once content scrolls past the sticky nav (or top of viewport)
     const navBottomY = containerTop + NAV_H
@@ -1286,6 +1295,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
               onOpenPlatformModal={() => setPlatformModalOpen(true)}
               hasAvailablePlatforms={availablePlatformIds.length > 0}
               audioQuality={audioQuality}
+              isStuttering={isPlaybackStuttering}
               onOpenQualityModal={() => setQualityModalOpen(true)}
               showScrollTop={showScrollTop}
               onScrollToTop={scrollToTop}
@@ -1389,6 +1399,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           open={qualityModalOpen}
           onClose={() => setQualityModalOpen(false)}
           activeQuality={audioQuality}
+          isStuttering={isPlaybackStuttering}
           onSelectQuality={handleSelectQuality}
         />
 
@@ -1399,6 +1410,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           restartCount={restartCount}
           audioQuality={audioQuality}
           onOpenQualityModal={() => setQualityModalOpen(true)}
+          onStutterChange={setIsPlaybackStuttering}
           onTogglePlay={() => setIsPlaying(prev => !prev)}
           onClosePlayer={() => {
             setPlayingTrack(null)

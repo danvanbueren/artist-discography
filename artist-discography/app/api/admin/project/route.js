@@ -163,9 +163,20 @@ export async function POST(request) {
     }
 
     const filesToWarm = []
+    const targetMap = {}
+    const detailsMap = {}
 
     // Process Cover File
     let coverProp = coverUrl || oldProject.cover || ''
+    // If coverProp had an absolute media path from old slug, extract relative filename
+    if (coverProp.startsWith('/api/media/projects/')) {
+      const parts = coverProp.replace('/api/media/projects/', '').split('/')
+      parts.shift() // remove old slug
+      coverProp = parts.join('/').split('?')[0]
+    } else if (coverProp.startsWith('/api/media/')) {
+      coverProp = coverProp.replace('/api/media/', '').split('?')[0]
+    }
+
     const coverFile = formData.get('coverFile')
     if (coverFile && typeof coverFile === 'object' && typeof coverFile.arrayBuffer === 'function' && coverFile.size > 0) {
       const origExt = path.extname(coverFile.name || '').toLowerCase()
@@ -175,6 +186,23 @@ export async function POST(request) {
       fs.writeFileSync(artPath, buffer)
       coverProp = `art${ext}`
       filesToWarm.push(artPath)
+      targetMap[artPath] = `${name} (Cover Art)`
+      detailsMap[artPath] = {
+        projectSlug: newSlug,
+        projectName: name,
+        isCover: true,
+        fileName: `art${ext}`,
+      }
+    }
+
+    // If coverProp is not explicitly set, check if an art file exists in the directory
+    if (!coverProp || !fs.existsSync(path.join(targetProjectDir, coverProp))) {
+      for (const imgExt of ['.jpg', '.jpeg', '.png', '.webp', '.avif']) {
+        if (fs.existsSync(path.join(targetProjectDir, `art${imgExt}`))) {
+          coverProp = `art${imgExt}`
+          break
+        }
+      }
     }
 
     // Process Tracks
@@ -205,6 +233,14 @@ export async function POST(request) {
         fs.writeFileSync(audioPath, buffer)
         writtenAudioFilename = `${trackSlug}${ext}`
         filesToWarm.push(audioPath)
+        targetMap[audioPath] = `${name} - Track: "${trackName || `Track ${i + 1}`}"`
+        detailsMap[audioPath] = {
+          projectSlug: newSlug,
+          projectName: name,
+          trackSlug,
+          trackName: trackName || `Track ${i + 1}`,
+          fileName: `${trackSlug}${ext}`,
+        }
       } else {
         // 1. Check if an existing audio file matches this track slug
         for (const ext of audioExtensions) {
@@ -229,6 +265,14 @@ export async function POST(request) {
                   fs.renameSync(oldAudioPath, newAudioPath)
                   writtenAudioFilename = `${trackSlug}${ext}`
                   filesToWarm.push(newAudioPath)
+                  targetMap[newAudioPath] = `${name} - Track: "${trackName || `Track ${i + 1}`}"`
+                  detailsMap[newAudioPath] = {
+                    projectSlug: newSlug,
+                    projectName: name,
+                    trackSlug,
+                    trackName: trackName || `Track ${i + 1}`,
+                    fileName: `${trackSlug}${ext}`,
+                  }
                 } catch (renameErr) {
                   console.error(`Failed to rename audio file from ${oldCandidateSlug}${ext} to ${trackSlug}${ext}:`, renameErr)
                 }
@@ -253,6 +297,14 @@ export async function POST(request) {
               try {
                 fs.renameSync(oldArtPath, newArtPath)
                 filesToWarm.push(newArtPath)
+                targetMap[newArtPath] = `${name} - Track: "${trackName || `Track ${i + 1}`}" (Art)`
+                detailsMap[newArtPath] = {
+                  projectSlug: newSlug,
+                  projectName: name,
+                  trackSlug,
+                  trackName: trackName || `Track ${i + 1}`,
+                  fileName: `${trackSlug}-art${imgExt}`,
+                }
               } catch (artErr) {
                 console.error(`Failed to rename track art file:`, artErr)
               }
@@ -331,30 +383,13 @@ export async function POST(request) {
       )
     }
 
-    // Immediately pre-compress and cache any uploaded or renamed media files
+    // Pre-compress and cache any uploaded or renamed media files in the background without blocking the HTTP response
     if (filesToWarm.length > 0) {
-      try {
-        const targetMap = {}
-        if (coverFile && typeof coverFile === 'object') {
-          for (const fp of filesToWarm) {
-            if (fp.includes('art.')) {
-              targetMap[fp] = `${name} (Cover Art)`
-            }
-          }
-        }
-        for (let i = 0; i < formattedTracks.length; i++) {
-          const tName = formattedTracks[i]?.name || `Track ${i + 1}`
-          for (const fp of filesToWarm) {
-            const base = path.basename(fp)
-            if (!base.startsWith('art.') && !targetMap[fp]) {
-              targetMap[fp] = `${name} - Track: "${tName}"`
-            }
-          }
-        }
-        await warmMediaFiles(filesToWarm, { targetMap })
-      } catch (warmErr) {
-        console.warn('Post-update media warming error:', warmErr)
-      }
+      setTimeout(() => {
+        warmMediaFiles(filesToWarm, { targetMap, detailsMap }).catch((warmErr) => {
+          console.warn('Post-update media warming error:', warmErr)
+        })
+      }, 10)
     }
 
     const timestamp = Date.now()
