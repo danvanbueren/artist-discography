@@ -22,6 +22,9 @@ import MobileMiniPlayer from './MobileMiniPlayer'
 import DesktopPlayerBar from './DesktopPlayerBar'
 import FullScreenPlayerModal from './FullScreenPlayerModal'
 
+const MIN_LISTENABLE_VOLUME = 10
+const DEFAULT_UNMUTE_VOLUME = 40
+
 function getOptimizedAudioSrc(rawUrl, tier = '320k') {
   if (!rawUrl) return undefined
   const sep = rawUrl.includes('?') ? '&' : '?'
@@ -201,9 +204,9 @@ export default function AudioPlayerBar({
       }
 
       let pV = 80
-      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) >= 10) {
-        pV = Math.min(100, Math.max(10, Number(savedPrevVol)))
-      } else if (v >= 10) {
+      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) >= MIN_LISTENABLE_VOLUME) {
+        pV = Math.min(100, Math.max(MIN_LISTENABLE_VOLUME, Number(savedPrevVol)))
+      } else if (v >= MIN_LISTENABLE_VOLUME) {
         pV = v
       }
 

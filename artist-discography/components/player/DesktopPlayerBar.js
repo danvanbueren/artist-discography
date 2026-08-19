@@ -483,7 +483,7 @@ export default function DesktopPlayerBar({
         {/* Row 2: Volume Icon + Slider */}
         <Stack
           direction="row"
-          spacing={0.5}
+          spacing={0.75}
           sx={{
             alignItems: 'center',
             justifyContent: 'flex-end',
@@ -497,6 +497,8 @@ export default function DesktopPlayerBar({
             sx={{
               color: isMuted ? 'error.main' : 'text.secondary',
               p: 0.8,
+              position: 'relative',
+              zIndex: 2,
               '&:hover': {
                 color: 'text.primary',
               },
@@ -510,7 +512,9 @@ export default function DesktopPlayerBar({
               width: { sm: 95, md: 102 },
               display: 'flex',
               alignItems: 'center',
-              px: 0.5,
+              px: 0.75,
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             <Slider
@@ -526,6 +530,7 @@ export default function DesktopPlayerBar({
                 '& .MuiSlider-thumb': {
                   width: 10,
                   height: 10,
+                  zIndex: 1,
                   '&:hover, &.Mui-focused, &.Mui-active': {
                     boxShadow: 'none',
                   },

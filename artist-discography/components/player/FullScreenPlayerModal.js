@@ -565,7 +565,7 @@ export default function FullScreenPlayerModal({
               {!isTouch && (
                 <Stack
                   direction="row"
-                  spacing={0.5}
+                  spacing={0.75}
                   sx={{
                     alignItems: 'center',
                     ml: { xs: 0.5, sm: 1 },
@@ -577,6 +577,8 @@ export default function FullScreenPlayerModal({
                     sx={{
                       color: isMuted ? 'error.main' : 'text.secondary',
                       p: { xs: 0.5, sm: 0.75 },
+                      position: 'relative',
+                      zIndex: 2,
                       '&:hover': {
                         color: 'text.primary',
                       },
@@ -589,6 +591,9 @@ export default function FullScreenPlayerModal({
                       width: { xs: 65, sm: 80, md: 95 },
                       display: 'flex',
                       alignItems: 'center',
+                      px: 0.5,
+                      position: 'relative',
+                      zIndex: 1,
                     }}
                   >
                     <Slider
@@ -604,6 +609,7 @@ export default function FullScreenPlayerModal({
                         '& .MuiSlider-thumb': {
                           width: 10,
                           height: 10,
+                          zIndex: 1,
                         },
                       }}
                     />
@@ -1071,7 +1077,7 @@ export default function FullScreenPlayerModal({
             {!isTouch && (
               <Stack
                 direction="row"
-                spacing={0.5}
+                spacing={0.75}
                 sx={{
                   alignItems: 'center',
                   ml: 1,
@@ -1083,6 +1089,8 @@ export default function FullScreenPlayerModal({
                   sx={{
                     color: isMuted ? 'error.main' : 'text.secondary',
                     p: 0.75,
+                    position: 'relative',
+                    zIndex: 2,
                     '&:hover': {
                       color: 'text.primary',
                     },
@@ -1095,6 +1103,9 @@ export default function FullScreenPlayerModal({
                     width: 100,
                     display: 'flex',
                     alignItems: 'center',
+                    px: 0.5,
+                    position: 'relative',
+                    zIndex: 1,
                   }}
                 >
                   <Slider
@@ -1110,6 +1121,7 @@ export default function FullScreenPlayerModal({
                       '& .MuiSlider-thumb': {
                         width: 10,
                         height: 10,
+                        zIndex: 1,
                       },
                     }}
                   />
