@@ -22,6 +22,7 @@ import AlbumIcon from '@mui/icons-material/Album'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
+import AdminDateInput from '../common/AdminDateInput'
 import TrackCreateCard from '../tracks/TrackCreateCard'
 import { PROJECT_TYPES } from '../adminConstants'
 import { createEmptyTrack, getMediaThumbnailUrl } from '../adminUtils'
@@ -161,9 +162,8 @@ export default function ProjectCreateForm({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <AdminTextInput
+            <AdminDateInput
               label="Release Date"
-              type="date"
               fullWidth
               required
               value={date}
@@ -172,7 +172,6 @@ export default function ProjectCreateForm({
                 if (dateRef) dateRef.current = val
                 markFieldDirty('new_date', executeCreateProject)
               }}
-              slotProps={{ inputLabel: { shrink: true } }}
               isDirty={dirtyFields.has('new_date')}
               isSaved={savedFields.has('new_date')}
             />

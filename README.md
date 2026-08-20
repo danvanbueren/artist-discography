@@ -47,6 +47,7 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
   - **Fast Authentication**: Auto-authenticates and hides lock controls when `adminPassword` is unconfigured for effortless local setup.
   - **Track Cloning / Duplication**: Copy tracks between projects (`/api/admin/copy-track`) with automatic slug sanitization.
   - **Deletion Safeguards & Artist Inheritance**: Confirmation modals for destructive actions and automatic artist credit inheritance from parent projects.
+  - **MUI X Date Picker Integration**: Advanced calendar date picker powered by `@mui/x-date-pickers` and `Dayjs` with dark-theme styling, dirty/saved auto-save state feedback, and responsive mobile/desktop popups.
 - **OS Media Session, Hardware Keys & Cast Integration**:
   - **`navigator.mediaSession` Synchronization**: Live sync of track title, artist, album name, and multi-resolution artwork (`96px` to `512px`).
   - **Hardware Keyboard Media Keys**: Native desktop media key controls (Play/Pause, Skip Next, Skip Previous, Stop, and Position Seeking) and mobile lockscreen/Dynamic Island scrubbing.

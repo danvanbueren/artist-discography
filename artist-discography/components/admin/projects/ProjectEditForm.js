@@ -25,6 +25,7 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import AddIcon from '@mui/icons-material/Add'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AdminTextInput from '../common/AdminTextInput'
+import AdminDateInput from '../common/AdminDateInput'
 import TrackEditCard from '../tracks/TrackEditCard'
 import { PROJECT_TYPES } from '../adminConstants'
 import { formatMediaPath, createEmptyTrack, getMediaThumbnailUrl } from '../adminUtils'
@@ -181,9 +182,8 @@ export default function ProjectEditForm({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <AdminTextInput
+            <AdminDateInput
               label="Release Date"
-              type="date"
               fullWidth
               required
               value={editDate}
@@ -192,7 +192,6 @@ export default function ProjectEditForm({
                 if (editDateRef) editDateRef.current = val
                 markFieldDirty('edit_date', executeUpdateProject)
               }}
-              slotProps={{ inputLabel: { shrink: true } }}
               isDirty={dirtyFields.has('edit_date')}
               isSaved={savedFields.has('edit_date')}
             />
