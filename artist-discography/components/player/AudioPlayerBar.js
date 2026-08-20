@@ -17,6 +17,8 @@ import { mediaPreloader } from '../../lib/mediaPreloader'
 import { useVibrantColors } from '../../lib/hooks/useVibrantColors'
 import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
 import { usePlaybackStutterDetector } from '../../lib/hooks/usePlaybackStutterDetector'
+import { useMediaSession } from '../../lib/hooks/useMediaSession'
+import { useMediaCastAndPip } from '../../lib/hooks/useMediaCastAndPip'
 import PlaybackQueueDialog from './PlaybackQueueDialog'
 import MobileMiniPlayer from './MobileMiniPlayer'
 import DesktopPlayerBar from './DesktopPlayerBar'
@@ -172,20 +174,19 @@ export default function AudioPlayerBar({
       : `hsla(${h}, ${Math.min(45, Math.max(10, s))}%, 30%, 0.15)`
   }, [coverArt, isPaletteLoaded, colors, theme.palette.mode])
 
-  // Handle restart count trigger (restarts current track from beginning)
-  const isFirstMountRef = useRef(true)
+  // Handle restart count trigger (restarts current track from beginning only when restartCount changes)
+  const prevRestartCountRef = useRef(restartCount)
   useEffect(() => {
-    if (isFirstMountRef.current) {
-      isFirstMountRef.current = false
-      return
-    }
-    if (restartCount > 0 && audioRef.current) {
-      audioRef.current.currentTime = 0
-      setCurrentTime(0)
-      if (isPlaying) {
-        const p = audioRef.current.play()
-        if (p !== undefined) {
-          p.catch(console.warn)
+    if (restartCount !== prevRestartCountRef.current) {
+      prevRestartCountRef.current = restartCount
+      if (restartCount > 0 && audioRef.current) {
+        audioRef.current.currentTime = 0
+        setCurrentTime(0)
+        if (isPlaying) {
+          const p = audioRef.current.play()
+          if (p !== undefined) {
+            p.catch(console.warn)
+          }
         }
       }
     }
@@ -293,6 +294,9 @@ export default function AudioPlayerBar({
 
   const handleClosePlayer = useCallback(() => {
     mediaPreloader.clearAudioPreload()
+    if (typeof document !== 'undefined' && document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {})
+    }
     if (audioRef.current) {
       try {
         audioRef.current.pause()
@@ -501,6 +505,34 @@ export default function AudioPlayerBar({
       audioRef.current.currentTime = val
     }
   }, [])
+
+  // Synchronize playback state, metadata, timeline scrubber, and actions with OS Media Session
+  useMediaSession({
+    playingTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    onTogglePlay: handleDirectTogglePlay,
+    onSkipNext,
+    onSkipPrev,
+    onSeek: handleSeek,
+  })
+
+  // Picture-in-Picture (Canvas Stream Video) & Remote Playback (Chrome Cast) Engine
+  const {
+    isPipActive,
+    isCasting,
+    isCastAvailable,
+    castError,
+    handleTogglePip,
+    handlePromptCast,
+  } = useMediaCastAndPip({
+    audioRef,
+    playingTrack,
+    isPlaying,
+    coverArt,
+    onShowToast,
+  })
 
   // Dynamic Volume Icon
   const effectiveVolume = isMuted ? 0 : volume
@@ -723,6 +755,12 @@ export default function AudioPlayerBar({
         onDirectTogglePlay={handleDirectTogglePlay}
         onCycleRepeat={handleCycleRepeat}
         onSeek={handleSeek}
+        isPipActive={isPipActive}
+        isCasting={isCasting}
+        isCastAvailable={isCastAvailable}
+        castError={castError}
+        onTogglePip={handleTogglePip}
+        onPromptCast={handlePromptCast}
         VolumeIconComponent={VolumeIconComponent}
       />
     </>

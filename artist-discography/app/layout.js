@@ -7,6 +7,7 @@ import './globals.css'
 import Providers from './providers'
 
 import { loadArtistData } from '../lib/artistData'
+import { getLogoDetails } from '../lib/logoUtils'
 
 const DEFAULT_PROJECT_NAME = packageJson.name
   .split('-')
@@ -26,23 +27,39 @@ export async function generateMetadata() {
   }
 
   const name = artistName || 'Artist'
-  const baseTitle = `${name} | Discography`
+  const baseTitle = `${name} - Artist Discography`
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://polybitmusic.com'
+
+  let logoMtime = '1'
+  try {
+    const logoDetails = getLogoDetails()
+    if (logoDetails.mtimeMs) {
+      logoMtime = Math.floor(logoDetails.mtimeMs).toString()
+    }
+  } catch {}
 
   return {
+    metadataBase: new URL(baseUrl),
     title: {
       default: baseTitle,
       template: `${name} | %s`,
     },
-    description: `${baseTitle} - A web app designed to showcase an artist's complete music discography, including albums, EPs, singles, and collaborations, with direct links to listen across all published streaming platforms.`,
+    description: `All music by ${name}, in one place. Direct links to listen across all published streaming platforms.`,
     appleWebApp: {
       title: baseTitle,
+      statusBarStyle: 'black-translucent',
     },
     icons: {
-      icon: '/api/icon?v=custom',
-      shortcut: '/api/icon?v=custom',
-      apple: '/api/icon?v=custom',
+      icon: [
+        { url: `/api/icon?w=32&v=${logoMtime}`, sizes: '32x32', type: 'image/png' },
+        { url: `/api/icon?w=16&v=${logoMtime}`, sizes: '16x16', type: 'image/png' },
+      ],
+      shortcut: `/api/icon?w=32&v=${logoMtime}`,
+      apple: [
+        { url: `/api/icon?w=180&v=${logoMtime}`, sizes: '180x180', type: 'image/png' },
+      ],
     },
-    manifest: '/favicons/manifest.json',
+    manifest: `/manifest.webmanifest?v=${logoMtime}`,
   }
 }
 

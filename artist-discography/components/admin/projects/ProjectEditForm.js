@@ -43,6 +43,12 @@ export default function ProjectEditForm({
   editDate,
   setEditDate,
   editDateRef,
+  editVisibility = 'public',
+  setEditVisibility,
+  editVisibilityRef,
+  editCopyright = 'cleared',
+  setEditCopyright,
+  editCopyrightRef,
   editCoverFile,
   setEditCoverFile,
   editCoverFileRef,
@@ -190,6 +196,44 @@ export default function ProjectEditForm({
               isDirty={dirtyFields.has('edit_date')}
               isSaved={savedFields.has('edit_date')}
             />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth size="small" sx={getFieldSx('edit_visibility')}>
+              <InputLabel id="edit-visibility-label">Visibility</InputLabel>
+              <Select
+                labelId="edit-visibility-label"
+                label="Visibility"
+                value={editVisibility}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (setEditVisibility) setEditVisibility(val)
+                  if (editVisibilityRef) editVisibilityRef.current = val
+                  markFieldDirty('edit_visibility', executeUpdateProject)
+                }}
+              >
+                <MenuItem value="public">Public (Visible to All)</MenuItem>
+                <MenuItem value="private">Private (Requires Access Code)</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth size="small" sx={getFieldSx('edit_copyright')}>
+              <InputLabel id="edit-copyright-label">Copyright Playback Status</InputLabel>
+              <Select
+                labelId="edit-copyright-label"
+                label="Copyright Playback Status"
+                value={editCopyright}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (setEditCopyright) setEditCopyright(val)
+                  if (editCopyrightRef) editCopyrightRef.current = val
+                  markFieldDirty('edit_copyright', executeUpdateProject)
+                }}
+              >
+                <MenuItem value="cleared">Cleared (Full In-Site Audio Playback)</MenuItem>
+                <MenuItem value="uncleared">Uncleared (Links Only, In-Site Audio Gated)</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
 
@@ -535,6 +579,10 @@ export default function ProjectEditForm({
               index={index}
               totalTracks={editTracks.length}
               defaultArtist={editArtist.trim() || artistNameInput?.trim() || defaultArtistName}
+              projectName={editName || currentProject.name || ''}
+              allProjects={projectsList}
+              currentTracks={editTracks}
+              currentProjectIndex={selectedProjIndex}
               isDuplicate={editDupTrackIndexes?.has(index)}
               isDirtyTitle={dirtyFields.has(`edit_track_${index}_title`)}
               isSavedTitle={savedFields.has(`edit_track_${index}_title`)}

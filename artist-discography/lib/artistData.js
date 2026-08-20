@@ -6,6 +6,7 @@ export const DEFAULT_DATA_SCAFFOLD = {
   adminAccess: true,
   adminPassword: 'admin123',
   devAccess: false,
+  privateAccessCode: 'access123',
   artist: {
     name: '',
     bio: '',
@@ -39,6 +40,8 @@ export const DEFAULT_DATA_SCAFFOLD = {
       artist: '',
       date: '',
       cover: '',
+      visibility: 'public',
+      copyright: 'cleared',
       tracks: [
         {
           name: '',
@@ -66,6 +69,7 @@ export function getArtistDataFilePath() {
 
 const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
 const SUPPORTED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif']
+const MAX_BACKUPS_TO_KEEP = 15
 
 function resolveLocalPath(baseDir, relativePath) {
   try {
@@ -75,6 +79,167 @@ function resolveLocalPath(baseDir, relativePath) {
     }
   } catch {}
   return null
+}
+
+/**
+ * Creates an automated timestamped snapshot backup in data/backups/
+ * Bounded to keep the latest MAX_BACKUPS_TO_KEEP files.
+ *
+ * @param {string} sourceFilePath
+ */
+export function createRollingBackup(sourceFilePath) {
+  try {
+    if (!sourceFilePath || !fs.existsSync(sourceFilePath)) return null
+
+    const dataDir = path.dirname(sourceFilePath)
+    const backupsDir = path.join(dataDir, 'backups')
+    if (!fs.existsSync(backupsDir)) {
+      fs.mkdirSync(backupsDir, { recursive: true })
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const backupFile = path.join(backupsDir, `artist-data-${timestamp}.json`)
+    fs.copyFileSync(sourceFilePath, backupFile)
+
+    // Maintain bounded rolling window
+    try {
+      const existingBackups = fs.readdirSync(backupsDir)
+        .filter((f) => f.startsWith('artist-data-') && f.endsWith('.json'))
+        .map((f) => {
+          const full = path.join(backupsDir, f)
+          return { name: f, fullPath: full, time: fs.statSync(full).mtimeMs }
+        })
+        .sort((a, b) => b.time - a.time)
+
+      if (existingBackups.length > MAX_BACKUPS_TO_KEEP) {
+        for (const oldBackup of existingBackups.slice(MAX_BACKUPS_TO_KEEP)) {
+          try {
+            fs.unlinkSync(oldBackup.fullPath)
+          } catch {}
+        }
+      }
+    } catch (pruneErr) {
+      console.warn('Warning during rolling backup pruning:', pruneErr)
+    }
+
+    return backupFile
+  } catch (err) {
+    console.warn('Warning: Failed to create rolling snapshot backup:', err)
+    return null
+  }
+}
+
+/**
+ * Safely archives a malformed/corrupted JSON file to data/artist-data.corrupted-<timestamp>.json
+ * before any fallback scaffolding is initialized.
+ *
+ * @param {string} filePath
+ * @param {string} rawContent
+ * @returns {string|null} Path to archived file
+ */
+export function archiveMalformedFile(filePath, rawContent) {
+  try {
+    const dataDir = path.dirname(filePath)
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const corruptedPath = path.join(dataDir, `artist-data.corrupted-${timestamp}.json`)
+    fs.writeFileSync(corruptedPath, rawContent, 'utf8')
+    console.error(`CRITICAL: Malformed artist-data.json archived to ${corruptedPath}`)
+    return corruptedPath
+  } catch (err) {
+    console.error('Failed to archive corrupted JSON file:', err)
+    return null
+  }
+}
+
+/**
+ * Attempts heuristic syntax repairs on corrupted JSON strings
+ * (removes JS comments, strips trailing commas, auto-closes unclosed quotes and braces).
+ *
+ * @param {string} raw
+ * @returns {Object|null}
+ */
+export function tryHeuristicJsonRepair(raw) {
+  if (typeof raw !== 'string') return null
+  let text = raw.trim()
+  if (!text) return null
+
+  // 1. Remove JavaScript-style comments (// and /* */)
+  text = text.replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '$1').trim()
+
+  // 2. Remove trailing commas before } or ]
+  text = text.replace(/,\s*([}\]])/g, '$1')
+
+  // 3. Try standard parse
+  try {
+    return JSON.parse(text)
+  } catch {}
+
+  // 4. Check for unclosed string quote
+  const quoteCount = (text.match(/(?<!\\)"/g) || []).length
+  if (quoteCount % 2 !== 0) {
+    text += '"'
+  }
+
+  // 5. Clean any trailing commas again
+  text = text.replace(/,\s*([}\]])/g, '$1')
+
+  // 6. Fix missing closing brackets/braces in matching nesting order
+  const stack = []
+  let inString = false
+  let escaped = false
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+    if (!inString) {
+      if (ch === '{') stack.push('}')
+      else if (ch === '[') stack.push(']')
+      else if (ch === '}' || ch === ']') {
+        if (stack.length > 0 && stack[stack.length - 1] === ch) {
+          stack.pop()
+        }
+      }
+    }
+  }
+
+  while (stack.length > 0) {
+    text += stack.pop()
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Atomically writes data to disk using an adjacent temporary swap file.
+ *
+ * @param {string} filePath
+ * @param {Object} data
+ */
+function atomicWriteJson(filePath, data) {
+  const dirPath = path.dirname(filePath)
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true })
+  }
+
+  const rand = Math.random().toString(36).substring(2, 8)
+  const tempPath = path.join(dirPath, `.artist-data.json.tmp.${process.pid}.${Date.now()}.${rand}`)
+  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tempPath, filePath)
 }
 
 export class ArtistDataManager {
@@ -102,7 +267,7 @@ export class ArtistDataManager {
           if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true })
           }
-          fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
+          atomicWriteJson(filePath, DEFAULT_DATA_SCAFFOLD)
           createdNewFile = true
           issues.push('JSON file did not exist. Created new scaffold at data/artist-data.json.')
         } catch (err) {
@@ -134,45 +299,48 @@ export class ArtistDataManager {
       }
 
       let parsedData = null
+      let wasHeuristicallyRepaired = false
+
       try {
         parsedData = JSON.parse(rawContent)
-      } catch (err) {
-        issues.push(`Invalid JSON syntax in file: ${err.message}.`)
-        try {
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-          const backupFileName = `artist-data.malformed.${timestamp}.json`
-          const backupFilePath = path.join(path.dirname(filePath), backupFileName)
-          const staticBackupFilePath = path.join(path.dirname(filePath), 'artist-data.malformed.json')
+      } catch (parseErr) {
+        // Attempt heuristic recovery before destructive fallback
+        const repaired = tryHeuristicJsonRepair(rawContent)
+        if (repaired && typeof repaired === 'object') {
+          parsedData = repaired
+          wasHeuristicallyRepaired = true
+          issues.push('Heuristically auto-repaired minor JSON syntax corruption (e.g. comments, trailing commas, unclosed brackets).')
+        } else {
+          // Zero-Data-Loss quarantine: Archive corrupted file without deleting raw user content
+          const corruptedPath = archiveMalformedFile(filePath, rawContent)
+          issues.push(`Invalid JSON syntax in file: ${parseErr.message}. Archived raw corrupted file to ${path.basename(corruptedPath || '')}.`)
 
-          fs.writeFileSync(backupFilePath, rawContent, 'utf8')
-          fs.writeFileSync(staticBackupFilePath, rawContent, 'utf8')
-          issues.push(`Saved copy of corrupt JSON to ${backupFileName} and artist-data.malformed.json.`)
-        } catch (backupErr) {
-          issues.push(`Failed to backup corrupt JSON file: ${backupErr.message}`)
-        }
+          // Create fresh fallback so app remains functional
+          try {
+            atomicWriteJson(filePath, DEFAULT_DATA_SCAFFOLD)
+            issues.push('Initialized working fallback default scaffold.')
+          } catch (writeErr) {
+            issues.push(`Failed to write fallback scaffold: ${writeErr.message}`)
+          }
 
-        try {
-          fs.writeFileSync(filePath, JSON.stringify(DEFAULT_DATA_SCAFFOLD, null, 2), 'utf8')
-          issues.push('Overwritten corrupt JSON file with default scaffold.')
-        } catch (writeErr) {
-          issues.push(`Failed to overwrite corrupt JSON file with default scaffold: ${writeErr.message}`)
-        }
-        return {
-          data: DEFAULT_DATA_SCAFFOLD,
-          health: {
-            isHealthy: false,
-            createdNewFile: false,
-            issues,
-          },
+          return {
+            data: DEFAULT_DATA_SCAFFOLD,
+            health: {
+              isHealthy: false,
+              createdNewFile: false,
+              issues,
+            },
+          }
         }
       }
 
       const { data: repairedData, repaired } = this.validateAndRepair(parsedData, issues)
 
-      if (repaired) {
+      if (repaired || wasHeuristicallyRepaired) {
         try {
-          fs.writeFileSync(filePath, JSON.stringify(repairedData, null, 2), 'utf8')
-          issues.push('Structural issues detected and auto-repaired in artist-data.json.')
+          createRollingBackup(filePath)
+          atomicWriteJson(filePath, repairedData)
+          issues.push('Structural schema issues detected and auto-repaired in artist-data.json.')
         } catch (err) {
           issues.push(`Failed to auto-save repaired JSON structure: ${err.message}`)
         }
@@ -220,6 +388,12 @@ export class ArtistDataManager {
       data.devAccess = DEFAULT_DATA_SCAFFOLD.devAccess
       repaired = true
       issues.push('Missing or invalid "devAccess" boolean property.')
+    }
+
+    if (typeof data.privateAccessCode !== 'string') {
+      data.privateAccessCode = typeof DEFAULT_DATA_SCAFFOLD.privateAccessCode === 'string' ? DEFAULT_DATA_SCAFFOLD.privateAccessCode : ''
+      repaired = true
+      issues.push('Missing or invalid "privateAccessCode" string property.')
     }
 
     if (typeof data.artist !== 'object' || data.artist === null) {
@@ -322,6 +496,16 @@ export class ArtistDataManager {
           updatedProj.date = ''
           repaired = true
           issues.push(`Project at index ${projIndex} missing "date".`)
+        }
+        if (updatedProj.visibility !== 'public' && updatedProj.visibility !== 'private') {
+          updatedProj.visibility = 'public'
+          repaired = true
+          issues.push(`Project at index ${projIndex} missing or invalid "visibility" property (defaulted to "public").`)
+        }
+        if (updatedProj.copyright !== 'cleared' && updatedProj.copyright !== 'uncleared') {
+          updatedProj.copyright = 'cleared'
+          repaired = true
+          issues.push(`Project at index ${projIndex} missing or invalid "copyright" property (defaulted to "cleared").`)
         }
 
         const projectSlug = slugify(updatedProj.name) || `project-${projIndex + 1}`
@@ -510,10 +694,18 @@ export class ArtistDataManager {
       if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true })
       }
-      const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
-      fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8')
-      fs.renameSync(tempPath, filePath)
-      return { success: true }
+
+      // 1. Create rolling backup snapshot before save
+      createRollingBackup(filePath)
+
+      // 2. Validate and repair schema
+      const issues = []
+      const { data: sanitizedData } = this.validateAndRepair(data, issues)
+
+      // 3. Atomically write to swap file
+      atomicWriteJson(filePath, sanitizedData)
+
+      return { success: true, issues }
     } catch (err) {
       console.error('Error saving artist data:', err)
       return { success: false, error: err.message }
@@ -539,4 +731,3 @@ export function loadArtistData() {
 export function saveArtistData(data) {
   return ArtistDataManager.saveData(data)
 }
-

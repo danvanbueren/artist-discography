@@ -3,6 +3,8 @@ import path from 'path'
 import { Readable } from 'stream'
 import { NextResponse } from 'next/server'
 import { getOptimizedAudio } from '../../../../lib/audioOptimizer'
+import { loadArtistData } from '../../../../lib/artistData'
+import { slugify } from '../../../../lib/slugs'
 
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
@@ -23,6 +25,29 @@ export async function GET(request, { params }) {
     const pathSegments = resolvedParams?.path ?? []
     if (!pathSegments || pathSegments.length === 0) {
       return new NextResponse('Audio path not specified', { status: 400 })
+    }
+
+    // Gate private or uncleared audio files behind private access authentication
+    let projectSlug = null
+    if (pathSegments[0] === 'projects' && pathSegments.length > 1) {
+      projectSlug = pathSegments[1]
+    } else if (pathSegments[0] !== 'projects' && pathSegments[0] !== 'audio') {
+      projectSlug = pathSegments[0]
+    }
+
+    if (projectSlug) {
+      const dataResult = loadArtistData()
+      const projects = dataResult?.data?.projects || []
+      const matchedProj = projects.find((p) => slugify(p.name) === projectSlug)
+      if (matchedProj) {
+        const isGated = matchedProj.visibility === 'private' || matchedProj.copyright === 'uncleared'
+        if (isGated) {
+          const isAuth = request.cookies.get('private_access_auth')?.value === 'true'
+          if (!isAuth) {
+            return new NextResponse('Private access code authentication required to stream this track', { status: 403 })
+          }
+        }
+      }
     }
 
     const dataDir = path.join(process.cwd(), 'data')

@@ -6,10 +6,11 @@ For full project documentation, technology stack, and comprehensive operator con
 
 ## 🗂️ App Architecture & Subdirectories
 
-- **`app/`**: Next.js App Router root layout, dynamic SPA route `[[...slug]]/page.js`, theme configuration (`theme.js`), and server API routes (`app/api/` for `admin` [artist, auth, copy-track, logo, project, upload], `dev` [openapi, seed-dummy], `audio` streaming, dynamic `logo`, and `media` optimization).
+- **`app/`**: Next.js App Router root layout, dynamic SPA route `[[...slug]]/page.js`, theme configuration (`theme.js`), and server API routes (`app/api/` for `admin` [artist, auth, copy-track, logo, project, upload], `auth` [private-access], `dev` [openapi, seed-dummy], `audio` streaming, dynamic `logo`, and `media` optimization).
 - **`components/`**: Modular UI components organized by domain:
   - `components/admin/`: Operator administration dashboard & project manager subcomponents (`auth/`, `common/`, `dialogs/`, `hooks/`, `layout/`, `profile/`, `projects/`, `tracks/`).
   - `components/artist/`: Artist hero header, biography, and social links.
+  - `components/auth/`: Private access code authentication dialog and session locking controls.
   - `components/common/`: Responsive progressive image loaders & media utilities.
   - `components/dev/`: Developer preview suite (`apiExplorer/`, `audit/`, `hooks/`, `layout/`, `overview/`, `platforms/`, `raw/`).
   - `components/discography/`: Catalog grid, filter bar, project cards, and track lists.
@@ -17,7 +18,7 @@ For full project documentation, technology stack, and comprehensive operator con
   - `components/player/`: Continuous audio player bar with progressive buffer indicator, volume persistence, and drag-and-drop queue dialog.
   - `components/ui/`: Shared primitive components.
 - **`lib/`**: Business logic, data parsing (`artistData.js`), URL slugs (`slugs.js`), logo utilities (`logoUtils.js`), Sharp image pipeline (`mediaOptimizer.js`), audio transcoding (`audioOptimizer.js`), automated cache cleanup coordinator (`cacheCleaner.js`), media cache warmer coordinator (`mediaWarmer.js`), client LRU preloader (`mediaPreloader.js`), OpenAPI schema (`apiSpec.js`), and custom React hooks (`lib/hooks/`).
-- **`data/`**: Operator content directory containing `artist-data.json`, project covers, track audio files, and cached media variants (`data/cache/images/` and `data/cache/audio/`). All media files uploaded via admin are immediately pre-compressed and cached on disk, verified via an automatic fallback check when users load the site, and kept lean by an automated background pruning system that purges unused/orphaned cache files from deleted or replaced projects.
+- **`data/`**: Operator content directory containing `artist-data.json`, project covers, track audio files, and cached media variants (`data/cache/images/` and `data/cache/audio/`). All media files uploaded via admin are immediately pre-compressed and cached on disk, verified via an automatic fallback check when users load the site, and kept lean by an automated background pruning system that purges unused/orphaned cache files from deleted or replaced projects. Automatic timestamped snapshots are saved to `data/backups/` to guarantee zero data loss.
 
 ## 🔐 System Routes
 

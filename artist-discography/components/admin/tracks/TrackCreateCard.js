@@ -16,6 +16,7 @@ import {
   AccordionDetails,
   LinearProgress,
   InputAdornment,
+  Tooltip,
 } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
@@ -26,8 +27,16 @@ import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import LinkIcon from '@mui/icons-material/Link'
 import GraphicEqIcon from '@mui/icons-material/GraphicEq'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS } from '../adminConstants'
+import {
+  formatMediaPath,
+  buildPlatformSearchUrl,
+  findDuplicateStreamingLink,
+  isAlbumLevelUrl,
+  analyzeYouTubeUrl,
+} from '../adminUtils'
 import { SOCIAL_ICONS } from '../../artist/ArtistHero'
 
 const TrackCreateCard = memo(function TrackCreateCard({
@@ -35,6 +44,10 @@ const TrackCreateCard = memo(function TrackCreateCard({
   index,
   totalTracks,
   defaultArtist,
+  projectName = '',
+  allProjects = [],
+  currentTracks = [],
+  currentProjectIndex = -1,
   isDuplicate,
   isDirtyTitle,
   isSavedTitle,
@@ -379,16 +392,75 @@ const TrackCreateCard = memo(function TrackCreateCard({
                   {PLATFORM_KEYS.map(({ key, label }) => {
                     const iconSrc = SOCIAL_ICONS[key]
                     const fieldKey = `new_track_${index}_${key}`
+                    const linkVal = track.links?.[key] || ''
+
+                    // 1. Check duplicate link (Other projects -> Same project -> Same track)
+                    const dupInfo = findDuplicateStreamingLink(
+                      linkVal,
+                      {
+                        currentProjectIndex: -1,
+                        currentTrackIndex: index,
+                        platformKey: key,
+                        currentTracks,
+                        currentTrackLinks: track.links,
+                      },
+                      allProjects
+                    )
+
+                    // 2. Check album level link
+                    const isAlbumLink = isAlbumLevelUrl(linkVal)
+
+                    // 3. Check YouTube playlist
+                    const ytAnalysis = key === 'youtube' ? analyzeYouTubeUrl(linkVal) : { hasPlaylist: false, cleanedUrl: linkVal }
+
+                    const isWarning = Boolean(dupInfo || isAlbumLink || ytAnalysis.hasPlaylist)
+
+                    let helperMsg = null
+                    if (dupInfo) {
+                      helperMsg = dupInfo.message
+                    } else if (isAlbumLink) {
+                      helperMsg = '⚠️ Detected album-level link. A direct track/song link is strongly recommended.'
+                    } else if (ytAnalysis.hasPlaylist) {
+                      helperMsg = '⚠️ YouTube playlist link detected. Direct video link is preferred.'
+                    }
+
                     return (
                       <Grid key={key} size={{ xs: 12, sm: 6 }}>
                         <AdminTextInput
                           label={label}
                           size="small"
                           fullWidth
-                          value={track.links?.[key] || ''}
+                          value={linkVal}
                           onChange={(val) => onUpdateLink(index, key, val)}
                           isDirty={dirtyFields.has(fieldKey)}
                           isSaved={savedFields.has(fieldKey)}
+                          warning={isWarning}
+                          helperText={
+                            isWarning ? (
+                              <Box component="span" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', mt: 0.25, flexWrap: 'wrap', gap: 0.5 }}>
+                                <span>{helperMsg}</span>
+                                {ytAnalysis.hasPlaylist && (
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    onClick={() => onUpdateLink(index, 'youtube', ytAnalysis.cleanedUrl)}
+                                    sx={{
+                                      color: '#fbbf24',
+                                      p: 0,
+                                      minWidth: 0,
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700,
+                                      textTransform: 'none',
+                                      textDecoration: 'underline',
+                                      '&:hover': { textDecoration: 'none', color: '#f59e0b' },
+                                    }}
+                                  >
+                                    Clean URL
+                                  </Button>
+                                )}
+                              </Box>
+                            ) : undefined
+                          }
                           slotProps={{
                             input: {
                               startAdornment: iconSrc ? (
@@ -407,6 +479,32 @@ const TrackCreateCard = memo(function TrackCreateCard({
                                   />
                                 </InputAdornment>
                               ) : null,
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <Tooltip title={`Search for this track on ${label} (or Google)`} arrow>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        const searchUrl = buildPlatformSearchUrl(
+                                          key,
+                                          track.artist || defaultArtist,
+                                          track.name,
+                                          projectName
+                                        )
+                                        window.open(searchUrl, '_blank', 'noopener,noreferrer')
+                                      }}
+                                      sx={{
+                                        color: 'text.secondary',
+                                        p: 0.5,
+                                        '&:hover': { color: 'secondary.main' },
+                                      }}
+                                      aria-label={`Search ${label}`}
+                                    >
+                                      <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </InputAdornment>
+                              ),
                             },
                           }}
                         />

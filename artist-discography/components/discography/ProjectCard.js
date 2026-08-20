@@ -20,6 +20,7 @@ export default function ProjectCard({
   onSelectTrackRow,
   onSelectTrackTitle,
   selectedPlatform,
+  isPrivateAuthenticated = false,
 }) {
   const cover = project?.cover ?? project?.image ?? ''
   const ambientCover = cover && typeof cover === 'string' && cover.startsWith('/api/media')
@@ -72,6 +73,7 @@ export default function ProjectCard({
           onSelectProject={onSelectProject}
           selectedPlatform={selectedPlatform}
           isSingleView={isSingleView}
+          isPrivateAuthenticated={isPrivateAuthenticated}
         />
 
         <TrackList

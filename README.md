@@ -7,6 +7,11 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
 ## 🌟 Key Features
 
 - **Full Catalog Showcase**: Browse an artist's complete discography categorized by albums (`LP`), EPs, singles, remixes, bootlegs, and features.
+- **Private Access System & Permission Flags**:
+  - **Private Access Code Authentication**: Operators configure an access code in `artist-data.json` / Admin Profile; visitors unlock VIP/unreleased projects and gated audio in `Navbar` -> `Settings`.
+  - **Project Visibility (`public` vs. `private`)**: Private releases are completely hidden from public browsing, search, and type filters until authenticated.
+  - **Copyright Playback Gating (`cleared` vs. `uncleared`)**: Uncleared projects display full metadata and streaming platform links, but in-site audio streams are withheld from unauthenticated users. Entering the code unlocks audio playback with subtle `UNLOCKED` badges and zero "locked" clutter for public visitors.
+  - **Defense in Depth**: Endpoint `/api/audio/[...path]` returns HTTP 403 Forbidden if unauthenticated visitors attempt direct streaming of gated tracks.
 - **Multi-Platform Streaming Links**: Direct links to listen on all major platforms (Spotify, Apple Music, YouTube, SoundCloud, Bandcamp, Tidal, Deezer, Pandora, Amazon Music, iTunes).
 - **Contained Audio Player Bar & Progressive Streaming**:
   - Direct in-app streaming with play/pause, seek scrubber, volume control, manual queueing, autoplay derivation, shuffle, and repeat modes.
@@ -42,7 +47,19 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
   - **Fast Authentication**: Auto-authenticates and hides lock controls when `adminPassword` is unconfigured for effortless local setup.
   - **Track Cloning / Duplication**: Copy tracks between projects (`/api/admin/copy-track`) with automatic slug sanitization.
   - **Deletion Safeguards & Artist Inheritance**: Confirmation modals for destructive actions and automatic artist credit inheritance from parent projects.
-  - **Asset Management**: Real-time file uploads with support for FLAC, WAV, MP3, AAC, OGG, WebM, WebP, PNG, JPG, and AVIF.
+- **OS Media Session, Hardware Keys & Cast Integration**:
+  - **`navigator.mediaSession` Synchronization**: Live sync of track title, artist, album name, and multi-resolution artwork (`96px` to `512px`).
+  - **Hardware Keyboard Media Keys**: Native desktop media key controls (Play/Pause, Skip Next, Skip Previous, Stop, and Position Seeking) and mobile lockscreen/Dynamic Island scrubbing.
+  - **Google Cast & Remote Playback**: W3C Remote Playback API integration to cast audio streams to smart speakers, Chromecast, and Android TVs with graceful visual feedback on connection error.
+  - **Desktop Picture-in-Picture Mini-Player**: Synchronized Canvas video stream pops out a floating desktop player with album artwork, track title, and progress. Automatically hidden on mobile/touch devices and destroyed on player close.
+- **Zero-Data-Loss & Data Resilience Architecture**:
+  - **Atomic Swap Writes**: Write operations serialize to temporary swap files (`.artist-data.json.tmp.<pid>.<timestamp>.<rand>`) before performing atomic renames (`fs.renameSync`), eliminating write corruption from server reboots.
+  - **Automated Rolling Backups**: Timestamped snapshots in `data/backups/artist-data-<timestamp>.json` before destructive save or repair operations, bounded to the latest 15 snapshots.
+  - **Non-Destructive Corrupted File Archival**: If JSON fails parsing, the raw file is immediately preserved in `data/artist-data.corrupted-<timestamp>.json` with zero data loss before initializing safe scaffolding.
+  - **Heuristic Syntax Auto-Healing**: Automatic recovery for minor JSON syntax issues (JavaScript comments, trailing commas, unbalanced braces/brackets, and unclosed quotes).
+- **Adaptive High-Contrast Dynamic Favicons**:
+  - **Perceived Luminance Detection**: Evaluates non-transparent pixel lightness of the artist logo (`0.299*R + 0.587*G + 0.114*B`).
+  - **Contrasting Background Compositing**: Light/white logos receive a dark obsidian background (`#0f0f14`); dark logos receive a crisp white background (`#ffffff`), with 8% inset padding to guarantee high visibility across light and dark browser tabs.
 - **Collision-Free System Routes (`/_sys/_admin` & `/_sys/_dev`)**:
   - System tools are namespaced under **`/_sys/_admin`** (Admin Portal) and **`/_sys/_dev`** (Dev Preview Dashboard) using Next.js rewrites.
   - Prevents URL routing collisions with music projects titled "admin" or "dev".
@@ -58,16 +75,22 @@ A high-performance, modern Single Page Application (SPA) designed to showcase an
 artist-discography/
 ├── plans/                              # Architecture blueprints & implementation status logs
 │   ├── README.md                       # Master Plan Index & Progress Log
-│   ├── 01-playback-queue-and-autoplay.md
-│   ├── 02-repeat-and-shuffle-modes.md
-│   ├── 03-media-caching-and-adaptive-streaming.md
-│   └── 04-spa-routing-and-history-navigation.md
+│   ├── 05-private-access-system-and-project-flags.md
+│   ├── 06-media-delivery-reliability-and-dynamic-favicons.md
+│   ├── 07-audio-playback-queue-and-player-ui-fixes.md
+│   ├── 08-navigation-project-ui-and-onboarding-banners.md
+│   ├── 09-rich-discord-and-opengraph-link-previews.md
+│   ├── 10-admin-streaming-links-power-tools.md
+│   ├── 11-os-media-session-and-hardware-key-integration.md
+│   ├── 12-data-resilience-and-graceful-json-recovery.md
+│   └── archive/                        # Completed & archived plans (Phases 1 - 4)
 ├── artist-discography/
 │   ├── app/                            # Next.js App Router pages & global theme
 │   │   ├── [[...slug]]/page.js         # Single Page App dynamic route handler
 │   │   ├── api/                        # Next.js Server Route Handlers
 │   │   │   ├── admin/                  # Admin APIs (artist, auth, copy-track, logo, project, upload)
 │   │   │   ├── audio/[...path]/route.js# Byte-range audio streaming & ETag validator
+│   │   │   ├── auth/private-access/    # Private access code authentication API
 │   │   │   ├── dev/                    # Dev APIs (openapi, seed-dummy)
 │   │   │   ├── logo/route.js           # Dynamic logo optimizer & fallback handler
 │   │   │   └── media/[...path]/route.js# Sharp dynamic image resizer & transcoder
@@ -78,6 +101,7 @@ artist-discography/
 │   ├── components/                     # Modular React UI components
 │   │   ├── admin/                      # Modular Admin Portal (auth, dialogs, hooks, layout, profile, projects, tracks)
 │   │   ├── artist/                     # Artist hero banner & social links
+│   │   ├── auth/                       # Private access authentication modal & session controls
 │   │   ├── common/                     # Shared progressive media & asset loaders
 │   │   ├── dev/                        # Modular Dev Preview Suite (apiExplorer, audit, hooks, layout, overview, platforms, raw)
 │   │   ├── discography/                # Main app container, catalog grid, & track lists
@@ -138,6 +162,7 @@ artist-discography/data/
 {
   "adminAccess": true,
   "devAccess": true,
+  "privateAccessCode": "access123",
   "artist": {
     "name": "Lunar Echoes",
     "bio": "Atmospheric electronic and synthwave producer crafting celestial soundscapes.",
@@ -163,6 +188,8 @@ artist-discography/data/
       "artist": "Lunar Echoes",
       "date": "2026-05-15",
       "cover": "",
+      "visibility": "public",
+      "copyright": "cleared",
       "tracks": [
         {
           "name": "Midnight Genesis",
@@ -182,9 +209,10 @@ artist-discography/data/
 
 #### Field Specifications
 
-##### 1. System Access Flags
+##### 1. System Access Flags & Private Codes
 - **`adminAccess`** *(Boolean, default: true)*: Enabled (`true`) by default on initial scaffold to allow operators setup access to the Admin Portal (`/_sys/_admin`). Set to `false` in production to lock access and auto-redirect visitors home (`/`).
 - **`devAccess`** *(Boolean, default: false)*: Disabled (`false`) by default on initial scaffold. Set to `true` to enable access to the Dev Preview Dashboard (`/_sys/_dev`).
+- **`privateAccessCode`** *(String, default: "access123")*: Access code required to unlock hidden private projects and enable playback on uncleared tracks via `Navbar` -> `Settings` -> `Private Access`.
 
 ##### 2. `artist` Object
 - **`name`**: The primary artist name.
@@ -197,6 +225,12 @@ artist-discography/data/
 - **`type`**: Type classification (e.g. `"LP"`, `"EP"`, `"Single"`, `"Remix"`, `"Feature"`, `"Bootleg"`, `"Flip"`, `"Edit"`).
 - **`artist`**: Project artist credit (defaults to main artist if blank).
 - **`date`**: Release date in `YYYY-MM-DD` format (formatted and displayed as "May 15, 2026").
+- **`visibility`** *(String, default: "public")*:
+  - `"public"`: Always visible to all visitors.
+  - `"private"`: Completely hidden from public browsing, search, and type filters until the user authenticates with `privateAccessCode`.
+- **`copyright`** *(String, default: "cleared")*:
+  - `"cleared"`: Full in-site audio playback enabled for all visitors.
+  - `"uncleared"`: In-site audio playback is disabled for unauthenticated visitors (audio streams are withheld). Streaming platform links remain visible. Authenticating with `privateAccessCode` unlocks audio playback and shows an `UNLOCKED` status badge.
 - **`cover`** *(Optional)*:
   - Leave blank (`""`) to auto-detect `data/projects/<project-slug>/art.<jpg|jpeg|png|webp|svg|gif|avif>`.
   - Or specify a relative filename inside the project folder (e.g. `"cover.jpg"`), or an external image URL.

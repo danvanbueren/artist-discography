@@ -90,7 +90,7 @@ export default function AudioQualityModal({
         }}
       >
         <Stack spacing={0.25}>
-          <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.15rem' }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.15rem' }}>
             Audio Playback Quality
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -201,8 +201,8 @@ export default function AudioQualityModal({
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography
                       variant="subtitle2"
-                      fontWeight={700}
                       sx={{
+                        fontWeight: 700,
                         fontSize: '0.95rem',
                         lineHeight: 1,
                         color: isSelected ? 'primary.main' : 'text.primary',

@@ -16,6 +16,7 @@ const AdminTextInput = memo(function AdminTextInput({
   multiline,
   rows,
   error,
+  warning,
   helperText,
   isDirty,
   isSaved,
@@ -36,6 +37,21 @@ const AdminTextInput = memo(function AdminTextInput({
             borderColor: '#f44336 !important',
             borderWidth: 2,
           },
+        },
+        ...sx,
+      }
+    : warning
+    ? {
+        ...fieldSx,
+        '& .MuiOutlinedInput-root': {
+          backgroundColor: 'rgba(255, 179, 0, 0.06)',
+          '& fieldset': {
+            borderColor: '#fbbf24 !important',
+            borderWidth: 1.5,
+          },
+        },
+        '& .MuiFormHelperText-root': {
+          color: '#fbbf24 !important',
         },
         ...sx,
       }

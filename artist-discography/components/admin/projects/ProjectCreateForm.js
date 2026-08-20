@@ -40,12 +40,19 @@ export default function ProjectCreateForm({
   date,
   setDate,
   dateRef,
+  visibility = 'public',
+  setVisibility,
+  visibilityRef,
+  copyright = 'cleared',
+  setCopyright,
+  copyrightRef,
   coverFile,
   setCoverFile,
   coverFileRef,
   coverPreview,
   tracks,
   setTracks,
+  projectsList = [],
   artistNameInput,
   defaultArtistName,
   isNewNameDuplicate,
@@ -169,6 +176,44 @@ export default function ProjectCreateForm({
               isDirty={dirtyFields.has('new_date')}
               isSaved={savedFields.has('new_date')}
             />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth size="small" sx={getFieldSx('new_visibility')}>
+              <InputLabel id="new-visibility-label">Visibility</InputLabel>
+              <Select
+                labelId="new-visibility-label"
+                label="Visibility"
+                value={visibility}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (setVisibility) setVisibility(val)
+                  if (visibilityRef) visibilityRef.current = val
+                  markFieldDirty('new_visibility', executeCreateProject)
+                }}
+              >
+                <MenuItem value="public">Public (Visible to All)</MenuItem>
+                <MenuItem value="private">Private (Requires Access Code)</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <FormControl fullWidth size="small" sx={getFieldSx('new_copyright')}>
+              <InputLabel id="new-copyright-label">Copyright Playback Status</InputLabel>
+              <Select
+                labelId="new-copyright-label"
+                label="Copyright Playback Status"
+                value={copyright}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (setCopyright) setCopyright(val)
+                  if (copyrightRef) copyrightRef.current = val
+                  markFieldDirty('new_copyright', executeCreateProject)
+                }}
+              >
+                <MenuItem value="cleared">Cleared (Full In-Site Audio Playback)</MenuItem>
+                <MenuItem value="uncleared">Uncleared (Links Only, In-Site Audio Gated)</MenuItem>
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
 
@@ -461,6 +506,10 @@ export default function ProjectCreateForm({
               index={index}
               totalTracks={tracks.length}
               defaultArtist={artist.trim() || artistNameInput?.trim() || defaultArtistName}
+              projectName={name || ''}
+              allProjects={projectsList}
+              currentTracks={tracks}
+              currentProjectIndex={-1}
               isDuplicate={newDupTrackIndexes?.has(index)}
               isDirtyTitle={dirtyFields.has(`new_track_${index}_title`)}
               isSavedTitle={savedFields.has(`new_track_${index}_title`)}

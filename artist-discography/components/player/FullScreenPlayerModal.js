@@ -10,6 +10,7 @@ import {
   Badge,
   Dialog,
   Slide,
+  Tooltip,
 } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
@@ -24,6 +25,10 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded'
+import CastRoundedIcon from '@mui/icons-material/CastRounded'
+import CastConnectedRoundedIcon from '@mui/icons-material/CastConnectedRounded'
+import PictureInPictureAltRoundedIcon from '@mui/icons-material/PictureInPictureAltRounded'
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded'
 import ProgressiveImage from '../common/ProgressiveImage'
 import AudioQualityPill from './AudioQualityPill'
 
@@ -79,6 +84,12 @@ export default function FullScreenPlayerModal({
   onDirectTogglePlay,
   onCycleRepeat,
   onSeek,
+  isPipActive = false,
+  isCasting = false,
+  isCastAvailable = true,
+  castError = false,
+  onTogglePip,
+  onPromptCast,
   VolumeIconComponent,
 }) {
   const hasNextTrack = manualQueue.length > 0 || autoplayTracks.length > 0 || repeatMode === 'all'
@@ -118,14 +129,6 @@ export default function FullScreenPlayerModal({
 
   const handleTouchMove = (e) => {
     if (!isSwiping.current || !e.touches || e.touches.length !== 1) return
-    const currentY = e.touches[0].clientY
-    const currentX = e.touches[0].clientX
-    const deltaY = currentY - touchStartY.current
-    const deltaX = currentX - touchStartX.current
-
-    if (deltaY < -10 || Math.abs(deltaX) > deltaY + 20) {
-      isSwiping.current = false
-    }
   }
 
   const handleTouchEnd = (e) => {
@@ -137,9 +140,10 @@ export default function FullScreenPlayerModal({
       const endX = e.changedTouches[0].clientX
       const deltaY = endY - touchStartY.current
       const deltaX = endX - touchStartX.current
+      const swipeDistance = Math.hypot(deltaX, deltaY)
 
-      // Downward swipe of at least 60px with predominantly vertical direction
-      if (deltaY > 60 && deltaY > Math.abs(deltaX) * 1.2) {
+      // Omnidirectional swipe of 75px or larger in any direction minimizes modal cleanly
+      if (swipeDistance > 75) {
         if (onClose) onClose()
       }
     }
@@ -190,6 +194,7 @@ export default function FullScreenPlayerModal({
             position: 'relative',
             overflow: 'hidden',
             boxSizing: 'border-box',
+            overscrollBehavior: 'contain',
             touchAction: 'manipulation',
             transform: 'translateZ(0)',
             backfaceVisibility: 'hidden',
@@ -256,6 +261,8 @@ export default function FullScreenPlayerModal({
             sx={{
               color: 'text.secondary',
               p: { xs: 0.75, sm: 1 },
+              position: 'relative',
+              zIndex: 2,
               '&:hover': {
                 color: 'text.primary',
               },
@@ -264,15 +271,18 @@ export default function FullScreenPlayerModal({
             <CloseRoundedIcon sx={{ fontSize: { xs: 22, sm: 26 } }} />
           </IconButton>
 
-          {/* Center: Track Context Button (navigates to project page & selects current track) */}
+          {/* Center: Track Context Button (Absolute 50% screen center) */}
           <Box
             sx={{
-              flexGrow: 1,
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: 0,
-              px: 1,
+              maxWidth: { xs: 'calc(100% - 130px)', sm: 'calc(100% - 190px)', md: 'calc(100% - 250px)' },
+              zIndex: 1,
+              pointerEvents: 'auto',
             }}
           >
             <Stack
@@ -320,13 +330,13 @@ export default function FullScreenPlayerModal({
               <Typography
                 className="top-project-title"
                 variant="subtitle2"
-                fontWeight={700}
                 sx={{
+                  fontWeight: 700,
                   color: 'text.primary',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: { xs: 200, sm: 300, md: 450, lg: 600 },
+                  maxWidth: { xs: 180, sm: 280, md: 420, lg: 560 },
                   fontSize: { xs: '0.875rem', sm: '0.95rem' },
                   lineHeight: 1.2,
                   transition: 'color 0.15s ease',
@@ -346,7 +356,7 @@ export default function FullScreenPlayerModal({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  maxWidth: { xs: 200, sm: 300, md: 450, lg: 600 },
+                  maxWidth: { xs: 180, sm: 280, md: 420, lg: 560 },
                   transition: 'color 0.15s ease',
                 }}
               >
@@ -355,20 +365,105 @@ export default function FullScreenPlayerModal({
             </Stack>
           </Box>
 
-          {/* Right: Down chevron collapse/minimize modal button */}
-          <IconButton
-            onClick={onClose}
-            size="small"
+          {/* Right: Cast, PiP & Down chevron collapse/minimize modal buttons */}
+          <Stack
+            direction="row"
+            spacing={{ xs: 0.5, sm: 1 }}
             sx={{
-              color: 'text.primary',
-              p: { xs: 0.75, sm: 1 },
-              '&:hover': {
-                color: 'primary.main',
-              },
+              alignItems: 'center',
+              flexShrink: 0,
+              position: 'relative',
+              zIndex: 2,
             }}
           >
-            <KeyboardArrowDownRoundedIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />
-          </IconButton>
+            {/* Cast / Remote Playback */}
+            {onPromptCast && (
+              <Tooltip
+                title={
+                  castError
+                    ? 'Casting Unavailable / Failed'
+                    : isCasting
+                    ? 'Connected to Cast Device'
+                    : 'Cast to Device'
+                }
+                arrow
+              >
+                <IconButton
+                  onClick={onPromptCast}
+                  size="small"
+                  sx={{
+                    color: castError
+                      ? 'error.main'
+                      : isCasting
+                      ? 'primary.main'
+                      : 'text.secondary',
+                    p: { xs: 0.75, sm: 1 },
+                    animation: castError ? 'castShakeError 0.45s ease-in-out' : 'none',
+                    '@keyframes castShakeError': {
+                      '0%, 100%': { transform: 'translateX(0)' },
+                      '25%': { transform: 'translateX(-4px)' },
+                      '50%': { transform: 'translateX(4px)' },
+                      '75%': { transform: 'translateX(-2px)' },
+                    },
+                    filter: castError ? 'drop-shadow(0 0 6px rgba(244, 67, 54, 0.75))' : 'none',
+                    transition: 'color 0.2s ease, filter 0.2s ease',
+                    '&:hover': {
+                      color: castError
+                        ? 'error.dark'
+                        : isCasting
+                        ? 'primary.main'
+                        : 'text.primary',
+                    },
+                  }}
+                  aria-label="Cast audio"
+                >
+                  {castError ? (
+                    <WarningAmberRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                  ) : isCasting ? (
+                    <CastConnectedRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                  ) : (
+                    <CastRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {/* Picture in Picture (Desktop viewports only) */}
+            {onTogglePip && !isTouch && (
+              <Tooltip title={isPipActive ? 'Exit Picture in Picture' : 'Picture in Picture Mini-Player'} arrow>
+                <IconButton
+                  onClick={onTogglePip}
+                  size="small"
+                  sx={{
+                    display: { xs: 'none', md: 'inline-flex' },
+                    color: isPipActive ? 'primary.main' : 'text.secondary',
+                    p: { xs: 0.75, sm: 1 },
+                    '&:hover': {
+                      color: isPipActive ? 'primary.main' : 'text.primary',
+                    },
+                  }}
+                  aria-label="Picture in Picture"
+                >
+                  <PictureInPictureAltRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {/* Down chevron collapse/minimize modal button */}
+            <IconButton
+              onClick={onClose}
+              size="small"
+              sx={{
+                color: 'text.primary',
+                p: { xs: 0.75, sm: 1 },
+                '&:hover': {
+                  color: 'primary.main',
+                },
+              }}
+            >
+              <KeyboardArrowDownRoundedIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />
+            </IconButton>
+          </Stack>
         </Box>
 
         {/* Center Artwork Hero */}
@@ -458,8 +553,8 @@ export default function FullScreenPlayerModal({
             <Box sx={{ minWidth: 0, flexGrow: 1 }}>
               <Typography
                 variant="h5"
-                fontWeight={800}
                 sx={{
+                  fontWeight: 800,
                   color: 'text.primary',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -639,7 +734,12 @@ export default function FullScreenPlayerModal({
               sx={{
                 color: isShuffle ? 'primary.main' : 'text.secondary',
                 p: { xs: 1.25, sm: 1.5 },
-                '&:hover': { color: 'text.primary' },
+                '@media (hover: hover)': {
+                  '&:hover': { color: isShuffle ? 'primary.main' : 'text.primary' },
+                },
+                '&:active': {
+                  transform: 'scale(0.92)',
+                },
               }}
             >
               <ShuffleRoundedIcon sx={{ fontSize: { xs: 26, sm: 30 } }} />
@@ -703,7 +803,12 @@ export default function FullScreenPlayerModal({
               sx={{
                 color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
                 p: { xs: 1.25, sm: 1.5 },
-                '&:hover': { color: 'text.primary' },
+                '@media (hover: hover)': {
+                  '&:hover': { color: repeatMode !== 'off' ? 'primary.main' : 'text.primary' },
+                },
+                '&:active': {
+                  transform: 'scale(0.92)',
+                },
               }}
             >
               {repeatMode === 'one' ? (
@@ -806,8 +911,8 @@ export default function FullScreenPlayerModal({
           >
             <Typography
               variant="h5"
-              fontWeight={800}
               sx={{
+                fontWeight: 800,
                 color: 'text.primary',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -884,7 +989,12 @@ export default function FullScreenPlayerModal({
                 sx={{
                   color: isShuffle ? 'primary.main' : 'text.secondary',
                   p: 0.8,
-                  '&:hover': { color: 'text.primary' },
+                  '@media (hover: hover)': {
+                    '&:hover': { color: isShuffle ? 'primary.main' : 'text.primary' },
+                  },
+                  '&:active': {
+                    transform: 'scale(0.92)',
+                  },
                 }}
               >
                 <ShuffleRoundedIcon sx={{ fontSize: 22 }} />
@@ -948,7 +1058,12 @@ export default function FullScreenPlayerModal({
                 sx={{
                   color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
                   p: 0.8,
-                  '&:hover': { color: 'text.primary' },
+                  '@media (hover: hover)': {
+                    '&:hover': { color: repeatMode !== 'off' ? 'primary.main' : 'text.primary' },
+                  },
+                  '&:active': {
+                    transform: 'scale(0.92)',
+                  },
                 }}
               >
                 {repeatMode === 'one' ? (

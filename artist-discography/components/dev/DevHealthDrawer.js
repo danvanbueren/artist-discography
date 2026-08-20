@@ -37,7 +37,7 @@ export default function DevHealthDrawer({ health, open, onClose }) {
     >
       <Stack spacing={2}>
         <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
             Dev Data Health Report
           </Typography>
           <IconButton onClick={onClose} size="small" aria-label="Close Health Report">
@@ -57,7 +57,7 @@ export default function DevHealthDrawer({ health, open, onClose }) {
 
         {issues.length > 0 && (
           <Box>
-            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
               Issues / Repairs Log ({issues.length}):
             </Typography>
             <Box component="ul" sx={{ pl: 2, m: 0 }}>

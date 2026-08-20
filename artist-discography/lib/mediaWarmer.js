@@ -236,6 +236,21 @@ export async function warmAllArtistMedia(artistData = null) {
     })
   }
 
+  // Ensure favicon suite is primed if custom logo is present
+  try {
+    const dataDir = path.join(process.cwd(), 'data')
+    const { findLogoFile, generateFaviconSuite } = await import('./logoUtils')
+    const customLogo = findLogoFile(dataDir)
+    if (customLogo) {
+      const faviconsDir = path.join(dataDir, 'cache', 'favicons')
+      if (!fs.existsSync(faviconsDir) || fs.readdirSync(faviconsDir).length === 0) {
+        await generateFaviconSuite(customLogo)
+      }
+    }
+  } catch (favErr) {
+    console.warn('Notice: Favicon priming during media warming:', favErr.message)
+  }
+
   return {
     imagesChecked: images.length,
     imagesWarmed,

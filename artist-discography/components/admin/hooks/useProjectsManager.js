@@ -29,6 +29,8 @@ export function useProjectsManager({
   const [type, setType] = useState('Single')
   const [artist, setArtist] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [visibility, setVisibility] = useState('public')
+  const [copyright, setCopyright] = useState('cleared')
   const [coverFile, setCoverFile] = useState(null)
   const [coverPreview, setCoverPreview] = useState(null)
   const [tracks, setTracks] = useState([createEmptyTrack()])
@@ -38,6 +40,8 @@ export function useProjectsManager({
   const [editType, setEditType] = useState('Single')
   const [editArtist, setEditArtist] = useState('')
   const [editDate, setEditDate] = useState('')
+  const [editVisibility, setEditVisibility] = useState('public')
+  const [editCopyright, setEditCopyright] = useState('cleared')
   const [editCoverFile, setEditCoverFile] = useState(null)
   const [editCoverPreview, setEditCoverPreview] = useState(null)
   const [editTracks, setEditTracks] = useState([])
@@ -59,6 +63,8 @@ export function useProjectsManager({
   const typeRef = useRef(type)
   const artistRef = useRef(artist)
   const dateRef = useRef(date)
+  const visibilityRef = useRef(visibility)
+  const copyrightRef = useRef(copyright)
   const coverFileRef = useRef(coverFile)
   const tracksRef = useRef(tracks)
 
@@ -66,6 +72,8 @@ export function useProjectsManager({
   const editTypeRef = useRef(editType)
   const editArtistRef = useRef(editArtist)
   const editDateRef = useRef(editDate)
+  const editVisibilityRef = useRef(editVisibility)
+  const editCopyrightRef = useRef(editCopyright)
   const editCoverFileRef = useRef(editCoverFile)
   const editTracksRef = useRef(editTracks)
 
@@ -73,6 +81,8 @@ export function useProjectsManager({
   useEffect(() => { typeRef.current = type }, [type])
   useEffect(() => { artistRef.current = artist }, [artist])
   useEffect(() => { dateRef.current = date }, [date])
+  useEffect(() => { visibilityRef.current = visibility }, [visibility])
+  useEffect(() => { copyrightRef.current = copyright }, [copyright])
   useEffect(() => { coverFileRef.current = coverFile }, [coverFile])
   useEffect(() => { tracksRef.current = tracks }, [tracks])
 
@@ -80,6 +90,8 @@ export function useProjectsManager({
   useEffect(() => { editTypeRef.current = editType }, [editType])
   useEffect(() => { editArtistRef.current = editArtist }, [editArtist])
   useEffect(() => { editDateRef.current = editDate }, [editDate])
+  useEffect(() => { editVisibilityRef.current = editVisibility }, [editVisibility])
+  useEffect(() => { editCopyrightRef.current = editCopyright }, [editCopyright])
   useEffect(() => { editCoverFileRef.current = editCoverFile }, [editCoverFile])
   useEffect(() => { editTracksRef.current = editTracks }, [editTracks])
 
@@ -134,6 +146,8 @@ export function useProjectsManager({
     setEditType(proj.type || 'Single')
     setEditArtist(resolveOverrideArtist(proj.artist, primaryName))
     setEditDate(proj.date || new Date().toISOString().split('T')[0])
+    setEditVisibility(proj.visibility || 'public')
+    setEditCopyright(proj.copyright || 'cleared')
     setEditCoverFile(null)
     setEditCoverPreview(proj.cover || null)
     setEditTracks(formattedTracks)
@@ -142,6 +156,8 @@ export function useProjectsManager({
     editTypeRef.current = proj.type || 'Single'
     editArtistRef.current = resolveOverrideArtist(proj.artist, primaryName)
     editDateRef.current = proj.date || new Date().toISOString().split('T')[0]
+    editVisibilityRef.current = proj.visibility || 'public'
+    editCopyrightRef.current = proj.copyright || 'cleared'
     editCoverFileRef.current = null
     editTracksRef.current = formattedTracks
   }, [projectsList, artistData?.name, defaultArtistName, artistNameInputRef, clearPendingAutoSave])
@@ -156,6 +172,8 @@ export function useProjectsManager({
     const primaryName = (artistNameInputRef?.current || artistData?.name || defaultArtistName).trim()
     setArtist(primaryName)
     setDate(new Date().toISOString().split('T')[0])
+    setVisibility('public')
+    setCopyright('cleared')
     setCoverFile(null)
     setCoverPreview(null)
     const initialTracks = [createEmptyTrack()]
@@ -165,6 +183,8 @@ export function useProjectsManager({
     typeRef.current = 'Single'
     artistRef.current = primaryName
     dateRef.current = new Date().toISOString().split('T')[0]
+    visibilityRef.current = 'public'
+    copyrightRef.current = 'cleared'
     coverFileRef.current = null
     tracksRef.current = initialTracks
   }, [artistData?.name, defaultArtistName, artistNameInputRef, clearPendingAutoSave])
@@ -271,6 +291,8 @@ export function useProjectsManager({
       formData.append('type', currentType)
       formData.append('artist', currentArtist?.trim() || defaultArtistName)
       formData.append('date', currentDate)
+      formData.append('visibility', visibilityRef.current || 'public')
+      formData.append('copyright', copyrightRef.current || 'cleared')
 
       if (currentCoverFile) {
         formData.append('coverFile', currentCoverFile)
@@ -382,6 +404,8 @@ export function useProjectsManager({
       formData.append('type', currentType)
       formData.append('artist', currentArtist.trim())
       formData.append('date', currentDate)
+      formData.append('visibility', editVisibilityRef.current || 'public')
+      formData.append('copyright', editCopyrightRef.current || 'cleared')
 
       if (currentCoverFile) {
         formData.append('coverFile', currentCoverFile)
@@ -827,6 +851,12 @@ export function useProjectsManager({
     date,
     setDate,
     dateRef,
+    visibility,
+    setVisibility,
+    visibilityRef,
+    copyright,
+    setCopyright,
+    copyrightRef,
     coverFile,
     setCoverFile,
     coverFileRef,
@@ -847,6 +877,12 @@ export function useProjectsManager({
     editDate,
     setEditDate,
     editDateRef,
+    editVisibility,
+    setEditVisibility,
+    editVisibilityRef,
+    editCopyright,
+    setEditCopyright,
+    editCopyrightRef,
     editCoverFile,
     setEditCoverFile,
     editCoverFileRef,

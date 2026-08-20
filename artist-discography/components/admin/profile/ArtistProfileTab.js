@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Box,
   Grid,
@@ -11,6 +12,8 @@ import {
   Button,
   Chip,
   LinearProgress,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import PersonIcon from '@mui/icons-material/Person'
 import LinkIcon from '@mui/icons-material/Link'
@@ -20,10 +23,14 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ImageIcon from '@mui/icons-material/Image'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import LockRoundedIcon from '@mui/icons-material/LockRounded'
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS, SOCIAL_KEYS } from '../adminConstants'
 import { SOCIAL_ICONS } from '../../artist/ArtistHero'
-import { getMediaThumbnailUrl } from '../adminUtils'
+import { getMediaThumbnailUrl, buildPlatformSearchUrl } from '../adminUtils'
 
 export default function ArtistProfileTab({
   artistNameInput,
@@ -38,6 +45,9 @@ export default function ArtistProfileTab({
   artistSocials,
   setArtistSocials,
   artistSocialsRef,
+  privateAccessCodeInput = '',
+  setPrivateAccessCodeInput,
+  privateAccessCodeInputRef,
   dirtyFields,
   savedFields,
   markFieldDirty,
@@ -50,6 +60,7 @@ export default function ArtistProfileTab({
   onResetLogo,
   mediaJobs,
 }) {
+  const [showCode, setShowCode] = useState(false)
   const logoJob = mediaJobs?.getJobForFile?.('logo') || null
   return (
     <Box
@@ -308,6 +319,69 @@ export default function ArtistProfileTab({
                   Custom logos saved to <code>data/logo.*</code> automatically override the default logo in navigation headers, dynamic theme gradient filters, and share metadata.
                 </Typography>
               </Box>
+
+              <Divider sx={{ my: 1 }} />
+
+              {/* Private Access Code Configuration */}
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    mb: 1.5,
+                  }}
+                >
+                  <LockRoundedIcon color="primary" sx={{ fontSize: 20 }} /> Private Access Code
+                </Typography>
+                <AdminTextInput
+                  label="Access Code"
+                  type={showCode ? 'text' : 'password'}
+                  fullWidth
+                  placeholder="e.g. access123"
+                  value={privateAccessCodeInput}
+                  onChange={(val) => {
+                    if (setPrivateAccessCodeInput) setPrivateAccessCodeInput(val)
+                    if (privateAccessCodeInputRef) privateAccessCodeInputRef.current = val
+                    markFieldDirty('privateAccessCode', executeSaveArtist)
+                  }}
+                  isDirty={dirtyFields.has('privateAccessCode')}
+                  isSaved={savedFields.has('privateAccessCode')}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={() => setShowCode((prev) => !prev)}
+                            edge="end"
+                            sx={{ color: 'text.secondary' }}
+                          >
+                            {showCode ? (
+                              <VisibilityOffRoundedIcon fontSize="small" />
+                            ) : (
+                              <VisibilityRoundedIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                    display: 'block',
+                    mt: 1,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Visitors entering this code from Navbar &rarr; Settings unlock private tracks and audio streaming for uncleared releases.
+                </Typography>
+              </Box>
             </Stack>
           </Paper>
         </Grid>
@@ -376,6 +450,32 @@ export default function ArtistProfileTab({
                                 />
                               </InputAdornment>
                             ) : null,
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Tooltip title={`Search for artist on ${label} (or Google)`} arrow>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => {
+                                      const searchUrl = buildPlatformSearchUrl(
+                                        key,
+                                        artistNameInput,
+                                        '',
+                                        ''
+                                      )
+                                      window.open(searchUrl, '_blank', 'noopener,noreferrer')
+                                    }}
+                                    sx={{
+                                      color: 'text.secondary',
+                                      p: 0.5,
+                                      '&:hover': { color: 'secondary.main' },
+                                    }}
+                                    aria-label={`Search ${label}`}
+                                  >
+                                    <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </InputAdornment>
+                            ),
                           },
                         }}
                       />

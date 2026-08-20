@@ -95,8 +95,8 @@ export default function MobileMiniPlayer({
         >
           <Typography
             variant="subtitle2"
-            fontWeight={700}
             sx={{
+              fontWeight: 700,
               fontSize: '0.875rem',
               lineHeight: 1.2,
               color: 'text.primary',

@@ -13,6 +13,8 @@ import {
   Paper,
   Stack,
   Typography,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
@@ -33,6 +35,8 @@ export default function PlaybackQueueDialog({
   onRemoveFromAutoplay,
   onPlayQueuedTrack,
 }) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const isTouch = useTouchDevice()
   const contentRef = useRef(null)
 
@@ -356,18 +360,19 @@ export default function PlaybackQueueDialog({
     <Dialog
       open={open}
       onClose={onClose}
+      fullScreen={isMobile}
       maxWidth="sm"
       fullWidth
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 4,
-            p: 1,
-            maxHeight: '80vh',
+            borderRadius: isMobile ? 0 : 4,
+            p: isMobile ? 0 : 1,
+            maxHeight: isMobile ? '100dvh' : '80vh',
             bgcolor: 'background.paper',
             backgroundImage: 'none',
             boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4)',
-            border: '1px solid',
+            border: isMobile ? 'none' : '1px solid',
             borderColor: 'divider',
           },
         },
@@ -388,7 +393,7 @@ export default function PlaybackQueueDialog({
           sx={{ alignItems: 'center' }}
         >
           <QueueMusicRoundedIcon sx={{ color: 'common.white' }} />
-          <Typography variant="h6" fontWeight={800}>
+          <Typography variant="h6" sx={{ fontWeight: 800 }}>
             Queue
           </Typography>
         </Stack>
@@ -412,7 +417,7 @@ export default function PlaybackQueueDialog({
 
         {/* SECTION 1: QUEUE */}
         <Box sx={{ mb: 3 }} data-queue-section="queue">
-          <Typography variant="subtitle1" fontWeight={700} color="primary.main" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
             Queue ({manualQueue.length})
           </Typography>
 
@@ -654,7 +659,7 @@ export default function PlaybackQueueDialog({
 
         {/* SECTION 2: AUTOPLAY */}
         <Box data-queue-section="autoplay">
-          <Typography variant="subtitle1" fontWeight={700} color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.secondary', mb: 1 }}>
             Autoplay
           </Typography>
 

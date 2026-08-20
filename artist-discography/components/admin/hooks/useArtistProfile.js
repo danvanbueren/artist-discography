@@ -9,6 +9,7 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
   const [artistBioInput, setArtistBioInput] = useState(() => artistData?.bio || '')
   const [artistPlatforms, setArtistPlatforms] = useState(() => artistData?.links?.platforms || {})
   const [artistSocials, setArtistSocials] = useState(() => artistData?.links?.socials || {})
+  const [privateAccessCodeInput, setPrivateAccessCodeInput] = useState(() => initialData?.privateAccessCode || '')
 
   // Logo State
   const [logoInfo, setLogoInfo] = useState(() => initialData?.logoInfo ?? {
@@ -26,6 +27,7 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
   const artistBioInputRef = useRef(artistBioInput)
   const artistPlatformsRef = useRef(artistPlatforms)
   const artistSocialsRef = useRef(artistSocials)
+  const privateAccessCodeInputRef = useRef(privateAccessCodeInput)
 
   useEffect(() => {
     artistNameInputRef.current = artistNameInput
@@ -43,6 +45,10 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
     artistSocialsRef.current = artistSocials
   }, [artistSocials])
 
+  useEffect(() => {
+    privateAccessCodeInputRef.current = privateAccessCodeInput
+  }, [privateAccessCodeInput])
+
   // Sync initialData when passed
   useEffect(() => {
     if (initialData?.artist) {
@@ -51,6 +57,9 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
       setArtistBioInput(initialData.artist.bio || '')
       setArtistPlatforms(initialData.artist.links?.platforms || {})
       setArtistSocials(initialData.artist.links?.socials || {})
+    }
+    if (initialData?.privateAccessCode !== undefined) {
+      setPrivateAccessCodeInput(initialData.privateAccessCode || '')
     }
     if (initialData?.logoInfo) {
       setLogoInfo(initialData.logoInfo)
@@ -68,6 +77,7 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
           bio: artistBioInputRef.current?.trim?.() || '',
           platforms: artistPlatformsRef.current,
           socials: artistSocialsRef.current,
+          privateAccessCode: privateAccessCodeInputRef.current?.trim?.() || '',
         }),
         signal: AbortSignal.timeout(20000),
       })
@@ -161,6 +171,9 @@ export function useArtistProfile(initialData = {}, defaultArtistName = 'Artist',
     artistSocials,
     setArtistSocials,
     artistSocialsRef,
+    privateAccessCodeInput,
+    setPrivateAccessCodeInput,
+    privateAccessCodeInputRef,
     logoInfo,
     setLogoInfo,
     logoPreview,

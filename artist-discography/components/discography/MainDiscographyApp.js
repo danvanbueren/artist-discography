@@ -26,9 +26,13 @@ import ArtistHero, { getSortedActiveLinks } from '../artist/ArtistHero'
 import CompactArtistHeader from '../layout/CompactArtistHeader'
 import FloatingNavBar from '../layout/FloatingNavBar'
 import PlatformSelectorModal, { STREAMING_PLATFORMS } from './PlatformSelectorModal'
+import PrivateAccessModal from '../auth/PrivateAccessModal'
 import ProjectCard from './ProjectCard'
 import AudioPlayerBar from '../player/AudioPlayerBar'
 import AudioQualityModal from '../player/AudioQualityModal'
+import OnboardingPlatformBanner from './OnboardingPlatformBanner'
+import OnboardingThemeBanner from './OnboardingThemeBanner'
+import PlaybackQualityBanner from '../player/PlaybackQualityBanner'
 import DevHealthDrawer from '../dev/DevHealthDrawer'
 import SubduedText from '../ui/SubduedText'
 import AmbientBackground from '../layout/AmbientBackground'
@@ -100,8 +104,72 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     })
   }, [])
 
+  // Onboarding sequence progression state
+  const [platformOnboardingCompleted, setPlatformOnboardingCompleted] = useState(false)
+
+  // Private Access State (Session cookie / localStorage)
+  const [isPrivateAccessAuthenticated, setIsPrivateAccessAuthenticated] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return (
+          getCookie('private_access_auth') === 'true' ||
+          localStorage.getItem('authenticated_private_access') === 'true'
+        )
+      } catch {}
+    }
+    return false
+  })
+  const [privateAccessModalOpen, setPrivateAccessModalOpen] = useState(false)
+
+  // Verify private access state on mount
+  useEffect(() => {
+    fetch('/api/auth/private-access')
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData && typeof resData.authenticated === 'boolean') {
+          setIsPrivateAccessAuthenticated(resData.authenticated)
+          try {
+            if (resData.authenticated) {
+              localStorage.setItem('authenticated_private_access', 'true')
+            } else {
+              localStorage.removeItem('authenticated_private_access')
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   const artist = data?.artist ?? {}
-  const projects = useMemo(() => data?.projects ?? [], [data])
+  const rawProjects = useMemo(() => data?.projects ?? [], [data])
+
+  // Contextually filter and gate projects based on private access authorization
+  const projects = useMemo(() => {
+    return rawProjects
+      .filter((proj) => {
+        if (proj.visibility === 'private' && !isPrivateAccessAuthenticated) {
+          return false
+        }
+        return true
+      })
+      .map((proj) => {
+        const isUncleared = proj.copyright === 'uncleared'
+        if (isUncleared && !isPrivateAccessAuthenticated) {
+          // Mask audio streams from unauthenticated visitors
+          const maskedTracks = (proj.tracks ?? []).map((t) => ({
+            ...t,
+            hasAudio: false,
+            audioUrl: '',
+            audio: '',
+          }))
+          return {
+            ...proj,
+            tracks: maskedTracks,
+          }
+        }
+        return proj
+      })
+  }, [rawProjects, isPrivateAccessAuthenticated])
 
   // Resolve initial project & track from initialSlug or window.location
   const initialResolved = useMemo(() => {
@@ -711,20 +779,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     const projName = parentProj?.name || track.project || ''
     const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
 
-    const isSameTrack = playingTrack?.name === track.name
+    const isSameTrack = (playingTrack?.name || '').toLowerCase() === (track.name || '').toLowerCase()
 
-    if (isSameTrack) {
-      if (options?.touchMode) {
-        if (isPlaying) {
-          setRestartCount((c) => c + 1)
-        } else {
-          setIsPlaying(true)
-        }
-      } else if (options?.restart || options?.restartIfSame) {
-        setIsPlaying(true)
+    if (isSameTrack && isPlaying) {
+      if (options?.touchMode || options?.restart || options?.restartIfSame) {
         setRestartCount((c) => c + 1)
       } else {
-        setIsPlaying((prev) => !prev)
+        setIsPlaying(false)
       }
     } else {
       const trackWithProject = {
@@ -741,7 +802,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       // Direct track play clears manual queue immediately
       setManualQueue([])
 
-      // User physically clicked PLAY on a new track -> populate autoplay queue with tracks that follow it
+      // User physically clicked PLAY -> populate autoplay queue with tracks that follow it in current view
       const currIndex = (displayedDiscographyTracks || []).findIndex(
         (item) => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase()
       )
@@ -750,6 +811,10 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
         setAutoplayTracks(isShuffle ? shuffleArray(remaining) : remaining)
       } else {
         setAutoplayTracks([])
+      }
+
+      if (isSameTrack && (options?.restart || options?.restartIfSame)) {
+        setRestartCount((c) => c + 1)
       }
     }
   }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
@@ -1293,6 +1358,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
               audioQuality={audioQuality}
               isStuttering={isPlaybackStuttering}
               onOpenQualityModal={() => setQualityModalOpen(true)}
+              isPrivateAuthenticated={isPrivateAccessAuthenticated}
+              onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
               showScrollTop={showScrollTop}
               onScrollToTop={scrollToTop}
             />
@@ -1336,6 +1403,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
                   onSelectTrackRow={(track) => selectTrackOnProjectPage(selectedProject, track)}
                   onSelectTrackTitle={(track) => selectTrackOnProjectPage(selectedProject, track)}
                   selectedPlatform={selectedPlatform}
+                  isPrivateAuthenticated={isPrivateAccessAuthenticated}
                 />
               </Stack>
             ) : (
@@ -1371,6 +1439,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
                           onSelectTrackRow={null}
                           onSelectTrackTitle={(track) => navigateToTrack(proj, track)}
                           selectedPlatform={selectedPlatform}
+                          isPrivateAuthenticated={isPrivateAccessAuthenticated}
                         />
                       </Box>
                     )
@@ -1380,6 +1449,30 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             )}
           </Container>
         </Box>
+
+        {/* Private Access Authentication Modal */}
+        <PrivateAccessModal
+          open={privateAccessModalOpen}
+          onClose={() => setPrivateAccessModalOpen(false)}
+          isAuthenticated={isPrivateAccessAuthenticated}
+          onAuthenticate={() => {
+            setIsPrivateAccessAuthenticated(true)
+            try {
+              localStorage.setItem('authenticated_private_access', 'true')
+            } catch {}
+          }}
+          onLock={() => {
+            setIsPrivateAccessAuthenticated(false)
+            try {
+              localStorage.removeItem('authenticated_private_access')
+            } catch {}
+            if (playingTrack) {
+              setPlayingTrack(null)
+              setIsPlaying(false)
+            }
+          }}
+          onShowToast={showToast}
+        />
 
         {/* Preferred Platform Selector Modal */}
         <PlatformSelectorModal
@@ -1397,6 +1490,28 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           activeQuality={audioQuality}
           isStuttering={isPlaybackStuttering}
           onSelectQuality={handleSelectQuality}
+        />
+
+        {/* Onboarding Platform Guidance Banner (Step 1) */}
+        <OnboardingPlatformBanner
+          onOpenPlatformModal={() => setPlatformModalOpen(true)}
+          isPlayerOpen={Boolean(playingTrack)}
+          onDismiss={() => setPlatformOnboardingCompleted(true)}
+        />
+
+        {/* Onboarding Theme Guidance Banner (Step 2) */}
+        <OnboardingThemeBanner
+          darkMode={darkMode}
+          onToggleTheme={handleToggleTheme}
+          isPlayerOpen={Boolean(playingTrack)}
+          readyToShow={platformOnboardingCompleted}
+        />
+
+        {/* Audio Playback Quality Guidance Banner */}
+        <PlaybackQualityBanner
+          isStuttering={isPlaybackStuttering}
+          onOpenQualityModal={() => setQualityModalOpen(true)}
+          isPlayerOpen={Boolean(playingTrack)}
         />
 
         {/* Contained Floating Audio Player Bar */}

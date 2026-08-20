@@ -59,6 +59,10 @@ export async function POST(request) {
       fullJsonData.artist.links.socials = { ...(fullJsonData.artist.links.socials || {}), ...socials }
     }
 
+    if (body.privateAccessCode !== undefined) {
+      fullJsonData.privateAccessCode = String(body.privateAccessCode || '').trim()
+    }
+
     const saveResult = saveArtistData(fullJsonData)
     if (!saveResult.success) {
       return NextResponse.json(

@@ -175,8 +175,8 @@ export default function DesktopPlayerBar({
             <Typography
               className="track-title-text"
               variant="subtitle1"
-              fontWeight={700}
               sx={{
+                fontWeight: 700,
                 fontSize: { xs: '0.95rem', sm: '1.05rem' },
                 lineHeight: 1.2,
                 color: 'text.primary',
@@ -246,8 +246,14 @@ export default function DesktopPlayerBar({
             size="small"
             onClick={onToggleShuffle}
             sx={{
-              color: isShuffle ? 'primary.main' : 'text.primary',
+              color: isShuffle ? 'primary.main' : 'text.secondary',
               p: 0.8,
+              '@media (hover: hover)': {
+                '&:hover': { color: isShuffle ? 'primary.main' : 'text.primary' },
+              },
+              '&:active': {
+                transform: 'scale(0.92)',
+              },
             }}
           >
             <ShuffleRoundedIcon fontSize="small" />
@@ -260,6 +266,8 @@ export default function DesktopPlayerBar({
             sx={{
               color: 'text.primary',
               p: 0.8,
+              '&:hover': { transform: 'scale(1.08)' },
+              transition: 'transform 0.15s ease',
             }}
           >
             <SkipPreviousRoundedIcon fontSize="small" />
@@ -295,6 +303,8 @@ export default function DesktopPlayerBar({
             sx={{
               color: 'text.primary',
               p: 0.8,
+              '&:hover': { transform: 'scale(1.08)' },
+              transition: 'transform 0.15s ease',
             }}
           >
             <SkipNextRoundedIcon fontSize="small" />
@@ -305,8 +315,14 @@ export default function DesktopPlayerBar({
             size="small"
             onClick={onCycleRepeat}
             sx={{
-              color: repeatMode !== 'off' ? 'primary.main' : 'text.primary',
+              color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
               p: 0.8,
+              '@media (hover: hover)': {
+                '&:hover': { color: repeatMode !== 'off' ? 'primary.main' : 'text.primary' },
+              },
+              '&:active': {
+                transform: 'scale(0.92)',
+              },
             }}
           >
             {repeatMode === 'one' ? (

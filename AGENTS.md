@@ -181,6 +181,15 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Album Art Consistency**: All album art across admin panels, cards, headers, and media players must strictly enforce a 1:1 square aspect ratio (`aspectRatio: '1 / 1'`, `objectFit: 'cover'`) and request scaled thumbnail variants (`?w=80` or `?w=160`) for preview rendering.
 - **Audio Element Lifecycle & Memory Management**: Never instantiate unmanaged, disposable `new Audio()` elements with `preload = 'auto'` without an explicit teardown mechanism. In Chromium/Blink, media elements retain native demuxer buffers and decoded audio streams unless explicitly unloaded via `audio.pause(); audio.removeAttribute('src'); audio.load()`. Preloading audio for upcoming queue tracks must be bounded to a single upcoming track in a managed slot, and cleared on track switch, player close, or component unmount.
 
+### Private Access Gating & Permissions Security
+- **Defense in Depth**: Gated private projects and uncleared audio streams must be secured both in frontend state (omitting private releases, masking `hasAudio`/`audioUrl` on uncleared releases) and at the HTTP streaming endpoint (`/api/audio/[...path]` returning 403 Forbidden for unauthenticated requests).
+- **Public Frontend Cleanliness**: Never display "locked" text, warnings, or padlock icons to unauthenticated public visitors. Keep the interface inviting and frictionless, only displaying subtle `UNLOCKED` badges when an authorized user enters the private access code.
+
+### Zero-Data-Loss Principle & Atomic Disk Operations
+- **Atomic Writes**: Always write modified JSON data to an adjacent temporary file (`.tmp.<pid>`) before atomically swapping it via `fs.renameSync`. This prevents partial write corruption during server crashes or process kills.
+- **Corrupted File Quarantine**: If `artist-data.json` is unparseable and heuristic syntax recovery fails, NEVER overwrite it with default scaffold data. Immediately copy/rename the corrupted file to `data/artist-data.corrupted-<timestamp>.json` before creating a working fallback.
+- **Automated Rolling Backups**: Maintain automated timestamped snapshots in `data/backups/artist-data-<timestamp>.json` before any destructive write operation.
+
 ---
 
 ## Project Workflows & Processes

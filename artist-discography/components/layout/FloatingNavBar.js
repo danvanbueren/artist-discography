@@ -33,6 +33,8 @@ import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
 import HighQualityRoundedIcon from '@mui/icons-material/HighQualityRounded'
 import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded'
+import LockRoundedIcon from '@mui/icons-material/LockRounded'
+import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded'
 import { SOCIAL_ICONS } from '../artist/ArtistHero'
 
 export const FILTER_OPTIONS = [
@@ -131,6 +133,8 @@ export default function FloatingNavBar({
   audioQuality = '320k',
   isStuttering = false,
   onOpenQualityModal,
+  isPrivateAuthenticated = false,
+  onOpenPrivateAccessModal,
   showScrollTop = false,
   onScrollToTop,
 }) {
@@ -875,6 +879,40 @@ export default function FloatingNavBar({
               }}
             >
               {darkMode ? 'Light Theme' : 'Dark Theme'}
+            </Button>
+
+            <Button
+              size="medium"
+              variant="outlined"
+              onClick={() => {
+                if (settingsDrag.hasDraggedRef.current) return
+                if (onOpenPrivateAccessModal) onOpenPrivateAccessModal()
+              }}
+              startIcon={
+                isPrivateAuthenticated ? (
+                  <LockOpenRoundedIcon fontSize="small" />
+                ) : (
+                  <LockRoundedIcon fontSize="small" />
+                )
+              }
+              sx={{
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                py: 1,
+                px: 2,
+                color: isPrivateAuthenticated ? 'success.main' : 'text.primary',
+                borderColor: isPrivateAuthenticated ? 'success.main' : 'divider',
+                '&:hover': {
+                  borderColor: isPrivateAuthenticated ? 'success.main' : 'text.primary',
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
+              {isPrivateAuthenticated ? 'Private: Unlocked' : 'Private Access'}
             </Button>
           </Box>
         )}

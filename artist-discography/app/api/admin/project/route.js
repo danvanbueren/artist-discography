@@ -96,6 +96,8 @@ export async function POST(request) {
     const rawArtist = String(formData.get('artist') || '').trim()
     const artist = rawArtist || primaryArtistName
     const date = String(formData.get('date') || new Date().toISOString().split('T')[0]).trim()
+    const visibility = String(formData.get('visibility') || '').trim().toLowerCase() === 'private' ? 'private' : 'public'
+    const copyright = String(formData.get('copyright') || '').trim().toLowerCase() === 'uncleared' ? 'uncleared' : 'cleared'
     const coverUrl = String(formData.get('coverUrl') || '').trim()
     const tracksRaw = String(formData.get('tracks') || '[]')
 
@@ -374,6 +376,8 @@ export async function POST(request) {
       type,
       artist,
       date,
+      visibility,
+      copyright,
       ...(coverProp ? { cover: coverProp } : {}),
       tracks: tracksToSave,
     }

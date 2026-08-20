@@ -15,6 +15,10 @@ const nextConfig = {
         source: '/_sys/_dev',
         destination: '/sys/dev',
       },
+      {
+        source: '/manifest.json',
+        destination: '/manifest.webmanifest',
+      },
     ]
   },
   async headers() {

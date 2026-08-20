@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import {
   Paper,
   Box,
@@ -10,10 +11,17 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Select,
+  MenuItem,
+  IconButton,
+  Tooltip,
+  Stack,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import AlbumIcon from '@mui/icons-material/Album'
 import SyncIcon from '@mui/icons-material/Sync'
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import { getMediaThumbnailUrl } from '../adminUtils'
 
 export default function ProjectSidebarList({
@@ -28,6 +36,48 @@ export default function ProjectSidebarList({
   tracks = [],
   coverPreview,
 }) {
+  const [sidebarSortBy, setSidebarSortBy] = useState('date')
+  const [sidebarSortAsc, setSidebarSortAsc] = useState(false)
+
+  const sortedProjectsWithIndex = useMemo(() => {
+    const indexed = projectsList.map((project, originalIndex) => ({
+      project,
+      originalIndex,
+    }))
+
+    return indexed.sort((a, b) => {
+      if (sidebarSortBy === 'json') {
+        return sidebarSortAsc ? a.originalIndex - b.originalIndex : b.originalIndex - a.originalIndex
+      }
+
+      if (sidebarSortBy === 'date') {
+        const dateA = a.project?.date ? new Date(a.project.date).getTime() || 0 : 0
+        const dateB = b.project?.date ? new Date(b.project.date).getTime() || 0 : 0
+        return sidebarSortAsc ? dateA - dateB : dateB - dateA
+      }
+
+      if (sidebarSortBy === 'title') {
+        const titleA = (a.project?.name || '').toLowerCase()
+        const titleB = (b.project?.name || '').toLowerCase()
+        return sidebarSortAsc ? titleA.localeCompare(titleB) : titleB.localeCompare(titleA)
+      }
+
+      if (sidebarSortBy === 'type') {
+        const typeA = (a.project?.type || '').toLowerCase()
+        const typeB = (b.project?.type || '').toLowerCase()
+        return sidebarSortAsc ? typeA.localeCompare(typeB) : typeB.localeCompare(typeA)
+      }
+
+      if (sidebarSortBy === 'tracks') {
+        const countA = a.project?.tracks?.length || 0
+        const countB = b.project?.tracks?.length || 0
+        return sidebarSortAsc ? countA - countB : countB - countA
+      }
+
+      return 0
+    })
+  }, [projectsList, sidebarSortBy, sidebarSortAsc])
+
   return (
     <Paper
       variant="outlined"
@@ -62,6 +112,7 @@ export default function ProjectSidebarList({
         Add New Project
       </Button>
 
+      {/* Sidebar Header with Releases count, Sorting dropdown and Direction Toggle */}
       <Box
         sx={{
           display: 'flex',
@@ -69,16 +120,56 @@ export default function ProjectSidebarList({
           justifyContent: 'space-between',
           mb: 1.5,
           px: 0.5,
+          gap: 1,
           flexShrink: 0,
         }}
       >
         <Typography
           variant="subtitle2"
-          sx={{ fontWeight: 700, color: 'text.secondary' }}
+          sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}
         >
-          Existing Releases ({projectsList.length})
+          Releases ({projectsList.length})
         </Typography>
-        {dirtyFields?.size > 0 && !isCreatingNew && (
+
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          <Select
+            size="small"
+            value={sidebarSortBy}
+            onChange={(e) => setSidebarSortBy(e.target.value)}
+            sx={{
+              height: 28,
+              fontSize: '0.75rem',
+              borderRadius: 1.5,
+              bgcolor: 'rgba(255, 255, 255, 0.05)',
+              '& .MuiSelect-select': { py: 0.5, px: 1 },
+            }}
+          >
+            <MenuItem value="date">Date</MenuItem>
+            <MenuItem value="title">Title</MenuItem>
+            <MenuItem value="type">Type</MenuItem>
+            <MenuItem value="tracks">Tracks</MenuItem>
+            <MenuItem value="json">Raw Order</MenuItem>
+          </Select>
+
+          <Tooltip title={sidebarSortAsc ? 'Ascending' : 'Descending'} arrow>
+            <IconButton
+              size="small"
+              onClick={() => setSidebarSortAsc((prev) => !prev)}
+              sx={{ p: 0.5, color: 'text.secondary' }}
+              aria-label="Toggle sort direction"
+            >
+              {sidebarSortAsc ? (
+                <ArrowUpwardRoundedIcon sx={{ fontSize: 18 }} />
+              ) : (
+                <ArrowDownwardRoundedIcon sx={{ fontSize: 18 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Box>
+
+      {dirtyFields?.size > 0 && !isCreatingNew && (
+        <Box sx={{ mb: 1, px: 0.5 }}>
           <Typography
             variant="caption"
             sx={{
@@ -100,10 +191,10 @@ export default function ProjectSidebarList({
               }}
             />
             {' '}
-            Saving…
+            Saving changes…
           </Typography>
-        )}
-      </Box>
+        </Box>
+      )}
 
       <Box
         sx={{
@@ -201,7 +292,7 @@ export default function ProjectSidebarList({
             </ListItemButton>
           )}
 
-          {projectsList.map((p, idx) => {
+          {sortedProjectsWithIndex.map(({ project: p, originalIndex: idx }) => {
             const hasCover = Boolean(p.cover || p.hasCover)
             const trks = p.tracks ?? []
             const audioCount = trks.filter((t) => Boolean(t.audioUrl || t.hasAudio || t.audio)).length
@@ -324,6 +415,28 @@ export default function ProjectSidebarList({
                             <Chip
                               label="No Links"
                               color="info"
+                              variant="outlined"
+                              size="small"
+                              sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
+                            />
+                          )}
+                        </Box>
+                      )}
+                      {(p.visibility === 'private' || p.copyright === 'uncleared') && (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {p.visibility === 'private' && (
+                            <Chip
+                              label="Private"
+                              color="secondary"
+                              variant="outlined"
+                              size="small"
+                              sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }}
+                            />
+                          )}
+                          {p.copyright === 'uncleared' && (
+                            <Chip
+                              label="Uncleared"
+                              color="default"
                               variant="outlined"
                               size="small"
                               sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}

@@ -1,9 +1,10 @@
 'use client'
 
-import { Box, Stack, Typography, Button, useTheme } from '@mui/material'
+import { Box, Stack, Typography, Button, Tooltip, useTheme } from '@mui/material'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import LinkIcon from '@mui/icons-material/Link'
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
 import SubduedText from '../ui/SubduedText'
 import { SOCIAL_ICONS, getSortedActiveLinks } from '../artist/ArtistHero'
 import { useLogoAnalysis, getLogoFilter } from '../../lib/hooks/useLogoAnalysis'
@@ -41,39 +42,62 @@ export default function CompactArtistHeader({
         textAlign: 'center',
       }}
     >
-      {/* 1. Horizontal Logo & Artist Name Button */}
+      {/* 1. Horizontal Logo & Artist Name Button with Back-To-Home Affordance */}
       <Stack
         direction="row"
-        spacing={{ xs: 2, sm: 3 }}
+        spacing={{ xs: 1.5, sm: 2.5 }}
         onClick={onNavigateHome}
         sx={{
           alignItems: 'center',
           justifyContent: 'center',
           cursor: onNavigateHome ? 'pointer' : 'default',
-          px: { xs: 3, sm: 4.5, md: 6 },
-          py: { xs: 1.75, sm: 2.5, md: 3 },
+          px: { xs: 2.5, sm: 4, md: 5 },
+          py: { xs: 1.5, sm: 2, md: 2.5 },
           borderRadius: 5,
-          opacity: 0.88,
-          bgcolor: 'transparent',
-          border: '1px solid transparent',
-          borderColor: 'transparent',
-          transition: 'transform 0.25s ease, opacity 0.25s ease, background-color 0.25s ease, border-color 0.25s ease',
+          bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+          border: '1px solid',
+          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+          transition: 'all 0.25s ease',
           '&:hover': onNavigateHome
             ? {
-                opacity: 1,
-                transform: 'scale(1.04)',
-                bgcolor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.07)',
                 borderColor: 'primary.main',
-                backdropFilter: 'blur(8px)',
+                transform: 'scale(1.02)',
+                boxShadow: isDarkMode ? '0 8px 24px rgba(0, 0, 0, 0.4)' : '0 8px 24px rgba(0, 0, 0, 0.08)',
               }
             : {},
         }}
       >
+        {onNavigateHome && (
+          <Tooltip title="Return to All Projects" arrow>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: { xs: 32, sm: 40 },
+                height: { xs: 32, sm: 40 },
+                borderRadius: '50%',
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                flexShrink: 0,
+                boxShadow: '0 4px 12px rgba(144, 202, 249, 0.35)',
+                transition: 'transform 0.2s ease',
+                '&:hover': {
+                  transform: 'translateX(-2px)',
+                },
+              }}
+            >
+              <ArrowBackRoundedIcon sx={{ fontSize: { xs: 18, sm: 22 } }} />
+            </Box>
+          </Tooltip>
+        )}
+
         <Box
           aria-label="Artist Logo"
           sx={{
-            height: { xs: 90, sm: 130, md: 170 },
-            maxWidth: { xs: 260, sm: 380, md: 480 },
+            height: { xs: 60, sm: 90, md: 120 },
+            maxWidth: { xs: 180, sm: 260, md: 340 },
             aspectRatio: logoAnalysis?.aspectRatio ? `${logoAnalysis.aspectRatio}` : 'auto',
             flexShrink: 0,
             ...logoGradientSx,
@@ -85,7 +109,7 @@ export default function CompactArtistHeader({
           component="h1"
           sx={{
             fontWeight: 800,
-            fontSize: { xs: '3rem', sm: '4rem', md: '4.75rem' },
+            fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' },
             letterSpacing: '-0.02em',
             fontFamily: 'Roboto, sans-serif',
             ...primaryTextSx,

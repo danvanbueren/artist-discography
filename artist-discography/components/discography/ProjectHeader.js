@@ -17,6 +17,7 @@ import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
+import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded'
 import ProgressiveImage from '../common/ProgressiveImage'
 import { isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
 import SubduedText from '../ui/SubduedText'
@@ -43,6 +44,7 @@ export default function ProjectHeader({
   onSelectProject,
   selectedPlatform,
   isSingleView = false,
+  isPrivateAuthenticated = false,
 }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
@@ -240,8 +242,8 @@ export default function ProjectHeader({
             textAlign: { xs: 'center', sm: 'left' },
           }}
         >
-          {/* Type Badge */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-start' }, width: '100%' }}>
+          {/* Type Badge & Unlocked Status */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: { xs: 'center', sm: 'flex-start' }, width: '100%' }}>
             {type ? (
               <Chip
                 label={type.toUpperCase()}
@@ -266,6 +268,22 @@ export default function ProjectHeader({
                   fontStyle: 'italic',
                   opacity: 0.6,
                   bgcolor: 'action.disabledBackground',
+                  borderRadius: 1,
+                }}
+              />
+            )}
+
+            {isPrivateAuthenticated && (project?.visibility === 'private' || project?.copyright === 'uncleared') && (
+              <Chip
+                icon={<LockOpenRoundedIcon sx={{ fontSize: '13px !important' }} />}
+                label={project?.visibility === 'private' ? 'PRIVATE • UNLOCKED' : 'UNLOCKED'}
+                size="small"
+                color="success"
+                variant="outlined"
+                sx={{
+                  height: 22,
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
                   borderRadius: 1,
                 }}
               />
