@@ -71,7 +71,13 @@ export function useLogoAnalysis(imageSrc) {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          const fallbackData = { isMonochrome: false, isLight: false, isDark: false, aspectRatio, loaded: true }
+          const fallbackData = {
+            isMonochrome: false,
+            isLight: false,
+            isDark: false,
+            aspectRatio,
+            loaded: true,
+          }
           saveCachedLogoAnalysis(imageSrc, fallbackData)
           if (isMounted) setAnalysis(fallbackData)
           return
@@ -107,7 +113,13 @@ export function useLogoAnalysis(imageSrc) {
         }
 
         if (opaquePixelCount === 0) {
-          const fallbackData = { isMonochrome: false, isLight: false, isDark: false, aspectRatio, loaded: true }
+          const fallbackData = {
+            isMonochrome: false,
+            isLight: false,
+            isDark: false,
+            aspectRatio,
+            loaded: true,
+          }
           saveCachedLogoAnalysis(imageSrc, fallbackData)
           if (isMounted) setAnalysis(fallbackData)
           return
@@ -133,7 +145,13 @@ export function useLogoAnalysis(imageSrc) {
           setAnalysis(result)
         }
       } catch (err) {
-        const errorResult = { isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true }
+        const errorResult = {
+          isMonochrome: false,
+          isLight: false,
+          isDark: false,
+          aspectRatio: null,
+          loaded: true,
+        }
         saveCachedLogoAnalysis(imageSrc, errorResult)
         if (isMounted) {
           setAnalysis(errorResult)
@@ -142,7 +160,13 @@ export function useLogoAnalysis(imageSrc) {
     }
 
     img.onerror = () => {
-      const errorResult = { isMonochrome: false, isLight: false, isDark: false, aspectRatio: null, loaded: true }
+      const errorResult = {
+        isMonochrome: false,
+        isLight: false,
+        isDark: false,
+        aspectRatio: null,
+        loaded: true,
+      }
       saveCachedLogoAnalysis(imageSrc, errorResult)
       if (isMounted) {
         setAnalysis(errorResult)
@@ -175,11 +199,15 @@ export function shouldApplyLogoGradient(analysis, isDarkMode) {
 /**
  * Helper to compute CSS filter based on logo analysis and current theme mode
  */
-export function getLogoFilter(analysis, isDarkMode, baseFilter = 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))') {
+export function getLogoFilter(
+  analysis,
+  isDarkMode,
+  baseFilter = 'drop-shadow(0px 6px 16px rgba(0,0,0,0.3))',
+) {
   const cleanBase = baseFilter === 'none' ? '' : baseFilter
 
   if (!analysis || !analysis.loaded) {
-    return !isDarkMode ? `invert(1) ${cleanBase}`.trim() : (cleanBase || 'none')
+    return !isDarkMode ? `invert(1) ${cleanBase}`.trim() : cleanBase || 'none'
   }
 
   if (!analysis.isMonochrome) {

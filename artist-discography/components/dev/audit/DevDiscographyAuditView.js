@@ -1,10 +1,7 @@
 'use client'
 
-import { useState, memo } from 'react'
-import {
-  Stack,
-  Alert,
-} from '@mui/material'
+import { useState, useCallback, memo } from 'react'
+import { Stack, Alert } from '@mui/material'
 import { DENSITY_SETTINGS } from '../devConstants'
 import AuditHeaderControls from './AuditHeaderControls'
 import ProjectAuditAccordion from './ProjectAuditAccordion'
@@ -16,38 +13,43 @@ function DevDiscographyAuditView({
   mounted = false,
   playingAudioUrl = null,
   handleToggleAudio = () => {},
+  handleSeekRelative = () => {},
 }) {
   const [viewDensity, setViewDensity] = useState('cozy')
-  // Track open state for each project index (default to all expanded)
-  const [expandedProjects, setExpandedProjects] = useState({})
+  // Default expansion: first project expanded, subsequent projects lazy/collapsed
+  const [expandedProjects, setExpandedProjects] = useState({ 0: true })
 
   const density = DENSITY_SETTINGS[viewDensity] || DENSITY_SETTINGS.cozy
 
-  const handleAccordionToggle = (idx) => {
+  const handleAccordionToggle = useCallback((idx) => {
     setExpandedProjects((prev) => {
-      const isCurrentlyExpanded = prev[idx] !== false
+      const isCurrentlyExpanded = prev[idx] === undefined ? idx === 0 : Boolean(prev[idx])
       return {
         ...prev,
         [idx]: !isCurrentlyExpanded,
       }
     })
-  }
+  }, [])
 
-  const handleExpandAll = () => {
+  const handleExpandAll = useCallback(() => {
     const allOpen = {}
     projects.forEach((_, idx) => {
       allOpen[idx] = true
     })
     setExpandedProjects(allOpen)
-  }
+  }, [projects])
 
-  const handleCollapseAll = () => {
+  const handleCollapseAll = useCallback(() => {
     const allClosed = {}
     projects.forEach((_, idx) => {
       allClosed[idx] = false
     })
     setExpandedProjects(allClosed)
-  }
+  }, [projects])
+
+  const handleDensityChange = useCallback((_, newDensity) => {
+    if (newDensity) setViewDensity(newDensity)
+  }, [])
 
   return (
     <Stack spacing={density.spacing}>
@@ -59,32 +61,35 @@ function DevDiscographyAuditView({
         onExpandAll={handleExpandAll}
         onCollapseAll={handleCollapseAll}
         viewDensity={viewDensity}
-        onDensityChange={(_, newDensity) => {
-          if (newDensity) setViewDensity(newDensity)
-        }}
+        onDensityChange={handleDensityChange}
         density={density}
       />
 
       {/* Projects List Accordion Cards */}
       {projects.length === 0 ? (
-        <Alert severity="info" sx={{ borderRadius: 2 }}>
-          No projects found in artist-data.json.
+        <Alert severity='info' sx={{ borderRadius: 2 }}>
+          No projects found in data/projects/.
         </Alert>
       ) : (
-        projects.map((proj, idx) => (
-          <ProjectAuditAccordion
-            key={idx}
-            proj={proj}
-            idx={idx}
-            artistName={artistName}
-            isExpanded={expandedProjects[idx] !== false}
-            onToggle={handleAccordionToggle}
-            density={density}
-            viewDensity={viewDensity}
-            playingAudioUrl={playingAudioUrl}
-            handleToggleAudio={handleToggleAudio}
-          />
-        ))
+        projects.map((proj, idx) => {
+          const isExpanded =
+            expandedProjects[idx] === undefined ? idx === 0 : Boolean(expandedProjects[idx])
+          return (
+            <ProjectAuditAccordion
+              key={proj.id || proj.name || idx}
+              proj={proj}
+              idx={idx}
+              artistName={artistName}
+              isExpanded={isExpanded}
+              onToggle={handleAccordionToggle}
+              density={density}
+              viewDensity={viewDensity}
+              playingAudioUrl={playingAudioUrl}
+              handleToggleAudio={handleToggleAudio}
+              handleSeekRelative={handleSeekRelative}
+            />
+          )
+        })
       )}
     </Stack>
   )

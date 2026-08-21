@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  Box,
-  Paper,
-  Typography,
-  Chip,
-  LinearProgress,
-} from '@mui/material'
+import { Box, Paper, Typography, Chip, LinearProgress } from '@mui/material'
 import ImageIcon from '@mui/icons-material/Image'
 import GraphicEqIcon from '@mui/icons-material/GraphicEq'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -21,7 +15,7 @@ export default function MediaJobCard({ job }) {
   const isFailed = job.status === 'failed'
   const isProcessing = job.status === 'processing' || job.status === 'queued'
 
-  const progressValue = typeof job.progress === 'number' ? job.progress : (isCompleted ? 100 : 0)
+  const progressValue = typeof job.progress === 'number' ? job.progress : isCompleted ? 100 : 0
 
   // Color scheme based on type
   const typeLabel = isAudio ? 'FFmpeg Audio' : 'Sharp Image'
@@ -33,8 +27,8 @@ export default function MediaJobCard({ job }) {
   const durationText = job.durationMs
     ? `${(job.durationMs / 1000).toFixed(1)}s`
     : job.startTime
-    ? `${Math.max(1, Math.round((Date.now() - job.startTime) / 1000))}s`
-    : null
+      ? `${Math.max(1, Math.round((Date.now() - job.startTime) / 1000))}s`
+      : null
 
   return (
     <Paper
@@ -45,16 +39,16 @@ export default function MediaJobCard({ job }) {
         backgroundColor: isProcessing
           ? 'rgba(30, 32, 48, 0.95)'
           : isFailed
-          ? 'rgba(45, 20, 25, 0.85)'
-          : 'rgba(24, 25, 35, 0.85)',
+            ? 'rgba(45, 20, 25, 0.85)'
+            : 'rgba(24, 25, 35, 0.85)',
         border: '1px solid',
         borderColor: isProcessing
           ? isAudio
             ? 'rgba(186, 104, 200, 0.4)'
             : 'rgba(41, 182, 246, 0.4)'
           : isFailed
-          ? 'rgba(244, 67, 54, 0.3)'
-          : 'rgba(255, 255, 255, 0.08)',
+            ? 'rgba(244, 67, 54, 0.3)'
+            : 'rgba(255, 255, 255, 0.08)',
         boxShadow: isProcessing
           ? `0 0 16px ${isAudio ? 'rgba(186, 104, 200, 0.15)' : 'rgba(41, 182, 246, 0.15)'}`
           : 'none',
@@ -89,18 +83,16 @@ export default function MediaJobCard({ job }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: isAudio
-                ? 'rgba(186, 104, 200, 0.18)'
-                : 'rgba(41, 182, 246, 0.18)',
+              backgroundColor: isAudio ? 'rgba(186, 104, 200, 0.18)' : 'rgba(41, 182, 246, 0.18)',
               color: isAudio ? '#ce93d8' : '#81d4fa',
               flexShrink: 0,
             }}
           >
-            {isAudio ? <GraphicEqIcon fontSize="small" /> : <ImageIcon fontSize="small" />}
+            {isAudio ? <GraphicEqIcon fontSize='small' /> : <ImageIcon fontSize='small' />}
           </Box>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Typography
-              variant="subtitle2"
+              variant='subtitle2'
               sx={{
                 fontWeight: 700,
                 color: 'text.primary',
@@ -113,7 +105,7 @@ export default function MediaJobCard({ job }) {
               {job.target || job.file || 'Media Processing'}
             </Typography>
             <Typography
-              variant="caption"
+              variant='caption'
               sx={{
                 color: 'text.secondary',
                 display: 'block',
@@ -129,49 +121,45 @@ export default function MediaJobCard({ job }) {
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
           <Chip
-            size="small"
+            size='small'
             label={typeLabel}
             sx={{
               fontWeight: 700,
               fontSize: '0.72rem',
               height: 22,
-              backgroundColor: isAudio
-                ? 'rgba(156, 39, 176, 0.25)'
-                : 'rgba(2, 136, 209, 0.25)',
+              backgroundColor: isAudio ? 'rgba(156, 39, 176, 0.25)' : 'rgba(2, 136, 209, 0.25)',
               color: isAudio ? '#e1bee7' : '#b3e5fc',
               border: '1px solid',
-              borderColor: isAudio
-                ? 'rgba(186, 104, 200, 0.4)'
-                : 'rgba(41, 182, 246, 0.4)',
+              borderColor: isAudio ? 'rgba(186, 104, 200, 0.4)' : 'rgba(41, 182, 246, 0.4)',
             }}
           />
 
           {isCompleted && (
             <Chip
-              size="small"
+              size='small'
               icon={<CheckCircleIcon sx={{ fontSize: '14px !important' }} />}
-              label="Done"
-              color="success"
+              label='Done'
+              color='success'
               sx={{ fontWeight: 700, fontSize: '0.72rem', height: 22 }}
             />
           )}
 
           {isFailed && (
             <Chip
-              size="small"
+              size='small'
               icon={<ErrorIcon sx={{ fontSize: '14px !important' }} />}
-              label="Failed"
-              color="error"
+              label='Failed'
+              color='error'
               sx={{ fontWeight: 700, fontSize: '0.72rem', height: 22 }}
             />
           )}
 
           {isProcessing && (
             <Chip
-              size="small"
+              size='small'
               icon={<HourglassEmptyIcon sx={{ fontSize: '14px !important' }} />}
               label={`${progressValue}%`}
-              color="warning"
+              color='warning'
               sx={{ fontWeight: 700, fontSize: '0.72rem', height: 22 }}
             />
           )}
@@ -192,8 +180,8 @@ export default function MediaJobCard({ job }) {
               background: isFailed
                 ? '#f44336'
                 : isCompleted
-                ? 'linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)'
-                : progressGradient,
+                  ? 'linear-gradient(90deg, #4caf50 0%, #66bb6a 100%)'
+                  : progressGradient,
               transition: 'transform 0.25s ease-out',
             },
           }}
@@ -211,7 +199,7 @@ export default function MediaJobCard({ job }) {
         }}
       >
         <Typography
-          variant="caption"
+          variant='caption'
           sx={{
             color: isFailed ? 'error.light' : 'text.secondary',
             fontWeight: 500,
@@ -227,7 +215,7 @@ export default function MediaJobCard({ job }) {
 
         {durationText && (
           <Typography
-            variant="caption"
+            variant='caption'
             sx={{
               color: 'text.disabled',
               fontSize: '0.7rem',

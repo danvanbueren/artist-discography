@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  Box,
-  Typography,
-  IconButton,
-  Stack,
-  useTheme,
-} from '@mui/material'
+import { Box, Typography, IconButton, Stack, useTheme } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
 import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
@@ -79,7 +73,7 @@ export default function MobileMiniPlayer({
               }}
             />
           ) : (
-            <MusicNoteRoundedIcon fontSize="small" />
+            <MusicNoteRoundedIcon fontSize='small' />
           )}
         </Box>
 
@@ -94,7 +88,7 @@ export default function MobileMiniPlayer({
           }}
         >
           <Typography
-            variant="subtitle2"
+            variant='subtitle2'
             sx={{
               fontWeight: 700,
               fontSize: '0.875rem',
@@ -108,8 +102,8 @@ export default function MobileMiniPlayer({
             {playingTrack?.name || 'Untitled Track'}
           </Typography>
           <Typography
-            variant="caption"
-            color="text.secondary"
+            variant='caption'
+            color='text.secondary'
             sx={{
               fontSize: '0.75rem',
               lineHeight: 1.2,
@@ -121,11 +115,7 @@ export default function MobileMiniPlayer({
             {playingTrack?.artist || 'Artist'}
           </Typography>
           {/* Audio Quality Pill */}
-          <AudioQualityPill
-            label={audioQualityLabel}
-            size="small"
-            isStuttering={isStuttering}
-          />
+          <AudioQualityPill label={audioQualityLabel} size='small' isStuttering={isStuttering} />
         </Stack>
 
         {/* 3. Auto-filled gap to push controls to the right */}
@@ -133,7 +123,7 @@ export default function MobileMiniPlayer({
 
         {/* 4. Copy track link share button */}
         <IconButton
-          size="small"
+          size='small'
           onClick={(e) => {
             e.stopPropagation()
             if (onShareTrack) onShareTrack(e)
@@ -146,15 +136,15 @@ export default function MobileMiniPlayer({
           }}
         >
           {copiedShare ? (
-            <CheckRoundedIcon fontSize="small" />
+            <CheckRoundedIcon fontSize='small' />
           ) : (
-            <ShareRoundedIcon fontSize="small" />
+            <ShareRoundedIcon fontSize='small' />
           )}
         </IconButton>
 
         {/* 5. Play / Pause Button */}
         <IconButton
-          color="primary"
+          color='primary'
           onClick={(e) => {
             e.stopPropagation()
             if (onDirectTogglePlay) onDirectTogglePlay()
@@ -170,9 +160,9 @@ export default function MobileMiniPlayer({
           }}
         >
           {isPlaying ? (
-            <PauseRoundedIcon fontSize="small" />
+            <PauseRoundedIcon fontSize='small' />
           ) : (
-            <PlayArrowRoundedIcon fontSize="small" />
+            <PlayArrowRoundedIcon fontSize='small' />
           )}
         </IconButton>
       </Box>

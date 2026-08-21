@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
-import { slugify } from '../../../../lib/slugs'
+import {
+  loadConfigData,
+  loadAllProjectsData,
+  saveProjectData,
+  deleteProjectData,
+  getProjectsDirPath,
+} from '../../../../lib/artistData'
+import { slugify, isSlugReserved } from '../../../../lib/slugs'
 import { warmMediaFiles } from '../../../../lib/mediaWarmer'
 import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
 
@@ -13,70 +19,55 @@ export async function POST(request) {
     const action = String(formData.get('action') || 'update').toLowerCase()
     const projectIndexStr = formData.get('projectIndex')
 
-    const dataResult = loadArtistData()
-    const currentData = dataResult?.data ?? {}
+    const configResult = loadConfigData()
+    const configData = configResult?.data ?? {}
 
-    const adminAccess = Boolean(currentData?.adminAccess)
-    const adminPassword = String(currentData?.adminPassword ?? '')
+    const adminAccess = Boolean(configData?.adminAccess)
+    const adminPassword = String(configData?.adminPassword ?? '')
 
     if (!adminAccess) {
       return NextResponse.json(
-        { success: false, error: 'Admin access is disabled in artist-data.json' },
-        { status: 403 }
+        { success: false, error: 'Admin access is disabled in config.json' },
+        { status: 403 },
       )
     }
 
     if (password !== adminPassword) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Invalid admin password' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
-    const filePath = path.join(process.cwd(), 'data', 'artist-data.json')
-    let fullJsonData = {}
-    if (fs.existsSync(filePath)) {
-      try {
-        fullJsonData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-      } catch (e) {
-        fullJsonData = currentData
-      }
-    } else {
-      fullJsonData = currentData
-    }
+    const projectsList = loadAllProjectsData(configData?.artist?.name)
 
-    if (!Array.isArray(fullJsonData.projects)) {
-      fullJsonData.projects = []
+    let oldProject = null
+    const requestedSlug = formData.get('originalSlug') || formData.get('projectSlug') || null
+    if (requestedSlug) {
+      oldProject = projectsList.find((p) => slugify(p.name) === String(requestedSlug).trim())
     }
 
     const index = parseInt(projectIndexStr, 10)
-    if (isNaN(index) || index < 0 || index >= fullJsonData.projects.length) {
+    if (!oldProject && !isNaN(index) && index >= 0 && index < projectsList.length) {
+      oldProject = projectsList[index]
+    }
+
+    if (!oldProject) {
       return NextResponse.json(
-        { success: false, error: 'Invalid project index specified' },
-        { status: 400 }
+        { success: false, error: 'Invalid project selection or project not found' },
+        { status: 400 },
       )
     }
 
+    const oldSlug = slugify(oldProject?.name || '') || `project-${index + 1}`
+
     // Action 1: Delete Project
     if (action === 'delete') {
-      const removedProject = fullJsonData.projects.splice(index, 1)[0]
-      if (removedProject && removedProject.name) {
-        const projSlug = slugify(removedProject.name)
-        const projDir = path.join(process.cwd(), 'data', 'projects', projSlug)
-        if (fs.existsSync(projDir)) {
-          try {
-            fs.rmSync(projDir, { recursive: true, force: true })
-          } catch (err) {
-            console.error('Error removing project folder:', err)
-          }
-        }
-      }
-
-      const saveResult = saveArtistData(fullJsonData)
-      if (!saveResult.success) {
+      const deleteResult = deleteProjectData(oldSlug)
+      if (!deleteResult.success) {
         return NextResponse.json(
-          { success: false, error: `Failed to delete project: ${saveResult.error}` },
-          { status: 500 }
+          { success: false, error: `Failed to delete project: ${deleteResult.error}` },
+          { status: 500 },
         )
       }
 
@@ -85,26 +76,36 @@ export async function POST(request) {
 
       return NextResponse.json({
         success: true,
-        message: `Project "${removedProject?.name || 'Project'}" deleted successfully.`,
+        message: `Project "${oldProject?.name || 'Project'}" deleted successfully.`,
       })
     }
 
     // Action 2: Update Project
-    const primaryArtistName = String(fullJsonData.artist?.name || currentData.artist?.name || 'Artist').trim()
+    const primaryArtistName = String(configData.artist?.name || 'Artist').trim()
     const name = String(formData.get('name') || '').trim()
     const type = String(formData.get('type') || 'Single').trim()
     const rawArtist = String(formData.get('artist') || '').trim()
     const artist = rawArtist || primaryArtistName
     const date = String(formData.get('date') || new Date().toISOString().split('T')[0]).trim()
-    const visibility = String(formData.get('visibility') || '').trim().toLowerCase() === 'private' ? 'private' : 'public'
-    const copyright = String(formData.get('copyright') || '').trim().toLowerCase() === 'uncleared' ? 'uncleared' : 'cleared'
+    const visibility =
+      String(formData.get('visibility') || '')
+        .trim()
+        .toLowerCase() === 'private'
+        ? 'private'
+        : 'public'
+    const copyright =
+      String(formData.get('copyright') || '')
+        .trim()
+        .toLowerCase() === 'uncleared'
+        ? 'uncleared'
+        : 'cleared'
     const coverUrl = String(formData.get('coverUrl') || '').trim()
     const tracksRaw = String(formData.get('tracks') || '[]')
 
     if (!name) {
       return NextResponse.json(
         { success: false, error: 'Project name is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -115,24 +116,36 @@ export async function POST(request) {
     } catch (err) {
       return NextResponse.json(
         { success: false, error: 'Invalid tracks JSON data' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    const oldProject = fullJsonData.projects[index]
-    const oldSlug = slugify(oldProject?.name || '') || `project-${index + 1}`
     const newSlug = slugify(name) || `project-${index + 1}`
 
+    // Reject system-reserved slugs
+    if (isSlugReserved(newSlug)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `The title "${name}" produces a reserved route URL (/${newSlug}). Please choose a different project title.`,
+        },
+        { status: 400 },
+      )
+    }
+
     // Check duplicate project slug across other projects
-    const isDuplicateProject = fullJsonData.projects.some((p, i) => {
+    const isDuplicateProject = projectsList.some((p, i) => {
       if (i === index) return false
       return slugify(p.name) === newSlug
     })
 
     if (isDuplicateProject) {
       return NextResponse.json(
-        { success: false, error: `A project with title "${name}" (slug: "${newSlug}") already exists.` },
-        { status: 400 }
+        {
+          success: false,
+          error: `A project with title "${name}" (slug: "${newSlug}") already exists.`,
+        },
+        { status: 400 },
       )
     }
 
@@ -144,25 +157,70 @@ export async function POST(request) {
       if (tSlug) {
         if (trackSlugsSeen.has(tSlug)) {
           return NextResponse.json(
-            { success: false, error: `Duplicate track title "${tName}" (slug: "${tSlug}") in project. Track titles within a project must be unique.` },
-            { status: 400 }
+            {
+              success: false,
+              error: `Duplicate track title "${tName}" (slug: "${tSlug}") in project. Track titles within a project must be unique.`,
+            },
+            { status: 400 },
           )
         }
         trackSlugsSeen.add(tSlug)
       }
     }
 
-    const projectsDir = path.join(process.cwd(), 'data', 'projects')
+    // Directory and file rename helpers with Windows file-lock retry handling
+    const safeRenameSync = (oldPath, newPath, maxRetries = 5, delayMs = 50) => {
+      if (!fs.existsSync(oldPath)) return false
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          fs.renameSync(oldPath, newPath)
+          return true
+        } catch (err) {
+          if (
+            (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES') &&
+            attempt < maxRetries
+          ) {
+            const start = Date.now()
+            while (Date.now() - start < delayMs * attempt) {}
+          } else {
+            if (attempt === maxRetries) {
+              console.error(
+                `Failed to rename ${oldPath} to ${newPath} after ${maxRetries} attempts:`,
+                err,
+              )
+            }
+          }
+        }
+      }
+      return false
+    }
+
+    const safeUnlinkSync = (targetPath, maxRetries = 3, delayMs = 50) => {
+      if (!fs.existsSync(targetPath)) return false
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          fs.unlinkSync(targetPath)
+          return true
+        } catch (err) {
+          if (
+            (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES') &&
+            attempt < maxRetries
+          ) {
+            const start = Date.now()
+            while (Date.now() - start < delayMs * attempt) {}
+          }
+        }
+      }
+      return false
+    }
+
+    const projectsDir = getProjectsDirPath()
     const oldProjectDir = oldSlug ? path.join(projectsDir, oldSlug) : null
     const targetProjectDir = path.join(projectsDir, newSlug)
 
     // Rename directory if slug changed and old dir exists
     if (oldSlug && oldSlug !== newSlug && oldProjectDir && fs.existsSync(oldProjectDir)) {
-      try {
-        fs.renameSync(oldProjectDir, targetProjectDir)
-      } catch (err) {
-        console.error('Directory rename error:', err)
-      }
+      safeRenameSync(oldProjectDir, targetProjectDir)
     }
 
     if (!fs.existsSync(targetProjectDir)) {
@@ -185,9 +243,17 @@ export async function POST(request) {
     }
 
     const coverFile = formData.get('coverFile')
-    if (coverFile && typeof coverFile === 'object' && typeof coverFile.arrayBuffer === 'function' && coverFile.size > 0) {
+    if (
+      coverFile &&
+      typeof coverFile === 'object' &&
+      typeof coverFile.arrayBuffer === 'function' &&
+      coverFile.size > 0
+    ) {
       const origExt = path.extname(coverFile.name || '').toLowerCase()
-      const ext = origExt && ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif'].includes(origExt) ? origExt : '.jpg'
+      const ext =
+        origExt && ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif'].includes(origExt)
+          ? origExt
+          : '.jpg'
       const artPath = path.join(targetProjectDir, `art${ext}`)
       const buffer = Buffer.from(await coverFile.arrayBuffer())
       fs.writeFileSync(artPath, buffer)
@@ -232,7 +298,12 @@ export async function POST(request) {
       let writtenAudioFilename = null
       const audioFile = formData.get(`track_${i}_audioFile`)
 
-      if (audioFile && typeof audioFile === 'object' && typeof audioFile.arrayBuffer === 'function' && audioFile.size > 0) {
+      if (
+        audioFile &&
+        typeof audioFile === 'object' &&
+        typeof audioFile.arrayBuffer === 'function' &&
+        audioFile.size > 0
+      ) {
         const origExt = path.extname(audioFile.name || '').toLowerCase()
         const ext = origExt && audioExtensions.includes(origExt) ? origExt : '.mp3'
         const audioPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
@@ -260,16 +331,14 @@ export async function POST(request) {
 
         // 2. If no new file uploaded and not found under current slug, check if renamed from previous slug
         if (!writtenAudioFilename && trackSlug) {
-          const candidateOldSlugs = [origSlug, fallbackOrigSlug].filter(
-            (s) => s && s !== trackSlug
-          )
+          const candidateOldSlugs = [origSlug, fallbackOrigSlug].filter((s) => s && s !== trackSlug)
           for (const oldCandidateSlug of candidateOldSlugs) {
             for (const ext of audioExtensions) {
               const oldAudioPath = path.join(targetProjectDir, `${oldCandidateSlug}${ext}`)
               if (fs.existsSync(oldAudioPath)) {
                 const newAudioPath = path.join(targetProjectDir, `${trackSlug}${ext}`)
-                try {
-                  fs.renameSync(oldAudioPath, newAudioPath)
+                const renamed = safeRenameSync(oldAudioPath, newAudioPath)
+                if (renamed) {
                   writtenAudioFilename = `${trackSlug}${ext}`
                   filesToWarm.push(newAudioPath)
                   targetMap[newAudioPath] = `${name} - Track: "${trackName || `Track ${i + 1}`}"`
@@ -280,8 +349,6 @@ export async function POST(request) {
                     trackName: trackName || `Track ${i + 1}`,
                     fileName: `${trackSlug}${ext}`,
                   }
-                } catch (renameErr) {
-                  console.error(`Failed to rename audio file from ${oldCandidateSlug}${ext} to ${trackSlug}${ext}:`, renameErr)
                 }
                 break
               }
@@ -293,16 +360,14 @@ export async function POST(request) {
 
       // Also rename custom track cover art if it was named after old track slug
       if (trackSlug) {
-        const candidateOldSlugs = [origSlug, fallbackOrigSlug].filter(
-          (s) => s && s !== trackSlug
-        )
+        const candidateOldSlugs = [origSlug, fallbackOrigSlug].filter((s) => s && s !== trackSlug)
         for (const oldCandidateSlug of candidateOldSlugs) {
           for (const imgExt of imageExtensions) {
             const oldArtPath = path.join(targetProjectDir, `${oldCandidateSlug}-art${imgExt}`)
             if (fs.existsSync(oldArtPath)) {
               const newArtPath = path.join(targetProjectDir, `${trackSlug}-art${imgExt}`)
-              try {
-                fs.renameSync(oldArtPath, newArtPath)
+              const renamed = safeRenameSync(oldArtPath, newArtPath)
+              if (renamed) {
                 filesToWarm.push(newArtPath)
                 targetMap[newArtPath] = `${name} - Track: "${trackName || `Track ${i + 1}`}" (Art)`
                 detailsMap[newArtPath] = {
@@ -312,8 +377,6 @@ export async function POST(request) {
                   trackName: trackName || `Track ${i + 1}`,
                   fileName: `${trackSlug}-art${imgExt}`,
                 }
-              } catch (artErr) {
-                console.error(`Failed to rename track art file:`, artErr)
               }
               break
             }
@@ -347,19 +410,20 @@ export async function POST(request) {
     // Clean up audio files in project directory that are no longer referenced by any track slug
     try {
       const expectedAudioFilenames = new Set(
-        formattedTracks.map((t) => t._writtenAudioFilename).filter(Boolean)
+        formattedTracks.map((t) => t._writtenAudioFilename).filter(Boolean),
       )
+      const validTrackSlugs = new Set(parsedTracks.map((t) => slugify(t?.name)).filter(Boolean))
 
       if (fs.existsSync(targetProjectDir)) {
         const existingFiles = fs.readdirSync(targetProjectDir)
         const audioExtensions = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
         existingFiles.forEach((file) => {
           const ext = path.extname(file).toLowerCase()
-          if (audioExtensions.includes(ext) && !expectedAudioFilenames.has(file)) {
-            try {
-              fs.unlinkSync(path.join(targetProjectDir, file))
-            } catch (e) {
-              console.error(`Failed to delete orphaned audio file ${file}:`, e)
+          const baseName = path.parse(file).name
+          if (audioExtensions.includes(ext)) {
+            const isExpected = expectedAudioFilenames.has(file) || validTrackSlugs.has(baseName)
+            if (!isExpected) {
+              safeUnlinkSync(path.join(targetProjectDir, file))
             }
           }
         })
@@ -382,13 +446,11 @@ export async function POST(request) {
       tracks: tracksToSave,
     }
 
-    fullJsonData.projects[index] = updatedProjectObj
-
-    const saveResult = saveArtistData(fullJsonData)
+    const saveResult = saveProjectData(newSlug, updatedProjectObj)
     if (!saveResult.success) {
       return NextResponse.json(
         { success: false, error: `Failed to update project: ${saveResult.error}` },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
@@ -406,9 +468,11 @@ export async function POST(request) {
 
     const timestamp = Date.now()
     const resolvedCover = coverProp
-      ? (coverProp.startsWith('http://') || coverProp.startsWith('https://') || coverProp.startsWith('/')
-          ? coverProp
-          : `/api/media/projects/${newSlug}/${coverProp}?t=${timestamp}`)
+      ? coverProp.startsWith('http://') ||
+        coverProp.startsWith('https://') ||
+        coverProp.startsWith('/')
+        ? coverProp
+        : `/api/media/projects/${newSlug}/${coverProp}?t=${timestamp}`
       : ''
 
     const enrichedTracks = tracksToSave.map((t, i) => {
@@ -443,7 +507,7 @@ export async function POST(request) {
     console.error('Error updating project:', err)
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

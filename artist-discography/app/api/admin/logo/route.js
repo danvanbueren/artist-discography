@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { loadArtistData } from '../../../../lib/artistData'
+import { loadConfigData } from '../../../../lib/artistData'
 import { getLogoDetails, saveCustomLogo, deleteCustomLogo } from '../../../../lib/logoUtils'
 import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
 
 function authenticateAdmin(password, request) {
-  const dataResult = loadArtistData()
+  const dataResult = loadConfigData()
   const currentData = dataResult?.data ?? {}
 
   const adminAccess = Boolean(currentData?.adminAccess)
@@ -14,8 +14,8 @@ function authenticateAdmin(password, request) {
     return {
       authenticated: false,
       response: NextResponse.json(
-        { success: false, error: 'Admin access is disabled in artist-data.json' },
-        { status: 403 }
+        { success: false, error: 'Admin access is disabled in config.json' },
+        { status: 403 },
       ),
     }
   }
@@ -26,7 +26,7 @@ function authenticateAdmin(password, request) {
       authenticated: false,
       response: NextResponse.json(
         { success: false, error: 'Unauthorized: Invalid admin password' },
-        { status: 401 }
+        { status: 401 },
       ),
     }
   }
@@ -45,7 +45,7 @@ export async function GET() {
     console.error('Error fetching logo info:', err)
     return NextResponse.json(
       { success: false, error: `Failed to fetch logo details: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -78,7 +78,7 @@ export async function POST(request) {
       if (!deleteResult.success) {
         return NextResponse.json(
           { success: false, error: deleteResult.error || 'Failed to remove custom logo.' },
-          { status: 500 }
+          { status: 500 },
         )
       }
       scheduleAutomatedCachePrune(5000)
@@ -89,10 +89,15 @@ export async function POST(request) {
       })
     }
 
-    if (!logoFile || typeof logoFile !== 'object' || typeof logoFile.arrayBuffer !== 'function' || logoFile.size === 0) {
+    if (
+      !logoFile ||
+      typeof logoFile !== 'object' ||
+      typeof logoFile.arrayBuffer !== 'function' ||
+      logoFile.size === 0
+    ) {
       return NextResponse.json(
         { success: false, error: 'No logo image file was provided.' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -102,7 +107,7 @@ export async function POST(request) {
     if (!saveResult.success) {
       return NextResponse.json(
         { success: false, error: saveResult.error || 'Failed to save custom logo file.' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
@@ -117,7 +122,7 @@ export async function POST(request) {
     console.error('Error handling logo upload:', err)
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -139,7 +144,7 @@ export async function DELETE(request) {
     if (!deleteResult.success) {
       return NextResponse.json(
         { success: false, error: deleteResult.error || 'Failed to remove custom logo.' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
@@ -154,7 +159,7 @@ export async function DELETE(request) {
     console.error('Error handling logo deletion:', err)
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

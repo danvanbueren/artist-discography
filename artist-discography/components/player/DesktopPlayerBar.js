@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  Box,
-  Typography,
-  IconButton,
-  Slider,
-  Stack,
-  Badge,
-} from '@mui/material'
+import { Box, Typography, IconButton, Slider, Stack, Badge } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
 import SkipNextRoundedIcon from '@mui/icons-material/SkipNextRounded'
@@ -92,7 +85,7 @@ export default function DesktopPlayerBar({
       {/* === LEFT GROUP === */}
       {/* Unified Cover Art + Title + Artist Clickable Area */}
       <Stack
-        direction="row"
+        direction='row'
         spacing={1.25}
         sx={{
           alignItems: 'center',
@@ -129,7 +122,7 @@ export default function DesktopPlayerBar({
         >
           {/* Cover Art Box */}
           <Box
-            className="cover-art-box"
+            className='cover-art-box'
             sx={{
               width: { xs: 52, sm: 58 },
               height: { xs: 52, sm: 58 },
@@ -159,7 +152,7 @@ export default function DesktopPlayerBar({
                 }}
               />
             ) : (
-              <MusicNoteRoundedIcon fontSize="small" />
+              <MusicNoteRoundedIcon fontSize='small' />
             )}
           </Box>
 
@@ -173,8 +166,8 @@ export default function DesktopPlayerBar({
             }}
           >
             <Typography
-              className="track-title-text"
-              variant="subtitle1"
+              className='track-title-text'
+              variant='subtitle1'
               sx={{
                 fontWeight: 700,
                 fontSize: { xs: '0.95rem', sm: '1.05rem' },
@@ -191,9 +184,9 @@ export default function DesktopPlayerBar({
             </Typography>
 
             <Typography
-              className="track-artist-text"
-              variant="caption"
-              color="text.secondary"
+              className='track-artist-text'
+              variant='caption'
+              color='text.secondary'
               sx={{
                 fontSize: { xs: '0.775rem', sm: '0.85rem' },
                 lineHeight: 1.2,
@@ -211,7 +204,7 @@ export default function DesktopPlayerBar({
             {/* Audio Quality Pill */}
             <AudioQualityPill
               label={audioQualityLabel}
-              size="medium"
+              size='medium'
               isStuttering={isStuttering}
               onClick={onOpenQualityModal}
             />
@@ -232,7 +225,7 @@ export default function DesktopPlayerBar({
       >
         {/* Row 1: Controls (Height: 40px) */}
         <Stack
-          direction="row"
+          direction='row'
           spacing={{ xs: 1, sm: 1.5 }}
           sx={{
             alignItems: 'center',
@@ -243,7 +236,7 @@ export default function DesktopPlayerBar({
         >
           {/* Shuffle */}
           <IconButton
-            size="small"
+            size='small'
             onClick={onToggleShuffle}
             sx={{
               color: isShuffle ? 'primary.main' : 'text.secondary',
@@ -256,12 +249,12 @@ export default function DesktopPlayerBar({
               },
             }}
           >
-            <ShuffleRoundedIcon fontSize="small" />
+            <ShuffleRoundedIcon fontSize='small' />
           </IconButton>
 
           {/* Skip Back */}
           <IconButton
-            size="small"
+            size='small'
             onClick={handleSkipBackClick}
             sx={{
               color: 'text.primary',
@@ -270,12 +263,12 @@ export default function DesktopPlayerBar({
               transition: 'transform 0.15s ease',
             }}
           >
-            <SkipPreviousRoundedIcon fontSize="small" />
+            <SkipPreviousRoundedIcon fontSize='small' />
           </IconButton>
 
           {/* Play/Pause */}
           <IconButton
-            color="primary"
+            color='primary'
             onClick={onDirectTogglePlay}
             sx={{
               bgcolor: 'primary.main',
@@ -290,15 +283,15 @@ export default function DesktopPlayerBar({
             }}
           >
             {isPlaying ? (
-              <PauseRoundedIcon fontSize="medium" />
+              <PauseRoundedIcon fontSize='medium' />
             ) : (
-              <PlayArrowRoundedIcon fontSize="medium" />
+              <PlayArrowRoundedIcon fontSize='medium' />
             )}
           </IconButton>
 
           {/* Skip Forward */}
           <IconButton
-            size="small"
+            size='small'
             onClick={handleSkipForwardClick}
             sx={{
               color: 'text.primary',
@@ -307,12 +300,12 @@ export default function DesktopPlayerBar({
               transition: 'transform 0.15s ease',
             }}
           >
-            <SkipNextRoundedIcon fontSize="small" />
+            <SkipNextRoundedIcon fontSize='small' />
           </IconButton>
 
           {/* Repeat */}
           <IconButton
-            size="small"
+            size='small'
             onClick={onCycleRepeat}
             sx={{
               color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
@@ -326,16 +319,16 @@ export default function DesktopPlayerBar({
             }}
           >
             {repeatMode === 'one' ? (
-              <RepeatOneRoundedIcon fontSize="small" />
+              <RepeatOneRoundedIcon fontSize='small' />
             ) : (
-              <RepeatRoundedIcon fontSize="small" />
+              <RepeatRoundedIcon fontSize='small' />
             )}
           </IconButton>
         </Stack>
 
         {/* Row 2: Playback Scrubber Bar (Height: 24px) */}
         <Stack
-          direction="row"
+          direction='row'
           spacing={1}
           sx={{
             width: '100%',
@@ -344,8 +337,8 @@ export default function DesktopPlayerBar({
           }}
         >
           <Typography
-            variant="caption"
-            color="text.secondary"
+            variant='caption'
+            color='text.secondary'
             sx={{
               fontSize: '0.725rem',
               fontFamily: 'monospace',
@@ -359,7 +352,7 @@ export default function DesktopPlayerBar({
           </Typography>
 
           <Slider
-            size="small"
+            size='small'
             value={currentTime}
             min={0}
             max={duration}
@@ -387,8 +380,8 @@ export default function DesktopPlayerBar({
           />
 
           <Typography
-            variant="caption"
-            color="text.secondary"
+            variant='caption'
+            color='text.secondary'
             sx={{
               fontSize: '0.725rem',
               fontFamily: 'monospace',
@@ -416,7 +409,7 @@ export default function DesktopPlayerBar({
       >
         {/* Row 1: Action Icons */}
         <Stack
-          direction="row"
+          direction='row'
           spacing={0.5}
           sx={{
             alignItems: 'center',
@@ -427,7 +420,7 @@ export default function DesktopPlayerBar({
         >
           {/* Share track */}
           <IconButton
-            size="small"
+            size='small'
             onClick={onShareTrack}
             sx={{
               color: copiedShare ? 'success.main' : 'text.secondary',
@@ -439,15 +432,15 @@ export default function DesktopPlayerBar({
             }}
           >
             {copiedShare ? (
-              <CheckRoundedIcon fontSize="small" />
+              <CheckRoundedIcon fontSize='small' />
             ) : (
-              <ShareRoundedIcon fontSize="small" />
+              <ShareRoundedIcon fontSize='small' />
             )}
           </IconButton>
 
           {/* View Queue */}
           <IconButton
-            size="small"
+            size='small'
             onClick={onOpenQueue}
             sx={{
               color: 'text.secondary',
@@ -459,15 +452,15 @@ export default function DesktopPlayerBar({
           >
             <Badge
               badgeContent={manualQueue.length > 0 ? manualQueue.length : null}
-              color="primary"
+              color='primary'
             >
-              <QueueMusicRoundedIcon fontSize="small" />
+              <QueueMusicRoundedIcon fontSize='small' />
             </Badge>
           </IconButton>
 
           {/* Fullscreen Button */}
           <IconButton
-            size="small"
+            size='small'
             onClick={onOpenFullScreen}
             sx={{
               color: 'text.secondary',
@@ -477,12 +470,12 @@ export default function DesktopPlayerBar({
               },
             }}
           >
-            <FullscreenRoundedIcon fontSize="small" />
+            <FullscreenRoundedIcon fontSize='small' />
           </IconButton>
 
           {/* Close Player */}
           <IconButton
-            size="small"
+            size='small'
             onClick={onClosePlayer}
             sx={{
               color: 'text.secondary',
@@ -492,13 +485,13 @@ export default function DesktopPlayerBar({
               },
             }}
           >
-            <CloseRoundedIcon fontSize="small" />
+            <CloseRoundedIcon fontSize='small' />
           </IconButton>
         </Stack>
 
         {/* Row 2: Volume Icon + Slider */}
         <Stack
-          direction="row"
+          direction='row'
           spacing={0.75}
           sx={{
             alignItems: 'center',
@@ -508,7 +501,7 @@ export default function DesktopPlayerBar({
           }}
         >
           <IconButton
-            size="small"
+            size='small'
             onClick={onToggleMute}
             sx={{
               color: isMuted ? 'error.main' : 'text.secondary',
@@ -520,7 +513,7 @@ export default function DesktopPlayerBar({
               },
             }}
           >
-            <VolumeIconComponent fontSize="small" />
+            <VolumeIconComponent fontSize='small' />
           </IconButton>
 
           <Box
@@ -534,7 +527,7 @@ export default function DesktopPlayerBar({
             }}
           >
             <Slider
-              size="small"
+              size='small'
               value={effectiveVolume}
               min={0}
               max={100}

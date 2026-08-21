@@ -11,6 +11,7 @@ import {
   Tooltip,
   Skeleton,
   CircularProgress,
+  Paper,
   useTheme,
 } from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
@@ -22,6 +23,7 @@ import ProgressiveImage from '../common/ProgressiveImage'
 import { isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
 import SubduedText from '../ui/SubduedText'
 import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
+import { useDragScroll } from '../../lib/hooks/useDragScroll'
 import { formatProjectDate } from '../../lib/dateUtils'
 import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
 
@@ -50,6 +52,7 @@ export default function ProjectHeader({
   const isDarkMode = theme.palette.mode === 'dark'
   const isTouch = useTouchDevice()
   const [artModalOpen, setArtModalOpen] = useState(false)
+  const platformDrag = useDragScroll()
 
   const name = project?.name ?? ''
   const pArtist = project?.artist || artistName || ''
@@ -82,11 +85,15 @@ export default function ProjectHeader({
 
   const isApiMedia = typeof cover === 'string' && cover.startsWith('/api/media')
   const previewUrl = isApiMedia
-    ? (cover.includes('?') ? `${cover}&w=600&q=85&fmt=webp` : `${cover}?w=600&q=85&fmt=webp`)
-    : (cover || '')
+    ? cover.includes('?')
+      ? `${cover}&w=600&q=85&fmt=webp`
+      : `${cover}?w=600&q=85&fmt=webp`
+    : cover || ''
   const masterHighResUrl = isApiMedia
-    ? (cover.includes('?') ? `${cover}&fmt=original` : `${cover}?fmt=original`)
-    : (cover || '')
+    ? cover.includes('?')
+      ? `${cover}&fmt=original`
+      : `${cover}?fmt=original`
+    : cover || ''
 
   const [isMasterLoaded, setIsMasterLoaded] = useState(false)
 
@@ -204,7 +211,7 @@ export default function ProjectHeader({
                 />
                 {canOpenModal && (
                   <Box
-                    className="cover-zoom-icon"
+                    className='cover-zoom-icon'
                     sx={{
                       position: 'absolute',
                       inset: 0,
@@ -243,11 +250,19 @@ export default function ProjectHeader({
           }}
         >
           {/* Type Badge & Unlocked Status */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: { xs: 'center', sm: 'flex-start' }, width: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              justifyContent: { xs: 'center', sm: 'flex-start' },
+              width: '100%',
+            }}
+          >
             {type ? (
               <Chip
                 label={type.toUpperCase()}
-                size="small"
+                size='small'
                 sx={{
                   height: 22,
                   fontSize: '0.7rem',
@@ -259,8 +274,8 @@ export default function ProjectHeader({
               />
             ) : (
               <Chip
-                label="PROJECT"
-                size="small"
+                label='PROJECT'
+                size='small'
                 sx={{
                   height: 22,
                   fontSize: '0.7rem',
@@ -273,29 +288,30 @@ export default function ProjectHeader({
               />
             )}
 
-            {isPrivateAuthenticated && (project?.visibility === 'private' || project?.copyright === 'uncleared') && (
-              <Chip
-                icon={<LockOpenRoundedIcon sx={{ fontSize: '13px !important' }} />}
-                label={project?.visibility === 'private' ? 'PRIVATE • UNLOCKED' : 'UNLOCKED'}
-                size="small"
-                color="success"
-                variant="outlined"
-                sx={{
-                  height: 22,
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  borderRadius: 1,
-                }}
-              />
-            )}
+            {isPrivateAuthenticated &&
+              (project?.visibility === 'private' || project?.copyright === 'uncleared') && (
+                <Chip
+                  icon={<LockOpenRoundedIcon sx={{ fontSize: '13px !important' }} />}
+                  label={project?.visibility === 'private' ? 'PRIVATE • UNLOCKED' : 'UNLOCKED'}
+                  size='small'
+                  color='success'
+                  variant='outlined'
+                  sx={{
+                    height: 22,
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    borderRadius: 1,
+                  }}
+                />
+              )}
           </Box>
 
           {/* Project Title */}
           <SubduedText
             value={name}
-            placeholder="Untitled Project"
-            variant="h5"
-            component="h2"
+            placeholder='Untitled Project'
+            variant='h5'
+            component='h2'
             sx={{
               fontWeight: 800,
               fontSize: { xs: '1.35rem', sm: '1.75rem' },
@@ -311,7 +327,7 @@ export default function ProjectHeader({
 
           {/* Artist Name & Release Date on SAME HORIZONTAL LINE */}
           <Stack
-            direction="row"
+            direction='row'
             spacing={1}
             sx={{
               alignItems: 'center',
@@ -322,8 +338,8 @@ export default function ProjectHeader({
           >
             <SubduedText
               value={pArtist}
-              placeholder="Artist"
-              variant="subtitle1"
+              placeholder='Artist'
+              variant='subtitle1'
               sx={{
                 fontWeight: 600,
                 fontSize: { xs: '0.95rem', sm: '1.05rem' },
@@ -332,74 +348,119 @@ export default function ProjectHeader({
             />
 
             {pArtist && date && (
-              <Typography variant="body2" sx={{ color: 'text.disabled', mx: 0.5 }}>
+              <Typography variant='body2' sx={{ color: 'text.disabled', mx: 0.5 }}>
                 •
               </Typography>
             )}
 
             <SubduedText
               value={date}
-              placeholder="Release Date"
-              variant="caption"
+              placeholder='Release Date'
+              variant='caption'
               sx={{ fontSize: '0.9rem', color: 'text.secondary' }}
             />
           </Stack>
 
-          {/* Platform Streaming Icons */}
+          {/* Platform Streaming Icons in Drag-Scrollable Paper Card Surface */}
           {availablePlatforms.length > 0 && (
-            <Stack
-              direction="row"
-              spacing={1.25}
+            <Paper
+              elevation={1}
               sx={{
-                pt: 1,
-                flexWrap: 'wrap',
-                gap: 1,
+                mt: 1.25,
+                maxWidth: '100%',
+                borderRadius: 3.5,
+                p: { xs: 0.5, sm: 0.75 },
+                backdropFilter: 'blur(16px)',
+                bgcolor: isDarkMode ? 'rgba(18, 18, 26, 0.75)' : 'rgba(255, 255, 255, 0.75)',
+                border: '1px solid',
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                boxShadow: isDarkMode
+                  ? '0 4px 20px rgba(0, 0, 0, 0.35)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.06)',
+                display: 'flex',
                 alignItems: 'center',
-                justifyContent: { xs: 'center', sm: 'flex-start' },
-                width: '100%',
+                alignSelf: { xs: 'center', sm: 'flex-start' },
+                transition:
+                  'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
               }}
             >
-              {availablePlatforms.map(({ key, url, icon }) => {
-                const isPreferred = selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
-                return (
-                  <IconButton
-                    key={key}
-                    component="a"
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    size="medium"
-                    sx={{
-                      p: 0.75,
-                      borderRadius: 2,
-                      border: '1.5px solid',
-                      borderColor: isPreferred ? 'primary.main' : 'rgba(255,255,255,0.12)',
-                      bgcolor: isPreferred ? 'rgba(144, 202, 249, 0.18)' : 'rgba(255,255,255,0.04)',
-                      transition: 'transform 0.2s ease, border-color 0.2s ease, bgcolor 0.2s ease',
-                      '&:hover': {
-                        transform: 'scale(1.18)',
-                        borderColor: 'primary.light',
-                        bgcolor: 'rgba(255,255,255,0.15)',
-                      },
-                    }}
-                  >
-                    {icon ? (
-                      <Box
-                        component="img"
-                        src={icon}
-                        alt={key}
-                        draggable={false}
-                        loading="eager"
-                        decoding="async"
-                        sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}
-                      />
-                    ) : (
-                      <LaunchRoundedIcon sx={{ fontSize: 22 }} />
-                    )}
-                  </IconButton>
-                )
-              })}
-            </Stack>
+              <Box
+                ref={platformDrag.ref}
+                {...platformDrag.bind}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  flexWrap: 'nowrap',
+                  gap: 1,
+                  overflowX: 'auto',
+                  maxWidth: '100%',
+                  py: 0.25,
+                  px: 0.5,
+                  cursor: platformDrag.isDragging ? 'grabbing' : 'grab',
+                  userSelect: 'none',
+                  scrollbarWidth: 'none',
+                  '&::-webkit-scrollbar': { display: 'none' },
+                }}
+              >
+                {availablePlatforms.map(({ key, url, icon }) => {
+                  const isPreferred =
+                    selectedPlatform && selectedPlatform.toLowerCase() === key.toLowerCase()
+                  return (
+                    <IconButton
+                      key={key}
+                      component='a'
+                      href={url}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      onClick={(e) => {
+                        if (platformDrag.hasDraggedRef.current) {
+                          e.preventDefault()
+                        }
+                      }}
+                      size='medium'
+                      sx={{
+                        p: 0.75,
+                        flexShrink: 0,
+                        borderRadius: 2,
+                        border: '1.5px solid',
+                        borderColor: isPreferred
+                          ? 'primary.main'
+                          : isDarkMode
+                            ? 'rgba(255,255,255,0.12)'
+                            : 'rgba(0,0,0,0.1)',
+                        bgcolor: isPreferred
+                          ? 'rgba(144, 202, 249, 0.18)'
+                          : isDarkMode
+                            ? 'rgba(255,255,255,0.04)'
+                            : 'rgba(0,0,0,0.03)',
+                        transition:
+                          'transform 0.2s ease, border-color 0.2s ease, bgcolor 0.2s ease',
+                        '&:hover': {
+                          transform: 'scale(1.15)',
+                          borderColor: 'primary.light',
+                          bgcolor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
+                        },
+                      }}
+                    >
+                      {icon ? (
+                        <Box
+                          component='img'
+                          src={icon}
+                          alt={key}
+                          draggable={false}
+                          loading='eager'
+                          decoding='async'
+                          sx={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 2 }}
+                        />
+                      ) : (
+                        <LaunchRoundedIcon sx={{ fontSize: 22 }} />
+                      )}
+                    </IconButton>
+                  )
+                })}
+              </Box>
+            </Paper>
           )}
         </Stack>
       </Box>
@@ -441,7 +502,7 @@ export default function ProjectHeader({
             }}
           >
             <IconButton
-              aria-label="close album art view"
+              aria-label='close album art view'
               onClick={() => setArtModalOpen(false)}
               sx={{
                 position: 'absolute',
@@ -481,8 +542,8 @@ export default function ProjectHeader({
             >
               {/* 1. Base Skeleton Wave Background */}
               <Skeleton
-                variant="rectangular"
-                animation="wave"
+                variant='rectangular'
+                animation='wave'
                 sx={{
                   position: 'absolute',
                   inset: 0,
@@ -496,7 +557,7 @@ export default function ProjectHeader({
               {/* 2. Fast Preview Image Layer */}
               {previewUrl && (
                 <Box
-                  component="img"
+                  component='img'
                   src={previewUrl}
                   alt={name || 'Project Cover Preview'}
                   draggable={false}
@@ -514,7 +575,7 @@ export default function ProjectHeader({
               {/* 3. Ultra High-Res Master Image Layer */}
               {masterHighResUrl && (
                 <Box
-                  component="img"
+                  component='img'
                   src={masterHighResUrl}
                   alt={name || 'Project Cover Art'}
                   draggable={false}
@@ -561,11 +622,7 @@ export default function ProjectHeader({
                   transform: isMasterLoaded ? 'scale(0.7)' : 'scale(1)',
                 }}
               >
-                <CircularProgress
-                  size={20}
-                  thickness={4.5}
-                  sx={{ color: '#90caf9' }}
-                />
+                <CircularProgress size={20} thickness={4.5} sx={{ color: '#90caf9' }} />
               </Box>
             </Box>
           </Box>

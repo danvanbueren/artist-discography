@@ -26,6 +26,8 @@ export function useAutoSave(editNameRef = null) {
 
   const autoSaveDebounceRef = useRef(null)
   const savedHighlightTimeoutRef = useRef(null)
+  const isSavingInFlightRef = useRef(false)
+  const pendingSaveTaskRef = useRef(null)
 
   // Auto-dismiss transient messages
   useEffect(() => {
@@ -53,31 +55,23 @@ export function useAutoSave(editNameRef = null) {
       if (savedHighlightTimeoutRef.current) {
         clearTimeout(savedHighlightTimeoutRef.current)
       }
+      pendingSaveTaskRef.current = null
+      isSavingInFlightRef.current = false
     }
   }, [])
 
-  const markFieldDirty = useCallback((fieldKey, saveCallback, delayMs = 1000) => {
-    if (fieldKey) {
-      dirtyFieldsRef.current.add(fieldKey)
-    }
-    setDirtyFields((prev) => {
-      if (prev.has(fieldKey)) return prev
-      const next = new Set(prev)
-      next.add(fieldKey)
-      return next
-    })
-    setSavedFields((prev) => {
-      if (!prev.has(fieldKey)) return prev
-      const next = new Set(prev)
-      next.delete(fieldKey)
-      return next
-    })
+  // Core sequential save executor
+  const executeSaveQueue = useCallback(
+    async (saveCallback) => {
+      if (isSavingInFlightRef.current) {
+        // An HTTP save request is already in flight. Queue the latest saveCallback to run immediately upon completion.
+        pendingSaveTaskRef.current = saveCallback
+        return
+      }
 
-    if (autoSaveDebounceRef.current) {
-      clearTimeout(autoSaveDebounceRef.current)
-    }
+      isSavingInFlightRef.current = true
+      setIsAutoSaving(true)
 
-    autoSaveDebounceRef.current = setTimeout(async () => {
       const snapshotKeys = Array.from(dirtyFieldsRef.current)
       let actionLabel = 'Auto-saving changes...'
       if (snapshotKeys.some((k) => k.includes('audio'))) {
@@ -88,24 +82,40 @@ export function useAutoSave(editNameRef = null) {
         actionLabel = 'Uploading & saving logo...'
       } else if (snapshotKeys.some((k) => k.startsWith('new_'))) {
         actionLabel = 'Saving new project...'
-      } else if (snapshotKeys.some((k) => k === 'artistName' || k === 'artistBio' || k.startsWith('platform_') || k.startsWith('social_'))) {
-        actionLabel = 'Saving artist profile...'
+      } else if (
+        snapshotKeys.some(
+          (k) =>
+            k === 'artistName' ||
+            k === 'artistBio' ||
+            k === 'siteUrl' ||
+            k === 'privateAccessCode' ||
+            k === 'adminAccess' ||
+            k === 'adminPassword' ||
+            k.startsWith('platform_') ||
+            k.startsWith('social_'),
+        )
+      ) {
+        actionLabel = 'Saving settings & profile...'
       } else if (snapshotKeys.some((k) => k.startsWith('edit_'))) {
         const currentEditName = editNameRef?.current?.trim?.()
-        actionLabel = currentEditName ? `Saving "${currentEditName}"...` : 'Saving project changes...'
+        actionLabel = currentEditName
+          ? `Saving "${currentEditName}"...`
+          : 'Saving project changes...'
       }
 
       setAutoSaveActionText(actionLabel)
-      setIsAutoSaving(true)
+
       let success = false
       try {
         success = await saveCallback()
       } catch (err) {
         setErrorMessage(`Save error: ${err.message}`)
         success = false
+      } finally {
+        isSavingInFlightRef.current = false
+        setIsAutoSaving(false)
       }
 
-      setIsAutoSaving(false)
       if (success) {
         setLastSavedTime(new Date().toLocaleTimeString())
         setDirtyFields((prev) => {
@@ -137,23 +147,75 @@ export function useAutoSave(editNameRef = null) {
           snapshotKeys.forEach((k) => dirtyFieldsRef.current.delete(k))
         }, 2500)
       }
-    }, delayMs)
-  }, [editNameRef])
+
+      // If another save was queued while this save was in flight, execute it sequentially now
+      if (pendingSaveTaskRef.current) {
+        const nextTask = pendingSaveTaskRef.current
+        pendingSaveTaskRef.current = null
+        // Small pause to let DOM and network settle before running next queued request
+        setTimeout(() => {
+          executeSaveQueue(nextTask)
+        }, 50)
+      }
+    },
+    [editNameRef],
+  )
+
+  const markFieldDirty = useCallback(
+    (fieldKey, saveCallback, delayMs = 1000) => {
+      if (fieldKey) {
+        dirtyFieldsRef.current.add(fieldKey)
+      }
+      setDirtyFields((prev) => {
+        if (prev.has(fieldKey)) return prev
+        const next = new Set(prev)
+        next.add(fieldKey)
+        return next
+      })
+      setSavedFields((prev) => {
+        if (!prev.has(fieldKey)) return prev
+        const next = new Set(prev)
+        next.delete(fieldKey)
+        return next
+      })
+
+      // If an upload or high-priority action is triggered (delayMs <= 200), don't postpone it with longer delays
+      const isUploadField =
+        fieldKey &&
+        (fieldKey.includes('audio') || fieldKey.includes('cover') || fieldKey.includes('logo'))
+      const effectiveDelay = isUploadField ? Math.min(delayMs, 100) : delayMs
+
+      if (autoSaveDebounceRef.current) {
+        clearTimeout(autoSaveDebounceRef.current)
+      }
+
+      autoSaveDebounceRef.current = setTimeout(() => {
+        autoSaveDebounceRef.current = null
+        executeSaveQueue(saveCallback)
+      }, effectiveDelay)
+    },
+    [executeSaveQueue],
+  )
 
   const clearPendingAutoSave = useCallback(() => {
     if (autoSaveDebounceRef.current) {
       clearTimeout(autoSaveDebounceRef.current)
+      autoSaveDebounceRef.current = null
     }
+    pendingSaveTaskRef.current = null
     dirtyFieldsRef.current = new Set()
     setDirtyFields(new Set())
     setSavedFields(new Set())
   }, [])
 
-  const getFieldSx = useCallback((fieldKey) => {
-    if (dirtyFields.has(fieldKey)) return DIRTY_FIELD_SX
-    if (savedFields.has(fieldKey)) return SAVED_FIELD_SX
-    return DEFAULT_FIELD_SX
-  }, [dirtyFields, savedFields])
+  const getFieldSx = useCallback(
+    (fieldKey) => {
+      if (dirtyFields.has(fieldKey)) return DIRTY_FIELD_SX
+      if (savedFields.has(fieldKey)) return SAVED_FIELD_SX
+      return DEFAULT_FIELD_SX
+    },
+    [dirtyFields, savedFields],
+  )
 
   return {
     dirtyFields,

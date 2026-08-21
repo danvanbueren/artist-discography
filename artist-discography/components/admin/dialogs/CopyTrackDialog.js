@@ -52,53 +52,43 @@ export default function CopyTrackDialog({
           gap: 1,
         }}
       >
-        <ContentCopyIcon color="primary" /> Copy Track to Another Project
+        <ContentCopyIcon color='primary' /> Copy Track to Another Project
       </DialogTitle>
       <DialogContent sx={{ pt: 1 }}>
-        <Typography
-          variant="body2"
-          sx={{ color: 'text.secondary', mb: 2 }}
-        >
-          Copying track <strong>&quot;{trackToCopy?.track?.name || 'Untitled Track'}&quot;</strong> into a destination project. Any audio file will also be duplicated as an independent copy.
+        <Typography variant='body2' sx={{ color: 'text.secondary', mb: 2 }}>
+          Copying track <strong>&quot;{trackToCopy?.track?.name || 'Untitled Track'}&quot;</strong>{' '}
+          into a destination project. Any audio file will also be duplicated as an independent copy.
         </Typography>
 
-        <FormControl
-          fullWidth
-          size="small"
-          sx={{ mt: 1 }}
-        >
-          <InputLabel id="target-project-label">Destination Project</InputLabel>
+        <FormControl fullWidth size='small' sx={{ mt: 1 }}>
+          <InputLabel id='target-project-label'>Destination Project</InputLabel>
           <Select
-            labelId="target-project-label"
-            label="Destination Project"
+            labelId='target-project-label'
+            label='Destination Project'
             value={copyTargetProjectIndex}
             onChange={(e) => onChangeTargetProjectIndex?.(Number(e.target.value))}
           >
             {projectsList.map((p, idx) => (
-              <MenuItem
-                key={idx}
-                value={idx}
-              >
-                {p.name || `Project #${idx + 1}`} {idx === trackToCopy?.sourceProjectIndex ? '(Current Project)' : ''}
+              <MenuItem key={idx} value={idx}>
+                {p.name || `Project #${idx + 1}`}{' '}
+                {idx === trackToCopy?.sourceProjectIndex ? '(Current Project)' : ''}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button
-          variant="outlined"
-          onClick={onClose}
-          sx={{ borderRadius: 2 }}
-        >
+        <Button variant='outlined' onClick={onClose} sx={{ borderRadius: 2 }}>
           Cancel
         </Button>
         <Button
-          variant="contained"
-          color="primary"
+          variant='contained'
+          color='primary'
           onClick={onConfirmCopy}
           disabled={isCopyingTrack || projectsList.length === 0}
-          startIcon={isCopyingTrack ? <CircularProgress size={16} color="inherit" /> : <ContentCopyIcon />}
+          startIcon={
+            isCopyingTrack ? <CircularProgress size={16} color='inherit' /> : <ContentCopyIcon />
+          }
           sx={{ borderRadius: 2 }}
         >
           {isCopyingTrack ? 'Copying…' : 'Copy Track'}

@@ -39,7 +39,7 @@ export default function PlatformSelectorModal({
       open={open}
       onClose={onClose}
       fullWidth
-      maxWidth="xs"
+      maxWidth='xs'
       slotProps={{
         paper: {
           sx: {
@@ -61,13 +61,13 @@ export default function PlatformSelectorModal({
           fontWeight: 700,
         }}
       >
-        <Typography variant="h6" component="div" sx={{ fontWeight: 700 }}>
+        <Typography variant='h6' component='div' sx={{ fontWeight: 700 }}>
           Select Preferred Platform
         </Typography>
         <IconButton
-          aria-label="close"
+          aria-label='close'
           onClick={onClose}
-          size="small"
+          size='small'
           sx={{ color: 'text.secondary' }}
         >
           <CloseIcon />
@@ -76,13 +76,13 @@ export default function PlatformSelectorModal({
       <DialogContent dividers sx={{ p: 1 }}>
         {availablePlatforms.length === 0 ? (
           <Box sx={{ py: 3, px: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant='body2' color='text.secondary'>
               No platform links available across tracks.
             </Typography>
           </Box>
         ) : (
           <List disablePadding>
-            {availablePlatforms.map(platform => {
+            {availablePlatforms.map((platform) => {
               const isSelected = selectedPlatform === platform.id
               return (
                 <ListItemButton
@@ -108,12 +108,12 @@ export default function PlatformSelectorModal({
                 >
                   <ListItemIcon sx={{ minWidth: 40 }}>
                     <Box
-                      component="img"
+                      component='img'
                       src={platform.icon}
                       alt={platform.name}
                       draggable={false}
-                      loading="eager"
-                      decoding="async"
+                      loading='eager'
+                      decoding='async'
                       sx={{ width: 26, height: 26, objectFit: 'contain', borderRadius: 1.5 }}
                     />
                   </ListItemIcon>

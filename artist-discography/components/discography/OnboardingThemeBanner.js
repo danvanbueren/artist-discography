@@ -1,15 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import {
-  Box,
-  Button,
-  IconButton,
-  Paper,
-  Slide,
-  Typography,
-  useTheme,
-} from '@mui/material'
+import { Box, Button, IconButton, Paper, Slide, Typography, useTheme } from '@mui/material'
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded'
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
@@ -58,7 +50,7 @@ export default function OnboardingThemeBanner({
   }
 
   return (
-    <Slide direction="up" in={visible} mountOnEnter unmountOnExit>
+    <Slide direction='up' in={visible} mountOnEnter unmountOnExit>
       <Paper
         elevation={10}
         sx={{
@@ -83,25 +75,22 @@ export default function OnboardingThemeBanner({
       >
         {darkMode ? (
           <LightModeRoundedIcon
-            color="primary"
+            color='primary'
             sx={{ fontSize: { xs: 26, sm: 30 }, flexShrink: 0 }}
           />
         ) : (
           <DarkModeRoundedIcon
-            color="primary"
+            color='primary'
             sx={{ fontSize: { xs: 26, sm: 30 }, flexShrink: 0 }}
           />
         )}
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography
-            variant="subtitle2"
-            sx={{ fontWeight: 700, lineHeight: 1.2 }}
-          >
+          <Typography variant='subtitle2' sx={{ fontWeight: 700, lineHeight: 1.2 }}>
             Choose Your Theme
           </Typography>
           <Typography
-            variant="caption"
-            color="text.secondary"
+            variant='caption'
+            color='text.secondary'
             noWrap
             sx={{ display: 'block', mt: 0.25 }}
           >
@@ -111,8 +100,8 @@ export default function OnboardingThemeBanner({
           </Typography>
         </Box>
         <Button
-          size="small"
-          variant="contained"
+          size='small'
+          variant='contained'
           onClick={handleToggle}
           sx={{
             borderRadius: 2,
@@ -125,12 +114,12 @@ export default function OnboardingThemeBanner({
           {darkMode ? 'Light Mode' : 'Dark Mode'}
         </Button>
         <IconButton
-          size="small"
+          size='small'
           onClick={handleDismiss}
           sx={{ color: 'text.secondary', p: 0.5 }}
-          aria-label="Dismiss theme onboarding"
+          aria-label='Dismiss theme onboarding'
         >
-          <CloseRoundedIcon fontSize="small" />
+          <CloseRoundedIcon fontSize='small' />
         </IconButton>
       </Paper>
     </Slide>

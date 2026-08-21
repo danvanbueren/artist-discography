@@ -9,7 +9,10 @@ export default function HeaderLogo({ onClick, ambientImage }) {
   const isDarkMode = theme.palette.mode === 'dark'
   const analysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
   const coverSrc = ambientImage || '/api/logo?w=640&fmt=webp'
-  const { logoGradientSx, getLogoFilter: getDynamicLogoFilter } = useDynamicThemeGradients(coverSrc, isDarkMode)
+  const { logoGradientSx, getLogoFilter: getDynamicLogoFilter } = useDynamicThemeGradients(
+    coverSrc,
+    isDarkMode,
+  )
 
   const baseShadow = isDarkMode
     ? 'drop-shadow(0px 6px 16px rgba(0,0,0,0.35))'
@@ -28,7 +31,7 @@ export default function HeaderLogo({ onClick, ambientImage }) {
       }}
     >
       <Box
-        aria-label="Artist Logo"
+        aria-label='Artist Logo'
         onClick={onClick}
         sx={{
           height: { xs: 'max(140px, 18dvh)', sm: 'max(180px, 22dvh)', md: 'max(220px, 26dvh)' },

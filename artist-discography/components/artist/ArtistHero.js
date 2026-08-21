@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Box, Container, useTheme } from '@mui/material'
 import HeaderLogo from '../layout/HeaderLogo'
 import SubduedText from '../ui/SubduedText'
@@ -67,6 +68,28 @@ export function getSortedActiveLinks(artist) {
   return activeLinks
 }
 
+function partitionEvenly(items, rowCount) {
+  if (!items || items.length === 0) return []
+  if (rowCount <= 1 || items.length <= 1) return [items]
+
+  const total = items.length
+  const actualRowCount = Math.min(rowCount, total)
+  const baseCount = Math.floor(total / actualRowCount)
+  const remainder = total % actualRowCount
+
+  const rows = []
+  let startIndex = 0
+
+  for (let r = 0; r < actualRowCount; r++) {
+    const count = r < remainder ? baseCount + 1 : baseCount
+    if (count > 0) {
+      rows.push(items.slice(startIndex, startIndex + count))
+      startIndex += count
+    }
+  }
+  return rows
+}
+
 export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
@@ -76,11 +99,82 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
   const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(coverSrc, isDark)
 
   // Collect non-empty social and platform links in explicit order
-  const activeLinks = getSortedActiveLinks(artist)
+  const activeLinks = useMemo(() => getSortedActiveLinks(artist), [artist])
+
+  const containerRef = useRef(null)
+  const [rowCount, setRowCount] = useState(1)
+  const activeLinksCount = activeLinks.length
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    let rafId = null
+
+    const calculateRowCount = () => {
+      if (activeLinksCount <= 1) {
+        setRowCount(1)
+        return
+      }
+
+      const width = el.clientWidth || 0
+      if (width <= 0) return
+
+      let itemSize = 72
+      let gap = 24
+
+      if (typeof window !== 'undefined') {
+        if (window.innerWidth < 600) {
+          itemSize = 54
+          gap = 16
+        } else if (window.innerWidth < 900) {
+          itemSize = 64
+          gap = 24
+        }
+      }
+
+      const maxItemsPerRow = Math.max(1, Math.floor((width + gap) / (itemSize + gap)))
+      const nextRowCount = Math.max(1, Math.ceil(activeLinksCount / maxItemsPerRow))
+
+      setRowCount((prev) => (prev === nextRowCount ? prev : nextRowCount))
+    }
+
+    const handleResize = () => {
+      if (rafId !== null) return
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null
+        calculateRowCount()
+      })
+    }
+
+    calculateRowCount()
+
+    let resizeObserver = null
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(handleResize)
+      resizeObserver.observe(el)
+    }
+
+    window.addEventListener('resize', handleResize, { passive: true })
+
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId)
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [activeLinksCount])
+
+  const rows = useMemo(() => {
+    return partitionEvenly(activeLinks, rowCount)
+  }, [activeLinks, rowCount])
 
   return (
     <Container
-      maxWidth="md"
+      maxWidth='md'
       sx={{
         textAlign: 'center',
         px: { xs: 4, sm: 3 },
@@ -97,9 +191,9 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
 
       <SubduedText
         value={name}
-        placeholder="Artist Name"
-        variant="h2"
-        component="h1"
+        placeholder='Artist Name'
+        variant='h2'
+        component='h1'
         sx={{
           fontWeight: 800,
           letterSpacing: '-0.02em',
@@ -113,8 +207,8 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
 
       <SubduedText
         value={bio}
-        placeholder="Artist description and bio will appear here."
-        variant="body1"
+        placeholder='Artist description and bio will appear here.'
+        variant='body1'
         sx={{
           maxWidth: 720,
           mx: 'auto',
@@ -127,65 +221,74 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
 
       {activeLinks.length > 0 && (
         <Box
+          ref={containerRef}
           sx={{
             width: '100%',
             mx: 'auto',
             mt: { xs: 3.5, sm: 4.5, md: 5 },
             flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: { xs: 2, sm: 3 },
           }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: { xs: 2, sm: 3 },
-              flexShrink: 0,
-            }}
-          >
-            {activeLinks.map(({ key, url, icon }) => (
-              <Box
-                key={key}
-                component="a"
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: { xs: 2.5, sm: 3 },
-                  transition: 'transform 0.25s ease, opacity 0.25s ease',
-                  textDecoration: 'none',
-                  flexShrink: 0,
-                  '&:hover': {
-                    transform: 'scale(1.12)',
-                  },
-                }}
-              >
+          {rows.map((rowLinks, rowIdx) => (
+            <Box
+              key={rowIdx}
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: { xs: 2, sm: 3 },
+                width: '100%',
+                flexShrink: 0,
+              }}
+            >
+              {rowLinks.map(({ key, url, icon }) => (
                 <Box
-                  component="img"
-                  src={icon}
-                  alt={key}
-                  draggable={false}
-                  loading="eager"
-                  decoding="async"
+                  key={key}
+                  component='a'
+                  href={url}
+                  target='_blank'
+                  rel='noopener noreferrer'
                   sx={{
-                    width: { xs: 54, sm: 64, md: 72 },
-                    height: { xs: 54, sm: 64, md: 72 },
-                    minWidth: { xs: 54, sm: 64, md: 72 },
-                    minHeight: { xs: 54, sm: 64, md: 72 },
-                    objectFit: 'contain',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     borderRadius: { xs: 2.5, sm: 3 },
-                    boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
-                    display: 'block',
+                    transition: 'transform 0.25s ease, opacity 0.25s ease',
+                    textDecoration: 'none',
                     flexShrink: 0,
+                    '&:hover': {
+                      transform: 'scale(1.12)',
+                    },
                   }}
-                />
-              </Box>
-            ))}
-          </Box>
+                >
+                  <Box
+                    component='img'
+                    src={icon}
+                    alt={key}
+                    draggable={false}
+                    loading='eager'
+                    decoding='async'
+                    sx={{
+                      width: { xs: 54, sm: 64, md: 72 },
+                      height: { xs: 54, sm: 64, md: 72 },
+                      minWidth: { xs: 54, sm: 64, md: 72 },
+                      minHeight: { xs: 54, sm: 64, md: 72 },
+                      objectFit: 'contain',
+                      borderRadius: { xs: 2.5, sm: 3 },
+                      boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+                      display: 'block',
+                      flexShrink: 0,
+                    }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          ))}
         </Box>
       )}
     </Container>

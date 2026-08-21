@@ -37,14 +37,16 @@ const BrandLinkCard = memo(function BrandLinkCard({
   const iconPath = `/platforms/${brandKey.toLowerCase()}.webp`
 
   const cardBg = hasUrl ? 'rgba(46, 125, 50, 0.2)' : 'rgba(211, 47, 47, 0.16)'
-  const cardBorder = hasUrl ? '1px solid rgba(76, 175, 80, 0.55)' : '1px solid rgba(244, 67, 54, 0.45)'
+  const cardBorder = hasUrl
+    ? '1px solid rgba(76, 175, 80, 0.55)'
+    : '1px solid rgba(244, 67, 54, 0.45)'
   const dotColor = hasUrl ? '#4caf50' : '#f44336'
   const shadowColor = hasUrl ? 'rgba(76, 175, 80, 0.35)' : 'rgba(244, 67, 54, 0.35)'
 
   return (
     <Grid size={{ xs: 12, sm: 6, md: 4 }}>
       <Card
-        variant="outlined"
+        variant='outlined'
         sx={{
           height: '100%',
           backgroundColor: cardBg,
@@ -63,7 +65,15 @@ const BrandLinkCard = memo(function BrandLinkCard({
       >
         <CardContent sx={{ p: 2.5, flexGrow: 1 }}>
           {/* Header: Dot, Platform Icon & Name, Status Badge */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              mb: 2,
+              gap: 1,
+            }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box
                 sx={{
@@ -76,28 +86,36 @@ const BrandLinkCard = memo(function BrandLinkCard({
                 }}
               />
               <Box
-                component="img"
+                component='img'
                 src={iconPath}
                 alt={brand.name}
-                onError={(e) => { e.target.style.display = 'none' }}
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                }}
                 sx={{ width: 24, height: 24, borderRadius: 1, objectFit: 'contain' }}
               />
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                <Typography variant='subtitle1' sx={{ fontWeight: 800, lineHeight: 1.2 }}>
                   {brand.name}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                <Typography variant='caption' sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
                   {brand.category}
                 </Typography>
               </Box>
             </Box>
 
             <Chip
-              icon={hasUrl ? <CheckCircleOutlineRoundedIcon fontSize="small" /> : <WarningAmberRoundedIcon fontSize="small" />}
+              icon={
+                hasUrl ? (
+                  <CheckCircleOutlineRoundedIcon fontSize='small' />
+                ) : (
+                  <WarningAmberRoundedIcon fontSize='small' />
+                )
+              }
               label={hasUrl ? 'Active' : 'Missing'}
               color={hasUrl ? 'success' : 'error'}
-              variant="filled"
-              size="small"
+              variant='filled'
+              size='small'
               sx={{
                 fontWeight: 800,
                 fontSize: '0.75rem',
@@ -123,7 +141,7 @@ const BrandLinkCard = memo(function BrandLinkCard({
           >
             {hasUrl ? (
               <Typography
-                variant="body2"
+                variant='body2'
                 sx={{
                   fontFamily: 'monospace',
                   fontSize: '0.8rem',
@@ -136,13 +154,13 @@ const BrandLinkCard = memo(function BrandLinkCard({
               </Typography>
             ) : (
               <Typography
-                variant="caption"
+                variant='caption'
                 sx={{
                   color: 'text.disabled',
                   fontStyle: 'italic',
                 }}
               >
-                No URL configured in data/artist-data.json
+                No URL configured in data/config.json
               </Typography>
             )}
           </Box>
@@ -153,24 +171,24 @@ const BrandLinkCard = memo(function BrandLinkCard({
               <>
                 <Tooltip title={copiedKey === brandKey ? 'Copied!' : 'Copy URL'}>
                   <IconButton
-                    size="small"
+                    size='small'
                     onClick={() => onCopyLink?.(url, brandKey)}
                     sx={{
                       backgroundColor: 'rgba(255, 255, 255, 0.06)',
                       '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.15)' },
                     }}
                   >
-                    <ContentCopyIcon fontSize="small" />
+                    <ContentCopyIcon fontSize='small' />
                   </IconButton>
                 </Tooltip>
                 <Button
-                  size="small"
-                  variant="outlined"
-                  color="primary"
+                  size='small'
+                  variant='outlined'
+                  color='primary'
                   endIcon={<LaunchIcon />}
                   href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  target='_blank'
+                  rel='noopener noreferrer'
                   sx={{
                     borderRadius: 1.5,
                     textTransform: 'none',

@@ -185,10 +185,31 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Defense in Depth**: Gated private projects and uncleared audio streams must be secured both in frontend state (omitting private releases, masking `hasAudio`/`audioUrl` on uncleared releases) and at the HTTP streaming endpoint (`/api/audio/[...path]` returning 403 Forbidden for unauthenticated requests).
 - **Public Frontend Cleanliness**: Never display "locked" text, warnings, or padlock icons to unauthenticated public visitors. Keep the interface inviting and frictionless, only displaying subtle `UNLOCKED` badges when an authorized user enters the private access code.
 
-### Zero-Data-Loss Principle & Atomic Disk Operations
-- **Atomic Writes**: Always write modified JSON data to an adjacent temporary file (`.tmp.<pid>`) before atomically swapping it via `fs.renameSync`. This prevents partial write corruption during server crashes or process kills.
-- **Corrupted File Quarantine**: If `artist-data.json` is unparseable and heuristic syntax recovery fails, NEVER overwrite it with default scaffold data. Immediately copy/rename the corrupted file to `data/artist-data.corrupted-<timestamp>.json` before creating a working fallback.
-- **Automated Rolling Backups**: Maintain automated timestamped snapshots in `data/backups/artist-data-<timestamp>.json` before any destructive write operation.
+### Zero-Data-Loss Principle & Modular Atomic Disk Operations
+- **Atomic Writes**: Always write modified JSON data to an adjacent temporary file (`.tmp.<pid>.<timestamp>.<rand>`) before atomically swapping it via `fs.renameSync`. This prevents partial write corruption during server crashes or process kills across both `data/config.json` and `data/projects/<slug>/project.json`.
+- **Corrupted File Quarantine**: If `config.json` or any `project.json` is unparseable and heuristic syntax recovery fails, NEVER overwrite it with default scaffold data. Immediately copy/rename the corrupted file to `data/config.corrupted-<timestamp>.json` (or `data/projects/<slug>/project.corrupted-<timestamp>.json`) before creating a working fallback.
+- **Automated Rolling Backups**: Maintain automated timestamped snapshots in `data/backups/config-<timestamp>.json` and `data/backups/project-<slug>-<timestamp>.json` before any destructive write or repair operation, bounded to the latest 15 snapshots per target.
+- **Modular Project Isolation**: Store project-level metadata within its respective project directory (`data/projects/<slug>/project.json`) alongside artwork (`art.jpg`) and track masters (`<track-slug>.<ext>`), with general configuration in `data/config.json`. Projects are discovered automatically and ordered chronologically by release date (newest first).
+
+### Cross-Device Casting, AirPlay & Media CORS Standards
+- **CORS & Preflight Compliance on Media Endpoints**: Google Cast and external media receivers (Chromecast, Google Home, Nest Audio, smart speakers, Android TVs, Apple TVs) run isolated web receiver engines that enforce strict CORS. All media streaming endpoints (`/api/audio/[...path]`, `/api/media/[...path]`, `/api/logo`, `/api/icon`) must export `OPTIONS` (HTTP 204 with `Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, HEAD, OPTIONS`, `Access-Control-Max-Age: 86400`) and `HEAD` handlers, attach full CORS headers across all response statuses (200, 206, 304, error statuses), and ensure `<audio>` tags include `crossOrigin="anonymous"`.
+- **Dual-Engine Casting & AirPlay Integration**: Combine W3C Remote Playback API (`audio.remote.prompt()`) for Chromium/Android/Desktop with Apple WebKit AirPlay API (`audio.webkitShowPlaybackTargetPicker()`, `webkitplaybacktargetavailabilitychanged`, `webkitcurrentplaybacktargetiswirelesschanged`) for iOS/iPadOS/macOS Safari. Accurately detect device capability and provide helpful diagnostic feedback if connecting on localhost or private networks.
+- **External Receiver Auth for Gated Releases**: External Cast receiver devices do not share browser session cookies. Allow authenticated sessions to stream private/gated tracks via query token authentication on `/api/audio/[...path]` so authorized users can cast private releases seamlessly.
+
+### Date Picking with MUI X Date Pickers & Dayjs
+- **Standard**: Use `@mui/x-date-pickers/DatePicker` paired with `LocalizationProvider` and `AdapterDayjs` (`dayjs`) for all date input fields (such as project release dates).
+- **Styling**: Apply dark-themed slot styling via `slotProps` (`paper`, `popper`, `textField`, `openPickerButton`) to maintain consistent aesthetics and prevent native date input inconsistencies across browsers.
+
+### Horizontal Drag & Mouse Wheel Scrolling (`useDragScroll`)
+- **Standard**: For horizontally overflowing containers (such as platform button groups, navbar links, and filter pill lists), use the `useDragScroll` custom hook.
+- **Interaction**: This provides smooth mouse click-and-drag panning and converts vertical mouse wheel ticks (`deltaY`) into horizontal scroll progress (`scrollLeft`) while suppressing accidental click triggers during drags.
+
+### Code Style, Formatting & Tooling
+- **Prettier**: Use Prettier (`.prettierrc`) with 2 spaces, single quotes, no semicolons, JSX single quotes, and trailing commas.
+- **ESLint**: Next.js flat configuration in `eslint.config.mjs` extending core web vitals and Prettier.
+
+### Absolute URL Normalization for Social Embeds & Metadata
+- **Standard**: Discord and OpenGraph scrapers require fully qualified absolute URLs (`https://...`). Use `normalizeSiteUrl()` from `lib/artistData.js` / `lib/metadata.js` to ensure configured `siteUrl` strings (or `process.env.NEXT_PUBLIC_SITE_URL`) are safely normalized with proper protocols and fallback defaults (`http://localhost:3000`).
 
 ---
 

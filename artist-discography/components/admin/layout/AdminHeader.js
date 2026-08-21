@@ -10,14 +10,20 @@ import {
   Snackbar,
   Tabs,
   Tab,
+  Tooltip,
 } from '@mui/material'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import SettingsIcon from '@mui/icons-material/Settings'
 import AlbumIcon from '@mui/icons-material/Album'
 import HomeIcon from '@mui/icons-material/Home'
 import LogoutIcon from '@mui/icons-material/Logout'
-import PersonIcon from '@mui/icons-material/Person'
+import TuneIcon from '@mui/icons-material/Tune'
 import SyncIcon from '@mui/icons-material/Sync'
 import PendingIcon from '@mui/icons-material/Pending'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import FactCheckIcon from '@mui/icons-material/FactCheck'
+import CodeIcon from '@mui/icons-material/Code'
+import DashboardIcon from '@mui/icons-material/Dashboard'
 
 export default function AdminHeader({
   isAutoSaving,
@@ -36,6 +42,8 @@ export default function AdminHeader({
   setActiveTab,
   mediaJobs,
 }) {
+  const isCompact = useMediaQuery((theme) => theme.breakpoints.down('md'))
+
   return (
     <>
       {/* Top Header Bar */}
@@ -57,12 +65,12 @@ export default function AdminHeader({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <AlbumIcon sx={{ color: 'primary.main', fontSize: 36 }} />
+          <SettingsIcon sx={{ color: 'primary.main', fontSize: 36 }} />
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-              Discography Control Center
+            <Typography variant='h5' sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+              Admin Dashboard
             </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
               All changes are automatically saved to disk following edits
             </Typography>
           </Box>
@@ -73,7 +81,7 @@ export default function AdminHeader({
           {mediaJobs?.isProcessing ? (
             <Chip
               onClick={() => mediaJobs.setIsDrawerOpen?.(true)}
-              icon={(
+              icon={
                 <Box
                   sx={{
                     display: 'flex',
@@ -93,10 +101,10 @@ export default function AdminHeader({
                     }}
                   />
                 </Box>
-              )}
+              }
               label={`Processing ${mediaJobs.activeJobs.length} file${mediaJobs.activeJobs.length === 1 ? '' : 's'} (${mediaJobs.overallProgress}%)...`}
-              color="warning"
-              variant="filled"
+              color='warning'
+              variant='filled'
               sx={{
                 fontWeight: 700,
                 py: 0.5,
@@ -109,7 +117,7 @@ export default function AdminHeader({
             />
           ) : isAutoSaving ? (
             <Chip
-              icon={(
+              icon={
                 <SyncIcon
                   sx={{
                     animation: 'spin 1s infinite linear',
@@ -119,48 +127,48 @@ export default function AdminHeader({
                     },
                   }}
                 />
-              )}
+              }
               label={autoSaveActionText}
-              color="warning"
-              variant="outlined"
+              color='warning'
+              variant='outlined'
               sx={{ fontWeight: 700, py: 0.5 }}
             />
           ) : dirtyFields.size > 0 ? (
             <Chip
               icon={<PendingIcon />}
               label={`Unsaved changes (${dirtyFields.size})...`}
-              color="warning"
+              color='warning'
               sx={{ fontWeight: 700, py: 0.5 }}
             />
           ) : savedFields.size > 0 ? (
             <Chip
               icon={<CheckCircleIcon />}
-              label="Saved to disk!"
-              color="success"
+              label='Saved to disk!'
+              color='success'
               sx={{ fontWeight: 700, py: 0.5, animation: 'pulse 1s 1' }}
             />
           ) : lastSavedTime ? (
             <Chip
               icon={<CheckCircleIcon />}
               label={`Saved: ${lastSavedTime}`}
-              color="default"
-              variant="outlined"
+              color='default'
+              variant='outlined'
               sx={{ color: 'text.secondary', py: 0.5 }}
             />
           ) : loadedTime ? (
             <Chip
               icon={<CheckCircleIcon />}
               label={`Loaded: ${loadedTime}`}
-              color="default"
-              variant="outlined"
+              color='default'
+              variant='outlined'
               sx={{ color: 'text.secondary', py: 0.5 }}
             />
           ) : null}
 
           {/* Media Center Quick Button */}
           <Button
-            variant="outlined"
-            size="small"
+            variant='outlined'
+            size='small'
             onClick={() => mediaJobs?.setIsDrawerOpen?.(true)}
             sx={{
               borderRadius: 2,
@@ -174,19 +182,19 @@ export default function AdminHeader({
           </Button>
 
           <Button
-            variant="outlined"
-            size="small"
+            variant='outlined'
+            size='small'
             startIcon={<HomeIcon />}
-            href="/"
+            href='/'
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
             View Site
           </Button>
           {hasPassword && (
             <Button
-              variant="outlined"
-              color="error"
-              size="small"
+              variant='outlined'
+              color='error'
+              size='small'
               startIcon={<LogoutIcon />}
               onClick={handleLogout}
               sx={{ borderRadius: 2, textTransform: 'none' }}
@@ -206,8 +214,8 @@ export default function AdminHeader({
         sx={{ zIndex: 2000 }}
       >
         <Alert
-          severity="success"
-          variant="filled"
+          severity='success'
+          variant='filled'
           onClose={() => setStatusMessage(null)}
           sx={{
             borderRadius: 2,
@@ -227,8 +235,8 @@ export default function AdminHeader({
         sx={{ zIndex: 2000 }}
       >
         <Alert
-          severity="error"
-          variant="filled"
+          severity='error'
+          variant='filled'
           onClose={() => setErrorMessage('')}
           sx={{
             borderRadius: 2,
@@ -244,27 +252,82 @@ export default function AdminHeader({
       <Tabs
         value={activeTab}
         onChange={(_, val) => setActiveTab(val)}
-        indicatorColor="primary"
-        textColor="primary"
-        variant="fullWidth"
+        indicatorColor='primary'
+        textColor='primary'
+        variant='fullWidth'
         sx={{
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          px: 2,
-          pt: 1,
+          width: '100%',
           flexShrink: 0,
+          '& .MuiTabs-flexContainer': {
+            width: '100%',
+            display: 'flex',
+          },
+          '& .MuiTab-root': {
+            flex: 1,
+            minWidth: 0,
+            maxWidth: 'none',
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: { xs: '0.85rem', md: '0.925rem' },
+            py: { xs: 1.25, md: 1.75 },
+            minHeight: { xs: 48, md: 54 },
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            },
+          },
         }}
       >
         <Tab
-          icon={<PersonIcon />}
-          iconPosition="start"
-          label="Artist Profile"
-          sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.95rem' }}
+          icon={
+            <Tooltip title='Settings' arrow placement='top'>
+              <TuneIcon sx={{ fontSize: { xs: 24, md: 20 } }} />
+            </Tooltip>
+          }
+          iconPosition='start'
+          label={isCompact ? undefined : 'Settings'}
+          aria-label='Settings'
         />
         <Tab
-          icon={<AlbumIcon />}
-          iconPosition="start"
-          label="Manage Projects"
-          sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.95rem' }}
+          icon={
+            <Tooltip title='Projects' arrow placement='top'>
+              <AlbumIcon sx={{ fontSize: { xs: 24, md: 20 } }} />
+            </Tooltip>
+          }
+          iconPosition='start'
+          label={isCompact ? undefined : 'Projects'}
+          aria-label='Projects'
+        />
+        <Tab
+          icon={
+            <Tooltip title='Audit' arrow placement='top'>
+              <FactCheckIcon sx={{ fontSize: { xs: 24, md: 20 } }} />
+            </Tooltip>
+          }
+          iconPosition='start'
+          label={isCompact ? undefined : 'Audit'}
+          aria-label='Audit'
+        />
+        <Tab
+          icon={
+            <Tooltip title='Utilities' arrow placement='top'>
+              <DashboardIcon sx={{ fontSize: { xs: 24, md: 20 } }} />
+            </Tooltip>
+          }
+          iconPosition='start'
+          label={isCompact ? undefined : 'Utilities'}
+          aria-label='Utilities'
+        />
+        <Tab
+          icon={
+            <Tooltip title='API' arrow placement='top'>
+              <CodeIcon sx={{ fontSize: { xs: 24, md: 20 } }} />
+            </Tooltip>
+          }
+          iconPosition='start'
+          label={isCompact ? undefined : 'API'}
+          aria-label='API'
         />
       </Tabs>
     </>

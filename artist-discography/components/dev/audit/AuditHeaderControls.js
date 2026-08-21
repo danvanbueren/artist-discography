@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  Box,
-  Typography,
-  Chip,
-  Button,
-  ToggleButton,
-  ToggleButtonGroup,
-} from '@mui/material'
+import { Box, Typography, Chip, Button, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded'
 import ViewComfyIcon from '@mui/icons-material/ViewComfy'
 import ViewStreamIcon from '@mui/icons-material/ViewStream'
@@ -40,15 +33,15 @@ export default function AuditHeaderControls({
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 800 }}>
+        <Typography variant='h6' sx={{ fontWeight: 800 }}>
           Projects &amp; Tracks Media Audit ({projectsCount} Releases)
         </Typography>
         <Chip
           icon={mounted && health?.isHealthy ? <CheckCircleOutlineRoundedIcon /> : undefined}
           label={health?.isHealthy ? 'JSON File: Valid' : 'Health Warnings'}
           color={health?.isHealthy ? 'success' : 'warning'}
-          variant="outlined"
-          size="small"
+          variant='outlined'
+          size='small'
           sx={{ fontWeight: 700 }}
         />
       </Box>
@@ -57,8 +50,8 @@ export default function AuditHeaderControls({
         {/* Expand / Collapse All Controls */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
-            size="small"
-            variant="outlined"
+            size='small'
+            variant='outlined'
             startIcon={<UnfoldMoreIcon />}
             onClick={onExpandAll}
             sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem' }}
@@ -66,8 +59,8 @@ export default function AuditHeaderControls({
             Expand All
           </Button>
           <Button
-            size="small"
-            variant="outlined"
+            size='small'
+            variant='outlined'
             startIcon={<UnfoldLessIcon />}
             onClick={onCollapseAll}
             sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.8rem' }}
@@ -81,8 +74,8 @@ export default function AuditHeaderControls({
           value={viewDensity}
           exclusive
           onChange={onDensityChange}
-          size="small"
-          aria-label="view density switcher"
+          size='small'
+          aria-label='view density switcher'
           sx={{
             backgroundColor: 'rgba(0, 0, 0, 0.3)',
             '& .MuiToggleButton-root': {
@@ -94,13 +87,13 @@ export default function AuditHeaderControls({
             },
           }}
         >
-          <ToggleButton value="comfortable" aria-label="comfortable view">
+          <ToggleButton value='comfortable' aria-label='comfortable view'>
             <ViewComfyIcon sx={{ fontSize: 16, mr: 0.5 }} /> Comfortable
           </ToggleButton>
-          <ToggleButton value="cozy" aria-label="cozy view">
+          <ToggleButton value='cozy' aria-label='cozy view'>
             <ViewStreamIcon sx={{ fontSize: 16, mr: 0.5 }} /> Cozy
           </ToggleButton>
-          <ToggleButton value="compact" aria-label="compact view">
+          <ToggleButton value='compact' aria-label='compact view'>
             <ViewHeadlineIcon sx={{ fontSize: 16, mr: 0.5 }} /> Compact
           </ToggleButton>
         </ToggleButtonGroup>

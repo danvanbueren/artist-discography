@@ -48,7 +48,7 @@ export default function AudioQualityPill({
 
   return (
     <Box
-      component="span"
+      component='span'
       title={isStuttering ? 'Playback is struggling. Click to adjust audio quality.' : undefined}
       onClick={(e) => {
         if (onClick) {
@@ -73,11 +73,7 @@ export default function AudioQualityPill({
           : isDark
             ? 'rgba(255, 255, 255, 0.08)'
             : 'rgba(0, 0, 0, 0.06)',
-        color: isStuttering
-          ? isDark
-            ? '#fbbf24'
-            : '#d97706'
-          : 'text.secondary',
+        color: isStuttering ? (isDark ? '#fbbf24' : '#d97706') : 'text.secondary',
         border: '1px solid',
         borderColor: isStuttering
           ? isDark
@@ -101,11 +97,7 @@ export default function AudioQualityPill({
         '&:hover': onClick
           ? {
               transform: 'scale(1.04)',
-              borderColor: isStuttering
-                ? isDark
-                  ? '#fbbf24'
-                  : '#d97706'
-                : 'primary.main',
+              borderColor: isStuttering ? (isDark ? '#fbbf24' : '#d97706') : 'primary.main',
               bgcolor: isStuttering
                 ? isDark
                   ? 'rgba(245, 158, 11, 0.28)'
@@ -121,8 +113,8 @@ export default function AudioQualityPill({
     >
       {isStuttering && (
         <Box
-          component="span"
-          aria-hidden="true"
+          component='span'
+          aria-hidden='true'
           sx={{
             display: 'inline-flex',
             alignItems: 'center',

@@ -35,12 +35,7 @@ export default function SubduedText({
   }
 
   return (
-    <Typography
-      variant={variant}
-      component={component}
-      sx={sx}
-      {...props}
-    >
+    <Typography variant={variant} component={component} sx={sx} {...props}>
       {value}
     </Typography>
   )

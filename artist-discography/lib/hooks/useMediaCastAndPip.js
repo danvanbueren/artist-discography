@@ -3,20 +3,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 /**
- * Custom hook to manage Picture-in-Picture (PiP) and Remote Playback / Cast capabilities
+ * Custom hook to manage Picture-in-Picture (PiP) and Remote Playback / Cast / AirPlay capabilities
  * for HTML5 audio playback.
  */
-export function useMediaCastAndPip({
-  audioRef,
-  playingTrack,
-  isPlaying,
-  coverArt,
-  onShowToast,
-}) {
+export function useMediaCastAndPip({ audioRef, playingTrack, isPlaying, coverArt, onShowToast }) {
   const [isPipActive, setIsPipActive] = useState(false)
   const [isCasting, setIsCasting] = useState(false)
   const [isCastAvailable, setIsCastAvailable] = useState(true)
   const [castError, setCastError] = useState(false)
+  const [castType, setCastType] = useState('remote') // 'remote' | 'airplay' | 'none'
 
   const canvasRef = useRef(null)
   const videoRef = useRef(null)
@@ -119,7 +114,9 @@ export function useMediaCastAndPip({
       // Artist & Project
       ctx.fillStyle = 'rgba(255,255,255,0.75)'
       ctx.font = '20px sans-serif'
-      const sub = [playingTrack?.artist || 'Artist', playingTrack?.project].filter(Boolean).join(' • ')
+      const sub = [playingTrack?.artist || 'Artist', playingTrack?.project]
+        .filter(Boolean)
+        .join(' • ')
       ctx.fillText(sub, 24, size - 26, size - 48)
     }
 
@@ -147,71 +144,115 @@ export function useMediaCastAndPip({
     }
   }, [isPlaying, Boolean(playingTrack)])
 
-  // 4. Remote Playback API (Chrome Casting) Integration
+  // 4. Remote Playback API (Google Cast / Chrome) & WebKit AirPlay Integration
   useEffect(() => {
     const audio = audioRef?.current
-    if (!audio || !('remote' in audio)) {
-      return
-    }
+    if (!audio) return
 
-    audio.disableRemotePlayback = false
+    // A. W3C Remote Playback API (Chromium, Chrome on Android, Edge)
+    if ('remote' in audio && audio.remote) {
+      setCastType('remote')
+      audio.disableRemotePlayback = false
 
-    const handleConnecting = () => {
-      setIsCasting(true)
-      if (onShowToast) onShowToast('Connecting to Cast device...')
-    }
+      const handleConnecting = () => {
+        setIsCasting(true)
+        if (onShowToast) onShowToast('Connecting to Cast device...')
+      }
 
-    const handleConnect = () => {
-      setIsCasting(true)
-      if (onShowToast) onShowToast('Connected to Cast device')
-    }
+      const handleConnect = () => {
+        setIsCasting(true)
+        if (onShowToast) onShowToast('Connected to Cast device')
+      }
 
-    const handleDisconnect = () => {
-      setIsCasting(false)
-      if (onShowToast) onShowToast('Disconnected from Cast device')
-    }
+      const handleDisconnect = () => {
+        setIsCasting(false)
+        if (onShowToast) onShowToast('Disconnected from Cast device')
+      }
 
-    audio.remote.addEventListener('connecting', handleConnecting)
-    audio.remote.addEventListener('connect', handleConnect)
-    audio.remote.addEventListener('disconnect', handleDisconnect)
+      audio.remote.addEventListener('connecting', handleConnecting)
+      audio.remote.addEventListener('connect', handleConnect)
+      audio.remote.addEventListener('disconnect', handleDisconnect)
 
-    let watchId = null
-    try {
-      if (typeof audio.remote.watchAvailability === 'function') {
-        audio.remote.watchAvailability((available) => {
-          setIsCastAvailable(available)
-        }).then((id) => {
-          watchId = id
-        }).catch(() => {
+      let watchId = null
+      try {
+        if (typeof audio.remote.watchAvailability === 'function') {
+          audio.remote
+            .watchAvailability((available) => {
+              setIsCastAvailable(available)
+            })
+            .then((id) => {
+              watchId = id
+            })
+            .catch(() => {
+              setIsCastAvailable(true)
+            })
+        } else {
           setIsCastAvailable(true)
-        })
-      } else {
+        }
+      } catch {
         setIsCastAvailable(true)
       }
-    } catch {
-      setIsCastAvailable(true)
-    }
 
-    return () => {
-      audio.remote.removeEventListener('connecting', handleConnecting)
-      audio.remote.removeEventListener('connect', handleConnect)
-      audio.remote.removeEventListener('disconnect', handleDisconnect)
-      if (watchId !== null && typeof audio.remote.cancelWatchAvailability === 'function') {
-        audio.remote.cancelWatchAvailability(watchId).catch(() => {})
+      return () => {
+        audio.remote.removeEventListener('connecting', handleConnecting)
+        audio.remote.removeEventListener('connect', handleConnect)
+        audio.remote.removeEventListener('disconnect', handleDisconnect)
+        if (watchId !== null && typeof audio.remote.cancelWatchAvailability === 'function') {
+          audio.remote.cancelWatchAvailability(watchId).catch(() => {})
+        }
       }
     }
+
+    // B. Apple WebKit AirPlay API (iOS Safari, iPadOS, macOS Safari)
+    if (typeof audio.webkitShowPlaybackTargetPicker === 'function') {
+      setCastType('airplay')
+
+      const handleAirPlayAvailability = (event) => {
+        setIsCastAvailable(event.availability === 'available')
+      }
+
+      const handleAirPlayTargetChanged = () => {
+        const isWireless = Boolean(audio.webkitCurrentPlaybackTargetIsWireless)
+        setIsCasting(isWireless)
+        if (onShowToast && isWireless) {
+          onShowToast('Connected to AirPlay device')
+        }
+      }
+
+      audio.addEventListener('webkitplaybacktargetavailabilitychanged', handleAirPlayAvailability)
+      audio.addEventListener(
+        'webkitcurrentplaybacktargetiswirelesschanged',
+        handleAirPlayTargetChanged,
+      )
+
+      return () => {
+        audio.removeEventListener(
+          'webkitplaybacktargetavailabilitychanged',
+          handleAirPlayAvailability,
+        )
+        audio.removeEventListener(
+          'webkitcurrentplaybacktargetiswirelesschanged',
+          handleAirPlayTargetChanged,
+        )
+      }
+    }
+
+    setCastType('none')
   }, [audioRef, onShowToast])
 
-  const triggerCastErrorVisual = useCallback((message) => {
-    setCastError(true)
-    if (castErrorTimeoutRef.current) clearTimeout(castErrorTimeoutRef.current)
-    castErrorTimeoutRef.current = setTimeout(() => {
-      setCastError(false)
-    }, 800)
-    if (onShowToast && message) {
-      onShowToast(message)
-    }
-  }, [onShowToast])
+  const triggerCastErrorVisual = useCallback(
+    (message) => {
+      setCastError(true)
+      if (castErrorTimeoutRef.current) clearTimeout(castErrorTimeoutRef.current)
+      castErrorTimeoutRef.current = setTimeout(() => {
+        setCastError(false)
+      }, 1200)
+      if (onShowToast && message) {
+        onShowToast(message)
+      }
+    },
+    [onShowToast],
+  )
 
   // Destroy Picture-in-Picture session
   const handleExitPip = useCallback(async () => {
@@ -253,7 +294,7 @@ export function useMediaCastAndPip({
     }
   }, [onShowToast])
 
-  // Prompt Cast Device Picker
+  // Prompt Cast / AirPlay Device Picker
   const handlePromptCast = useCallback(async () => {
     const audio = audioRef?.current
 
@@ -262,29 +303,55 @@ export function useMediaCastAndPip({
       return
     }
 
-    if (!('remote' in audio) || typeof audio.remote?.prompt !== 'function') {
-      triggerCastErrorVisual('Casting is not supported by your browser. Use Google Chrome or Microsoft Edge to cast to speakers & TVs.')
+    // 1. Google Chrome / Chromium Remote Playback API
+    if ('remote' in audio && typeof audio.remote?.prompt === 'function') {
+      try {
+        await audio.remote.prompt()
+      } catch (err) {
+        if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
+          // User closed or dismissed the cast selector dialog
+          return
+        }
+        if (err.name === 'NotFoundError') {
+          triggerCastErrorVisual('No Cast devices found on your local network.')
+          return
+        }
+        if (err.name === 'NotSupportedError') {
+          triggerCastErrorVisual('Casting is not supported by this receiver.')
+          return
+        }
+
+        // Provide diagnostic toast if testing on localhost
+        if (
+          typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ) {
+          triggerCastErrorVisual(
+            'Cast devices cannot connect to "localhost". Access via your local network IP (e.g. 192.168.x.x) or domain.',
+          )
+          return
+        }
+
+        console.warn('Remote playback prompt error:', err)
+        triggerCastErrorVisual(err.message || 'Unable to connect to Cast device.')
+      }
       return
     }
 
-    try {
-      await audio.remote.prompt()
-    } catch (err) {
-      if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
-        // User closed or dismissed the cast selector dialog
-        return
+    // 2. Apple WebKit AirPlay Picker
+    if (typeof audio.webkitShowPlaybackTargetPicker === 'function') {
+      try {
+        audio.webkitShowPlaybackTargetPicker()
+      } catch (err) {
+        console.warn('AirPlay prompt error:', err)
+        triggerCastErrorVisual('Unable to open AirPlay device picker.')
       }
-      if (err.name === 'NotFoundError') {
-        triggerCastErrorVisual('No Cast devices found on your local network.')
-        return
-      }
-      if (err.name === 'NotSupportedError') {
-        triggerCastErrorVisual('Casting this audio stream is not supported by the receiver device.')
-        return
-      }
-      console.warn('Remote playback prompt error:', err)
-      triggerCastErrorVisual(err.message || 'Unable to connect to Cast device.')
+      return
     }
+
+    triggerCastErrorVisual(
+      'Casting is not supported by your current browser. Use Google Chrome, Edge, or Safari to stream to external speakers.',
+    )
   }, [audioRef, triggerCastErrorVisual])
 
   return {
@@ -292,6 +359,7 @@ export function useMediaCastAndPip({
     isCasting,
     isCastAvailable,
     castError,
+    castType,
     handleTogglePip,
     handleExitPip,
     handlePromptCast,

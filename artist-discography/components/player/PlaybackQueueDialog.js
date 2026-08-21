@@ -82,30 +82,33 @@ export default function PlaybackQueueDialog({
     }
   }, [])
 
-  const checkAndTriggerAutoScroll = useCallback((clientY) => {
-    if (!contentRef.current) return
+  const checkAndTriggerAutoScroll = useCallback(
+    (clientY) => {
+      if (!contentRef.current) return
 
-    const rect = contentRef.current.getBoundingClientRect()
-    const threshold = 64
+      const rect = contentRef.current.getBoundingClientRect()
+      const threshold = 64
 
-    if (clientY < rect.top + threshold) {
-      const dist = Math.max(0, rect.top + threshold - clientY)
-      const ratio = Math.min(1, dist / threshold)
-      scrollSpeedRef.current = -Math.round(ratio * 12 + 3)
-      if (!autoScrollAnimRef.current) {
-        autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
+      if (clientY < rect.top + threshold) {
+        const dist = Math.max(0, rect.top + threshold - clientY)
+        const ratio = Math.min(1, dist / threshold)
+        scrollSpeedRef.current = -Math.round(ratio * 12 + 3)
+        if (!autoScrollAnimRef.current) {
+          autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
+        }
+      } else if (clientY > rect.bottom - threshold) {
+        const dist = Math.max(0, clientY - (rect.bottom - threshold))
+        const ratio = Math.min(1, dist / threshold)
+        scrollSpeedRef.current = Math.round(ratio * 12 + 3)
+        if (!autoScrollAnimRef.current) {
+          autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
+        }
+      } else {
+        stopAutoScroll()
       }
-    } else if (clientY > rect.bottom - threshold) {
-      const dist = Math.max(0, clientY - (rect.bottom - threshold))
-      const ratio = Math.min(1, dist / threshold)
-      scrollSpeedRef.current = Math.round(ratio * 12 + 3)
-      if (!autoScrollAnimRef.current) {
-        autoScrollAnimRef.current = requestAnimationFrame(autoScrollLoop)
-      }
-    } else {
-      stopAutoScroll()
-    }
-  }, [autoScrollLoop, stopAutoScroll])
+    },
+    [autoScrollLoop, stopAutoScroll],
+  )
 
   // Helper to determine drop target from (clientX, clientY) coordinates
   const updateDropTargetFromCoords = useCallback((clientX, clientY) => {
@@ -307,9 +310,10 @@ export default function PlaybackQueueDialog({
     e.stopPropagation()
     stopAutoScroll()
     if (draggedItem && onQueueDragDrop) {
-      const toIndex = dragOverItem && dragOverItem.listType === targetListType
-        ? dragOverItem.targetIndex
-        : fallbackIndex
+      const toIndex =
+        dragOverItem && dragOverItem.listType === targetListType
+          ? dragOverItem.targetIndex
+          : fallbackIndex
       onQueueDragDrop({
         fromList: draggedItem.listType,
         fromIndex: draggedItem.index,
@@ -361,19 +365,31 @@ export default function PlaybackQueueDialog({
       open={open}
       onClose={onClose}
       fullScreen={isMobile}
-      maxWidth="sm"
+      maxWidth='sm'
       fullWidth
+      sx={{
+        '& .MuiDialog-container': isMobile
+          ? {
+              height: '100dvh',
+              maxHeight: '100dvh',
+            }
+          : undefined,
+      }}
       slotProps={{
         paper: {
           sx: {
             borderRadius: isMobile ? 0 : 4,
             p: isMobile ? 0 : 1,
-            maxHeight: isMobile ? '100dvh' : '80vh',
+            height: isMobile ? '100dvh' : 'auto',
+            maxHeight: isMobile ? '100dvh' : '85vh',
+            display: 'flex',
+            flexDirection: 'column',
             bgcolor: 'background.paper',
             backgroundImage: 'none',
             boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4)',
             border: isMobile ? 'none' : '1px solid',
             borderColor: 'divider',
+            overflow: 'hidden',
           },
         },
       }}
@@ -382,26 +398,20 @@ export default function PlaybackQueueDialog({
         sx={{
           m: 0,
           p: 2,
+          pt: isMobile ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : 2,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}
       >
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ alignItems: 'center' }}
-        >
+        <Stack direction='row' spacing={1.5} sx={{ alignItems: 'center' }}>
           <QueueMusicRoundedIcon sx={{ color: 'common.white' }} />
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          <Typography variant='h6' sx={{ fontWeight: 800 }}>
             Queue
           </Typography>
         </Stack>
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{ color: 'text.secondary' }}
-        >
+        <IconButton aria-label='close' onClick={onClose} sx={{ color: 'text.secondary' }}>
           <CloseRoundedIcon />
         </IconButton>
       </DialogTitle>
@@ -410,24 +420,32 @@ export default function PlaybackQueueDialog({
         ref={contentRef}
         sx={{
           p: 2,
-          maxHeight: '80vh',
+          pb: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 32px)' : 2.5,
+          flex: '1 1 auto',
           overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+          minHeight: 0,
         }}
       >
-
         {/* SECTION 1: QUEUE */}
-        <Box sx={{ mb: 3 }} data-queue-section="queue">
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
+        <Box sx={{ mb: 3 }} data-queue-section='queue'>
+          <Typography variant='subtitle1' sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
             Queue ({manualQueue.length})
           </Typography>
 
           {manualQueue.length === 0 ? (
             <Paper
-              variant="outlined"
+              variant='outlined'
               onDragOver={(e) => {
                 e.preventDefault()
                 checkAndTriggerAutoScroll(e.clientY)
-                setDragOverItem({ listType: 'queue', targetIndex: 0, itemIndex: 0, position: 'top' })
+                setDragOverItem({
+                  listType: 'queue',
+                  targetIndex: 0,
+                  itemIndex: 0,
+                  position: 'top',
+                })
               }}
               onDrop={(e) => handleDrop(e, 'queue', 0)}
               sx={{
@@ -440,9 +458,9 @@ export default function PlaybackQueueDialog({
               }}
             >
               <Typography
-                variant="body2"
-                color="text.secondary"
-                fontStyle="italic"
+                variant='body2'
+                color='text.secondary'
+                fontStyle='italic'
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -452,7 +470,7 @@ export default function PlaybackQueueDialog({
                 }}
               >
                 No tracks in queue. Click
-                <QueueMusicRoundedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                <QueueMusicRoundedIcon fontSize='small' sx={{ color: 'text.secondary' }} />
                 on any track or drag a track here.
               </Typography>
             </Paper>
@@ -478,7 +496,7 @@ export default function PlaybackQueueDialog({
                 return (
                   <ListItem
                     key={idx}
-                    data-list-type="queue"
+                    data-list-type='queue'
                     data-item-index={idx}
                     draggable={!isTouch}
                     onDragStart={(e) => handleDragStart(e, 'queue', idx)}
@@ -514,12 +532,12 @@ export default function PlaybackQueueDialog({
                       },
                     }}
                     secondaryAction={
-                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                      <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center' }}>
                         {!isTouch && (
                           <IconButton
-                            size="small"
-                            color="primary"
-                            title="Play Track"
+                            size='small'
+                            color='primary'
+                            title='Play Track'
                             onClick={(e) => {
                               e.stopPropagation()
                               if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, true)
@@ -532,18 +550,18 @@ export default function PlaybackQueueDialog({
                               },
                             }}
                           >
-                            <PlayArrowRoundedIcon fontSize="small" />
+                            <PlayArrowRoundedIcon fontSize='small' />
                           </IconButton>
                         )}
                         <IconButton
-                          size="small"
-                          title="Remove from Queue"
+                          size='small'
+                          title='Remove from Queue'
                           onClick={(e) => {
                             e.stopPropagation()
                             if (onRemoveFromManualQueue) onRemoveFromManualQueue(idx)
                           }}
                         >
-                          <DeleteOutlineRoundedIcon fontSize="small" />
+                          <DeleteOutlineRoundedIcon fontSize='small' />
                         </IconButton>
                       </Stack>
                     }
@@ -578,7 +596,12 @@ export default function PlaybackQueueDialog({
                       <DragIndicatorRoundedIcon />
                     </Box>
                     {(() => {
-                      const coverUrl = item.track?.cover || item.track?.projectCover || item.project?.cover || item.project?.image || ''
+                      const coverUrl =
+                        item.track?.cover ||
+                        item.track?.projectCover ||
+                        item.project?.cover ||
+                        item.project?.image ||
+                        ''
                       return (
                         <Box
                           sx={{
@@ -605,21 +628,22 @@ export default function PlaybackQueueDialog({
                               sx={{ width: '100%', height: '100%' }}
                             />
                           ) : (
-                            <MusicNoteRoundedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
+                            <MusicNoteRoundedIcon
+                              fontSize='small'
+                              sx={{ color: 'text.secondary', opacity: 0.7 }}
+                            />
                           )}
                         </Box>
                       )
                     })()}
                     <ListItemText
                       primary={item.track?.name || `Track ${idx + 1}`}
-                      secondary={
-                        (() => {
-                          const projName = item.project?.name || item.track?.project || ''
-                          const artistName = item.track?.artist || item.project?.artist || ''
-                          if (projName && artistName) return `${projName} • ${artistName}`
-                          return projName || artistName || 'Artist'
-                        })()
-                      }
+                      secondary={(() => {
+                        const projName = item.project?.name || item.track?.project || ''
+                        const artistName = item.track?.artist || item.project?.artist || ''
+                        if (projName && artistName) return `${projName} • ${artistName}`
+                        return projName || artistName || 'Artist'
+                      })()}
                       slotProps={{
                         primary: {
                           variant: 'body1',
@@ -658,18 +682,23 @@ export default function PlaybackQueueDialog({
         </Box>
 
         {/* SECTION 2: AUTOPLAY */}
-        <Box data-queue-section="autoplay">
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.secondary', mb: 1 }}>
+        <Box data-queue-section='autoplay'>
+          <Typography variant='subtitle1' sx={{ fontWeight: 700, color: 'text.secondary', mb: 1 }}>
             Autoplay
           </Typography>
 
           {autoplayTracks.length === 0 ? (
             <Paper
-              variant="outlined"
+              variant='outlined'
               onDragOver={(e) => {
                 e.preventDefault()
                 checkAndTriggerAutoScroll(e.clientY)
-                setDragOverItem({ listType: 'autoplay', targetIndex: 0, itemIndex: 0, position: 'top' })
+                setDragOverItem({
+                  listType: 'autoplay',
+                  targetIndex: 0,
+                  itemIndex: 0,
+                  position: 'top',
+                })
               }}
               onDrop={(e) => handleDrop(e, 'autoplay', 0)}
               sx={{
@@ -681,7 +710,7 @@ export default function PlaybackQueueDialog({
                 borderColor: dragOverItem?.listType === 'autoplay' ? 'primary.main' : 'divider',
               }}
             >
-              <Typography variant="body2" color="text.secondary" fontStyle="italic">
+              <Typography variant='body2' color='text.secondary' fontStyle='italic'>
                 No upcoming autoplay tracks. Drag a track here.
               </Typography>
             </Paper>
@@ -707,7 +736,7 @@ export default function PlaybackQueueDialog({
                 return (
                   <ListItem
                     key={idx}
-                    data-list-type="autoplay"
+                    data-list-type='autoplay'
                     data-item-index={idx}
                     draggable={!isTouch}
                     onDragStart={(e) => handleDragStart(e, 'autoplay', idx)}
@@ -743,12 +772,12 @@ export default function PlaybackQueueDialog({
                       },
                     }}
                     secondaryAction={
-                      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                      <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center' }}>
                         {!isTouch && (
                           <IconButton
-                            size="small"
-                            color="primary"
-                            title="Play Track"
+                            size='small'
+                            color='primary'
+                            title='Play Track'
                             onClick={(e) => {
                               e.stopPropagation()
                               if (onPlayQueuedTrack) onPlayQueuedTrack(item, idx, false)
@@ -761,18 +790,18 @@ export default function PlaybackQueueDialog({
                               },
                             }}
                           >
-                            <PlayArrowRoundedIcon fontSize="small" />
+                            <PlayArrowRoundedIcon fontSize='small' />
                           </IconButton>
                         )}
                         <IconButton
-                          size="small"
-                          title="Remove from Autoplay"
+                          size='small'
+                          title='Remove from Autoplay'
                           onClick={(e) => {
                             e.stopPropagation()
                             if (onRemoveFromAutoplay) onRemoveFromAutoplay(idx)
                           }}
                         >
-                          <DeleteOutlineRoundedIcon fontSize="small" />
+                          <DeleteOutlineRoundedIcon fontSize='small' />
                         </IconButton>
                       </Stack>
                     }
@@ -807,7 +836,12 @@ export default function PlaybackQueueDialog({
                       <DragIndicatorRoundedIcon />
                     </Box>
                     {(() => {
-                      const coverUrl = item.track?.cover || item.track?.projectCover || item.project?.cover || item.project?.image || ''
+                      const coverUrl =
+                        item.track?.cover ||
+                        item.track?.projectCover ||
+                        item.project?.cover ||
+                        item.project?.image ||
+                        ''
                       return (
                         <Box
                           sx={{
@@ -834,21 +868,22 @@ export default function PlaybackQueueDialog({
                               sx={{ width: '100%', height: '100%' }}
                             />
                           ) : (
-                            <MusicNoteRoundedIcon fontSize="small" sx={{ color: 'text.secondary', opacity: 0.7 }} />
+                            <MusicNoteRoundedIcon
+                              fontSize='small'
+                              sx={{ color: 'text.secondary', opacity: 0.7 }}
+                            />
                           )}
                         </Box>
                       )
                     })()}
                     <ListItemText
                       primary={item.track?.name || `Track ${idx + 1}`}
-                      secondary={
-                        (() => {
-                          const projName = item.project?.name || item.track?.project || ''
-                          const artistName = item.track?.artist || item.project?.artist || ''
-                          if (projName && artistName) return `${projName} • ${artistName}`
-                          return projName || artistName || 'Artist'
-                        })()
-                      }
+                      secondary={(() => {
+                        const projName = item.project?.name || item.track?.project || ''
+                        const artistName = item.track?.artist || item.project?.artist || ''
+                        if (projName && artistName) return `${projName} • ${artistName}`
+                        return projName || artistName || 'Artist'
+                      })()}
                       slotProps={{
                         primary: {
                           variant: 'body1',
@@ -885,7 +920,6 @@ export default function PlaybackQueueDialog({
             </List>
           )}
         </Box>
-
       </DialogContent>
     </Dialog>
   )

@@ -1,13 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import {
-  isImageFullyCached,
-  optimizeAndCacheImage,
-} from './mediaOptimizer'
-import {
-  isAudioFullyCached,
-  optimizeAndCacheAudio,
-} from './audioOptimizer'
+import { isImageFullyCached, optimizeAndCacheImage } from './mediaOptimizer'
+import { isAudioFullyCached, optimizeAndCacheAudio } from './audioOptimizer'
 import { slugify } from './slugs'
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif'])
@@ -57,7 +51,7 @@ export async function warmMediaFiles(filePaths = [], options = {}) {
     return { imagesWarmed: 0, audioWarmed: 0 }
   }
 
-  const validPaths = filePaths.filter(fp => fp && typeof fp === 'string' && fs.existsSync(fp))
+  const validPaths = filePaths.filter((fp) => fp && typeof fp === 'string' && fs.existsSync(fp))
   let imagesWarmed = 0
   let audioWarmed = 0
 
@@ -77,7 +71,9 @@ export async function warmMediaFiles(filePaths = [], options = {}) {
   await asyncPool(imageFiles, 4, async (imgPath) => {
     try {
       const fileName = path.basename(imgPath)
-      const targetLabel = options.targetMap?.[imgPath] || (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
+      const targetLabel =
+        options.targetMap?.[imgPath] ||
+        (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
       const details = options.detailsMap?.[imgPath] || {}
       await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel, details })
       imagesWarmed++
@@ -205,8 +201,8 @@ export function collectAllMediaFiles(artistData = null) {
 export async function warmAllArtistMedia(artistData = null) {
   const { images, audio } = collectAllMediaFiles(artistData)
 
-  const uncachedImages = images.filter(img => !isImageFullyCached(img))
-  const uncachedAudio = audio.filter(aud => !isAudioFullyCached(aud))
+  const uncachedImages = images.filter((img) => !isImageFullyCached(img))
+  const uncachedAudio = audio.filter((aud) => !isAudioFullyCached(aud))
 
   let imagesWarmed = 0
   let audioWarmed = 0
@@ -277,7 +273,7 @@ export function ensureAllMediaReadyFallback(artistData = null) {
 
   lastWarmingCheckTimestamp = now
 
-    activeBackgroundWarmingPromise = (async () => {
+  activeBackgroundWarmingPromise = (async () => {
     try {
       await warmAllArtistMedia(artistData)
       try {

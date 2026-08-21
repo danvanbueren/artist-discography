@@ -120,7 +120,8 @@ export function failJob(id, error, finalDetails = {}) {
   const job = jobs.get(id)
   if (!job) return
 
-  const errorMsg = error instanceof Error ? error.message : String(error || 'Unknown error occurred')
+  const errorMsg =
+    error instanceof Error ? error.message : String(error || 'Unknown error occurred')
   job.status = 'failed'
   job.endTime = Date.now()
   job.durationMs = job.endTime - job.startTime
@@ -138,8 +139,8 @@ export function failJob(id, error, finalDetails = {}) {
  */
 export function getAllJobs() {
   const all = Array.from(jobs.values()).sort((a, b) => b.startTime - a.startTime)
-  const active = all.filter(j => j.status === 'processing' || j.status === 'queued')
-  const completed = all.filter(j => j.status === 'completed' || j.status === 'failed')
+  const active = all.filter((j) => j.status === 'processing' || j.status === 'queued')
+  const completed = all.filter((j) => j.status === 'completed' || j.status === 'failed')
 
   return {
     active,

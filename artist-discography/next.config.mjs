@@ -12,12 +12,22 @@ const nextConfig = {
         destination: '/sys/admin',
       },
       {
-        source: '/_sys/_dev',
-        destination: '/sys/dev',
-      },
-      {
         source: '/manifest.json',
         destination: '/manifest.webmanifest',
+      },
+    ]
+  },
+  async redirects() {
+    return [
+      {
+        source: '/_sys/_dev',
+        destination: '/_sys/_admin',
+        permanent: false,
+      },
+      {
+        source: '/sys/dev',
+        destination: '/_sys/_admin',
+        permanent: false,
       },
     ]
   },

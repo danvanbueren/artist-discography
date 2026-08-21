@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { loadArtistData } from '../../../../lib/artistData'
+import { loadConfigData } from '../../../../lib/artistData'
 
 export async function GET() {
   try {
@@ -13,7 +13,7 @@ export async function GET() {
   } catch (err) {
     return NextResponse.json(
       { success: false, authenticated: false, error: err.message },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -26,25 +26,25 @@ export async function POST(request) {
     if (!submittedCode) {
       return NextResponse.json(
         { success: false, error: 'Please enter a private access code' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    const dataResult = loadArtistData()
+    const dataResult = loadConfigData()
     const currentData = dataResult?.data ?? {}
     const configuredCode = String(currentData?.privateAccessCode || '').trim()
 
     if (!configuredCode) {
       return NextResponse.json(
         { success: false, error: 'No private access code is configured on this site' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     if (submittedCode !== configuredCode) {
       return NextResponse.json(
         { success: false, error: 'Invalid private access code' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -66,7 +66,7 @@ export async function POST(request) {
     console.error('Error verifying private access code:', err)
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -89,7 +89,7 @@ export async function DELETE() {
   } catch (err) {
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

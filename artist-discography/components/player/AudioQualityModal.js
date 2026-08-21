@@ -67,7 +67,7 @@ export default function AudioQualityModal({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
+      maxWidth='xs'
       fullWidth
       slotProps={{
         paper: {
@@ -90,15 +90,15 @@ export default function AudioQualityModal({
         }}
       >
         <Stack spacing={0.25}>
-          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.15rem' }}>
+          <Typography variant='h6' sx={{ fontWeight: 700, fontSize: '1.15rem' }}>
             Audio Playback Quality
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant='caption' color='text.secondary'>
             Select your preferred streaming audio quality
           </Typography>
         </Stack>
-        <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
-          <CloseRoundedIcon fontSize="small" />
+        <IconButton size='small' onClick={onClose} sx={{ color: 'text.secondary' }}>
+          <CloseRoundedIcon fontSize='small' />
         </IconButton>
       </DialogTitle>
 
@@ -128,10 +128,8 @@ export default function AudioQualityModal({
                 width: 20,
                 height: 20,
                 borderRadius: '50%',
-                bgcolor: (theme) =>
-                  theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706',
-                color: (theme) =>
-                  theme.palette.mode === 'dark' ? '#1a1400' : '#ffffff',
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706'),
+                color: (theme) => (theme.palette.mode === 'dark' ? '#1a1400' : '#ffffff'),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -141,10 +139,9 @@ export default function AudioQualityModal({
               <PriorityHighRoundedIcon sx={{ fontSize: 13, color: 'inherit' }} />
             </Box>
             <Typography
-              variant="caption"
+              variant='caption'
               sx={{
-                color: (theme) =>
-                  theme.palette.mode === 'dark' ? '#fbbf24' : '#b45309',
+                color: (theme) => (theme.palette.mode === 'dark' ? '#fbbf24' : '#b45309'),
                 fontWeight: 600,
                 lineHeight: 1.35,
               }}
@@ -171,17 +168,23 @@ export default function AudioQualityModal({
                   border: '2px solid',
                   borderColor: isSelected ? 'primary.main' : 'divider',
                   bgcolor: isSelected
-                    ? (theme) => theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.12)' : 'rgba(25, 118, 210, 0.08)'
+                    ? (theme) =>
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(144, 202, 249, 0.12)'
+                          : 'rgba(25, 118, 210, 0.08)'
                     : 'background.paper',
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     borderColor: isSelected ? 'primary.main' : 'text.secondary',
-                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.06)'
+                        : 'rgba(0, 0, 0, 0.04)',
                     transform: 'translateY(-1px)',
                   },
                 }}
               >
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+                <Stack direction='row' spacing={1.5} sx={{ alignItems: 'flex-start' }}>
                   <Box
                     sx={{
                       p: 1,
@@ -200,7 +203,7 @@ export default function AudioQualityModal({
 
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography
-                      variant="subtitle2"
+                      variant='subtitle2'
                       sx={{
                         fontWeight: 700,
                         fontSize: '0.95rem',
@@ -235,8 +238,8 @@ export default function AudioQualityModal({
                     )}
 
                     <Typography
-                      variant="caption"
-                      color="text.secondary"
+                      variant='caption'
+                      color='text.secondary'
                       sx={{
                         display: 'block',
                         lineHeight: 1.35,
@@ -248,9 +251,11 @@ export default function AudioQualityModal({
 
                   <Box sx={{ flexShrink: 0, mt: 0.25 }}>
                     {isSelected ? (
-                      <CheckCircleRoundedIcon color="primary" sx={{ fontSize: 22 }} />
+                      <CheckCircleRoundedIcon color='primary' sx={{ fontSize: 22 }} />
                     ) : (
-                      <RadioButtonUncheckedRoundedIcon sx={{ fontSize: 22, color: 'text.disabled' }} />
+                      <RadioButtonUncheckedRoundedIcon
+                        sx={{ fontSize: 22, color: 'text.disabled' }}
+                      />
                     )}
                   </Box>
                 </Stack>

@@ -42,18 +42,32 @@ export function useMediaSession({
 
   // 1. Synchronize Metadata (Track Title, Artist, Album, Multi-Resolution Artwork)
   useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !window.MediaMetadata || !playingTrack) {
+    if (
+      typeof window === 'undefined' ||
+      !('mediaSession' in navigator) ||
+      !window.MediaMetadata ||
+      !playingTrack
+    ) {
       return
     }
 
     const title = playingTrack.name || 'Untitled Track'
     const artist = playingTrack.artist || playingTrack.projectArtist || 'Artist'
     const album = playingTrack.project || 'Discography'
-    const rawCover = playingTrack.cover || playingTrack.image || playingTrack.projectCover || '/api/logo?w=512&fmt=png'
+    const rawCover =
+      playingTrack.cover ||
+      playingTrack.image ||
+      playingTrack.projectCover ||
+      '/api/logo?w=512&fmt=png'
 
     const artworkList = []
 
-    if (typeof rawCover === 'string' && (rawCover.startsWith('/api/media') || rawCover.startsWith('/api/logo') || rawCover.startsWith('/'))) {
+    if (
+      typeof rawCover === 'string' &&
+      (rawCover.startsWith('/api/media') ||
+        rawCover.startsWith('/api/logo') ||
+        rawCover.startsWith('/'))
+    ) {
       const origin = typeof window !== 'undefined' ? window.location.origin : ''
       const sep = rawCover.includes('?') ? '&' : '?'
       for (const sz of ARTWORK_SIZES) {
@@ -132,49 +146,73 @@ export function useMediaSession({
     }
 
     const actionHandlers = [
-      ['play', () => {
-        if (onTogglePlayRef.current && !isPlayingRef.current) {
-          onTogglePlayRef.current()
-        }
-      }],
-      ['pause', () => {
-        if (onTogglePlayRef.current && isPlayingRef.current) {
-          onTogglePlayRef.current()
-        }
-      }],
-      ['previoustrack', () => {
-        if (onSkipPrevRef.current) {
-          onSkipPrevRef.current()
-        }
-      }],
-      ['nexttrack', () => {
-        if (onSkipNextRef.current) {
-          onSkipNextRef.current()
-        }
-      }],
-      ['seekbackward', (details) => {
-        const skipTime = details?.seekOffset || 10
-        const current = currentTimeRef.current || 0
-        const target = Math.max(0, current - skipTime)
-        if (onSeekRef.current) onSeekRef.current(target)
-      }],
-      ['seekforward', (details) => {
-        const skipTime = details?.seekOffset || 10
-        const current = currentTimeRef.current || 0
-        const dur = durationRef.current || 0
-        const target = Math.min(dur, current + skipTime)
-        if (onSeekRef.current) onSeekRef.current(target)
-      }],
-      ['seekto', (details) => {
-        if (details?.seekTime !== undefined && !isNaN(details.seekTime) && onSeekRef.current) {
-          onSeekRef.current(details.seekTime)
-        }
-      }],
-      ['stop', () => {
-        if (onTogglePlayRef.current && isPlayingRef.current) {
-          onTogglePlayRef.current()
-        }
-      }],
+      [
+        'play',
+        () => {
+          if (onTogglePlayRef.current && !isPlayingRef.current) {
+            onTogglePlayRef.current()
+          }
+        },
+      ],
+      [
+        'pause',
+        () => {
+          if (onTogglePlayRef.current && isPlayingRef.current) {
+            onTogglePlayRef.current()
+          }
+        },
+      ],
+      [
+        'previoustrack',
+        () => {
+          if (onSkipPrevRef.current) {
+            onSkipPrevRef.current()
+          }
+        },
+      ],
+      [
+        'nexttrack',
+        () => {
+          if (onSkipNextRef.current) {
+            onSkipNextRef.current()
+          }
+        },
+      ],
+      [
+        'seekbackward',
+        (details) => {
+          const skipTime = details?.seekOffset || 10
+          const current = currentTimeRef.current || 0
+          const target = Math.max(0, current - skipTime)
+          if (onSeekRef.current) onSeekRef.current(target)
+        },
+      ],
+      [
+        'seekforward',
+        (details) => {
+          const skipTime = details?.seekOffset || 10
+          const current = currentTimeRef.current || 0
+          const dur = durationRef.current || 0
+          const target = Math.min(dur, current + skipTime)
+          if (onSeekRef.current) onSeekRef.current(target)
+        },
+      ],
+      [
+        'seekto',
+        (details) => {
+          if (details?.seekTime !== undefined && !isNaN(details.seekTime) && onSeekRef.current) {
+            onSeekRef.current(details.seekTime)
+          }
+        },
+      ],
+      [
+        'stop',
+        () => {
+          if (onTogglePlayRef.current && isPlayingRef.current) {
+            onTogglePlayRef.current()
+          }
+        },
+      ],
     ]
 
     for (const [action, handler] of actionHandlers) {

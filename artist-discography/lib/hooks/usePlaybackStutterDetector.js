@@ -91,9 +91,7 @@ export function usePlaybackStutterDetector({ isPlaying, audioQuality, trackKey }
     }
 
     // Prune old stalls from window
-    stallHistoryRef.current = stallHistoryRef.current.filter(
-      (ts) => now - ts < STALL_WINDOW_MS
-    )
+    stallHistoryRef.current = stallHistoryRef.current.filter((ts) => now - ts < STALL_WINDOW_MS)
     stallHistoryRef.current.push(now)
 
     // Multiple stalls within window trigger alert immediately

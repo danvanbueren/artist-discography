@@ -1,13 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import {
-  Box,
-  Container,
-  Paper,
-  useTheme,
-  Collapse,
-} from '@mui/material'
+import { Box, Container, Paper, useTheme, Collapse } from '@mui/material'
 import VolumeUpRoundedIcon from '@mui/icons-material/VolumeUpRounded'
 import VolumeDownRoundedIcon from '@mui/icons-material/VolumeDownRounded'
 import VolumeOffRoundedIcon from '@mui/icons-material/VolumeOffRounded'
@@ -25,7 +19,7 @@ import DesktopPlayerBar from './DesktopPlayerBar'
 import FullScreenPlayerModal from './FullScreenPlayerModal'
 
 const MIN_LISTENABLE_VOLUME = 10
-const DEFAULT_UNMUTE_VOLUME = 40
+const DEFAULT_UNMUTE_VOLUME = 100
 
 function getOptimizedAudioSrc(rawUrl, tier = '320k') {
   if (!rawUrl) return undefined
@@ -159,9 +153,7 @@ export default function AudioPlayerBar({
   // Subtle single color border derived from palette
   const playerBorderColor = useMemo(() => {
     if (!coverArt || !isPaletteLoaded || !colors || colors.length === 0) {
-      return theme.palette.mode === 'dark'
-        ? 'rgba(255, 255, 255, 0.12)'
-        : 'rgba(0, 0, 0, 0.12)'
+      return theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'
     }
     const match = colors[0].match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i)
     if (!match) {
@@ -195,17 +187,25 @@ export default function AudioPlayerBar({
   // Load volume & mute preference from cookie/localStorage on mount
   useEffect(() => {
     try {
-      const savedVol = getCookie('audio_playback_volume') || localStorage.getItem('audio_playback_volume')
-      const savedMuted = getCookie('audio_playback_muted') || localStorage.getItem('audio_playback_muted')
-      const savedPrevVol = getCookie('audio_playback_prev_volume') || localStorage.getItem('audio_playback_prev_volume')
+      const savedVol =
+        getCookie('audio_playback_volume') || localStorage.getItem('audio_playback_volume')
+      const savedMuted =
+        getCookie('audio_playback_muted') || localStorage.getItem('audio_playback_muted')
+      const savedPrevVol =
+        getCookie('audio_playback_prev_volume') ||
+        localStorage.getItem('audio_playback_prev_volume')
 
       let v = 100
       if (savedVol !== null && !isNaN(Number(savedVol))) {
         v = Math.min(100, Math.max(0, Number(savedVol)))
       }
 
-      let pV = 80
-      if (savedPrevVol !== null && !isNaN(Number(savedPrevVol)) && Number(savedPrevVol) >= MIN_LISTENABLE_VOLUME) {
+      let pV = 100
+      if (
+        savedPrevVol !== null &&
+        !isNaN(Number(savedPrevVol)) &&
+        Number(savedPrevVol) >= MIN_LISTENABLE_VOLUME
+      ) {
         pV = Math.min(100, Math.max(MIN_LISTENABLE_VOLUME, Number(savedPrevVol)))
       } else if (v >= MIN_LISTENABLE_VOLUME) {
         pV = v
@@ -216,7 +216,7 @@ export default function AudioPlayerBar({
       setVolume(v)
       setPrevVolume(pV)
       setIsMuted(muted)
-    } catch { }
+    } catch {}
   }, [])
 
   // When touch input is detected, volume is always maxed and unmuted in the app
@@ -239,7 +239,7 @@ export default function AudioPlayerBar({
       pendingResumeTimeRef.current = null
       try {
         audioRef.current.currentTime = targetTime
-      } catch { }
+      } catch {}
       if (shouldResumeAfterQualitySwitchRef.current) {
         audioRef.current.play().catch((err) => {
           if (err.name !== 'AbortError') console.warn('Resume play error:', err)
@@ -285,9 +285,12 @@ export default function AudioPlayerBar({
 
     for (const item of upcoming.slice(0, 3)) {
       const trackObj = item?.track || item
-      const coverUrl = item?.project?.cover || item?.track?.cover || trackObj?.projectCover || trackObj?.cover
+      const coverUrl =
+        item?.project?.cover || item?.track?.cover || trackObj?.projectCover || trackObj?.cover
       if (coverUrl && typeof coverUrl === 'string' && coverUrl.startsWith('/api/media')) {
-        mediaPreloader.preloadImage(`${coverUrl}${coverUrl.includes('?') ? '&' : '?'}w=120&q=75&fmt=webp`)
+        mediaPreloader.preloadImage(
+          `${coverUrl}${coverUrl.includes('?') ? '&' : '?'}w=120&q=75&fmt=webp`,
+        )
       }
     }
   }, [manualQueue, autoplayTracks, rawAudioUrl, activeTier])
@@ -381,7 +384,17 @@ export default function AudioPlayerBar({
               isTextEditField = true
             } else if (tagName === 'INPUT') {
               const type = (target.type || 'text').toLowerCase()
-              const nonTextTypes = ['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file', 'image']
+              const nonTextTypes = [
+                'range',
+                'checkbox',
+                'radio',
+                'button',
+                'submit',
+                'reset',
+                'color',
+                'file',
+                'image',
+              ]
               if (!nonTextTypes.includes(type)) {
                 isTextEditField = true
               }
@@ -412,24 +425,27 @@ export default function AudioPlayerBar({
   }, [])
 
   // Handle Share button click
-  const handleShareTrack = useCallback((e) => {
-    if (e && e.stopPropagation) e.stopPropagation()
-    if (typeof window !== 'undefined' && playingTrack) {
-      const projectSlug = slugify(playingTrack?.project || '')
-      const trackSlug = slugify(playingTrack?.name || '')
-      const shareUrl = `${window.location.origin}${projectSlug ? `/${projectSlug}` : ''}${trackSlug ? `/${trackSlug}` : ''}`
-      try {
-        navigator.clipboard.writeText(shareUrl)
-        setCopiedShare(true)
-        setTimeout(() => setCopiedShare(false), 2000)
-        if (onShowToast) {
-          onShowToast(`Copied share link to "${playingTrack?.name || 'track'}"`)
+  const handleShareTrack = useCallback(
+    (e) => {
+      if (e && e.stopPropagation) e.stopPropagation()
+      if (typeof window !== 'undefined' && playingTrack) {
+        const projectSlug = slugify(playingTrack?.project || '')
+        const trackSlug = slugify(playingTrack?.name || '')
+        const shareUrl = `${window.location.origin}${projectSlug ? `/${projectSlug}` : ''}${trackSlug ? `/${trackSlug}` : ''}`
+        try {
+          navigator.clipboard.writeText(shareUrl)
+          setCopiedShare(true)
+          setTimeout(() => setCopiedShare(false), 2000)
+          if (onShowToast) {
+            onShowToast(`Copied share link to "${playingTrack?.name || 'track'}"`)
+          }
+        } catch (err) {
+          console.error('Failed to copy share URL:', err)
         }
-      } catch (err) {
-        console.error('Failed to copy share URL:', err)
       }
-    }
-  }, [playingTrack, onShowToast])
+    },
+    [playingTrack, onShowToast],
+  )
 
   // Handle Volume Icon click (toggle mute)
   const handleToggleMute = useCallback(() => {
@@ -448,7 +464,7 @@ export default function AudioPlayerBar({
         localStorage.setItem('audio_playback_muted', 'false')
         setCookie('audio_playback_prev_volume', targetVol.toString())
         localStorage.setItem('audio_playback_prev_volume', targetVol.toString())
-      } catch { }
+      } catch {}
     } else {
       const volToSave = Math.max(volume, MIN_LISTENABLE_VOLUME)
       setPrevVolume(volToSave)
@@ -458,39 +474,42 @@ export default function AudioPlayerBar({
         localStorage.setItem('audio_playback_prev_volume', volToSave.toString())
         setCookie('audio_playback_muted', 'true')
         localStorage.setItem('audio_playback_muted', 'true')
-      } catch { }
+      } catch {}
     }
   }, [isMuted, volume, prevVolume])
 
   // Handle Volume Slider change
-  const handleVolumeChange = useCallback((_, val) => {
-    setVolume(val)
-    if (val >= MIN_LISTENABLE_VOLUME) {
-      setPrevVolume(val)
-      if (isMuted) setIsMuted(false)
-    } else if (val > 0) {
-      if (isMuted) setIsMuted(false)
-    } else if (val === 0 && !isMuted) {
-      setIsMuted(true)
-    }
-    try {
-      setCookie('audio_playback_volume', val.toString())
-      localStorage.setItem('audio_playback_volume', val.toString())
-      setCookie('audio_playback_muted', val === 0 ? 'true' : 'false')
-      localStorage.setItem('audio_playback_muted', val === 0 ? 'true' : 'false')
+  const handleVolumeChange = useCallback(
+    (_, val) => {
+      setVolume(val)
       if (val >= MIN_LISTENABLE_VOLUME) {
-        setCookie('audio_playback_prev_volume', val.toString())
-        localStorage.setItem('audio_playback_prev_volume', val.toString())
+        setPrevVolume(val)
+        if (isMuted) setIsMuted(false)
+      } else if (val > 0) {
+        if (isMuted) setIsMuted(false)
+      } else if (val === 0 && !isMuted) {
+        setIsMuted(true)
       }
-    } catch { }
-  }, [isMuted])
+      try {
+        setCookie('audio_playback_volume', val.toString())
+        localStorage.setItem('audio_playback_volume', val.toString())
+        setCookie('audio_playback_muted', val === 0 ? 'true' : 'false')
+        localStorage.setItem('audio_playback_muted', val === 0 ? 'true' : 'false')
+        if (val >= MIN_LISTENABLE_VOLUME) {
+          setCookie('audio_playback_prev_volume', val.toString())
+          localStorage.setItem('audio_playback_prev_volume', val.toString())
+        }
+      } catch {}
+    },
+    [isMuted],
+  )
 
   // Cycle repeat mode: off -> all -> one -> off
   const handleCycleRepeat = useCallback(() => {
     if (onCycleRepeatMode) {
       onCycleRepeatMode()
     } else {
-      setLocalRepeatMode(prev => {
+      setLocalRepeatMode((prev) => {
         if (prev === 'off') return 'all'
         if (prev === 'all') return 'one'
         return 'off'
@@ -518,12 +537,13 @@ export default function AudioPlayerBar({
     onSeek: handleSeek,
   })
 
-  // Picture-in-Picture (Canvas Stream Video) & Remote Playback (Chrome Cast) Engine
+  // Picture-in-Picture (Canvas Stream Video) & Remote Playback (Chrome Cast / AirPlay) Engine
   const {
     isPipActive,
     isCasting,
     isCastAvailable,
     castError,
+    castType,
     handleTogglePip,
     handlePromptCast,
   } = useMediaCastAndPip({
@@ -567,7 +587,7 @@ export default function AudioPlayerBar({
             pr: { xs: 0, sm: '8px' },
           }}
         >
-          <Container maxWidth="md" sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
+          <Container maxWidth='md' sx={{ pointerEvents: 'auto', px: { xs: 2, sm: 3 } }}>
             <Paper
               elevation={6}
               sx={{
@@ -637,7 +657,9 @@ export default function AudioPlayerBar({
               <audio
                 ref={audioRef}
                 src={activeAudioSrc || undefined}
-                preload="auto"
+                preload='auto'
+                crossOrigin='anonymous'
+                playsInline
                 onPlay={(e) => {
                   const volVal = isMuted ? 0 : volume
                   e.currentTarget.volume = Math.min(1, Math.max(0, volVal / 100))
@@ -684,9 +706,13 @@ export default function AudioPlayerBar({
                   if (repeatMode === 'one') {
                     if (audioRef.current) {
                       audioRef.current.currentTime = 0
-                      audioRef.current.play().catch(() => { })
+                      audioRef.current.play().catch(() => {})
                     }
-                  } else if (repeatMode === 'all' || manualQueue.length > 0 || autoplayTracks.length > 0) {
+                  } else if (
+                    repeatMode === 'all' ||
+                    manualQueue.length > 0 ||
+                    autoplayTracks.length > 0
+                  ) {
                     if (onSkipNext) onSkipNext()
                   } else {
                     if (audioRef.current) {
@@ -699,7 +725,8 @@ export default function AudioPlayerBar({
                 onError={() => {
                   mediaPreloader.setAudioBuffering(false)
                   if (isPlaying) {
-                    if (onShowToast) onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
+                    if (onShowToast)
+                      onShowToast(`Failed to load audio for "${playingTrack?.name || 'track'}"`)
                     if (onTogglePlay) onTogglePlay()
                   }
                 }}
@@ -759,6 +786,7 @@ export default function AudioPlayerBar({
         isCasting={isCasting}
         isCastAvailable={isCastAvailable}
         castError={castError}
+        castType={castType}
         onTogglePip={handleTogglePip}
         onPromptCast={handlePromptCast}
         VolumeIconComponent={VolumeIconComponent}

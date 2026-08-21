@@ -32,6 +32,7 @@ import { formatMediaPath, createEmptyTrack, getMediaThumbnailUrl } from '../admi
 import { slugify } from '../../../lib/slugs'
 
 export default function ProjectEditForm({
+  isPending = false,
   editName,
   setEditName,
   editNameRef,
@@ -62,6 +63,7 @@ export default function ProjectEditForm({
   artistNameInput,
   defaultArtistName,
   isEditNameDuplicate,
+  editNameValidationError,
   editDupTrackIndexes,
   dirtyFields,
   savedFields,
@@ -82,16 +84,37 @@ export default function ProjectEditForm({
 }) {
   const currentProject = projectsList[selectedProjIndex] || {}
   const projectSlug = slugify(editName || currentProject.name || '')
-  const coverJob = mediaJobs?.getJobForCover?.({
-    projectSlug,
-    fileName: editCoverFile?.name || 'art.jpg',
-  }) || mediaJobs?.getJobForFile?.(editCoverFile?.name) || null
+  const coverJob =
+    mediaJobs?.getJobForCover?.({
+      projectSlug,
+      fileName: editCoverFile?.name || 'art.jpg',
+    }) ||
+    mediaJobs?.getJobForFile?.(editCoverFile?.name) ||
+    null
 
   return (
-    <Stack spacing={3}>
+    <Stack
+      spacing={3}
+      sx={{
+        position: 'relative',
+        opacity: isPending ? 0.65 : 1,
+        pointerEvents: isPending ? 'none' : 'auto',
+        transition: 'opacity 0.15s ease',
+      }}
+    >
+      {isPending && (
+        <LinearProgress
+          color='secondary'
+          sx={{
+            borderRadius: 1,
+            height: 3,
+            mb: -2,
+          }}
+        />
+      )}
       {/* Project Metadata & Artwork */}
       <Paper
-        variant="outlined"
+        variant='outlined'
         sx={{
           p: 3,
           borderRadius: 2.5,
@@ -101,7 +124,7 @@ export default function ProjectEditForm({
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography
-            variant="h6"
+            variant='h6'
             sx={{
               fontWeight: 700,
               display: 'flex',
@@ -109,12 +132,12 @@ export default function ProjectEditForm({
               gap: 1,
             }}
           >
-            <EditIcon color="primary" /> Editing: {editName || 'Project'}
+            <EditIcon color='primary' /> Editing: {editName || 'Project'}
           </Typography>
           <Button
-            variant="outlined"
-            color="error"
-            size="small"
+            variant='outlined'
+            color='error'
+            size='small'
             startIcon={<DeleteIcon />}
             onClick={() => setDeleteConfirmOpen(true)}
             sx={{ borderRadius: 2 }}
@@ -126,7 +149,7 @@ export default function ProjectEditForm({
         <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, sm: 8 }}>
             <AdminTextInput
-              label="Project Title"
+              label='Project Title'
               fullWidth
               required
               value={editName}
@@ -135,23 +158,23 @@ export default function ProjectEditForm({
                 if (editNameRef) editNameRef.current = val
                 markFieldDirty('edit_name', executeUpdateProject)
               }}
-              error={isEditNameDuplicate}
-              helperText={isEditNameDuplicate ? 'A project with this title / URL slug already exists.' : null}
+              error={Boolean(isEditNameDuplicate || editNameValidationError)}
+              helperText={
+                editNameValidationError ||
+                (isEditNameDuplicate
+                  ? 'A project with this title / URL slug already exists.'
+                  : null)
+              }
               isDirty={dirtyFields.has('edit_name')}
               isSaved={savedFields.has('edit_name')}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
-            <FormControl
-              fullWidth
-              size="small"
-              required
-              sx={getFieldSx('edit_type')}
-            >
-              <InputLabel id="edit-type-label">Release Type</InputLabel>
+            <FormControl fullWidth size='small' required sx={getFieldSx('edit_type')}>
+              <InputLabel id='edit-type-label'>Release Type</InputLabel>
               <Select
-                labelId="edit-type-label"
-                label="Release Type"
+                labelId='edit-type-label'
+                label='Release Type'
                 value={editType}
                 onChange={(e) => {
                   const val = e.target.value
@@ -161,14 +184,16 @@ export default function ProjectEditForm({
                 }}
               >
                 {PROJECT_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>{t}</MenuItem>
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <AdminTextInput
-              label="Artist Name (Optional Override)"
+              label='Artist Name (Optional Override)'
               placeholder={`Defaults to "${artistNameInput?.trim() || defaultArtistName}"`}
               fullWidth
               value={editArtist}
@@ -183,7 +208,7 @@ export default function ProjectEditForm({
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <AdminDateInput
-              label="Release Date"
+              label='Release Date'
               fullWidth
               required
               value={editDate}
@@ -197,11 +222,11 @@ export default function ProjectEditForm({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" sx={getFieldSx('edit_visibility')}>
-              <InputLabel id="edit-visibility-label">Visibility</InputLabel>
+            <FormControl fullWidth size='small' sx={getFieldSx('edit_visibility')}>
+              <InputLabel id='edit-visibility-label'>Visibility</InputLabel>
               <Select
-                labelId="edit-visibility-label"
-                label="Visibility"
+                labelId='edit-visibility-label'
+                label='Visibility'
                 value={editVisibility}
                 onChange={(e) => {
                   const val = e.target.value
@@ -210,17 +235,17 @@ export default function ProjectEditForm({
                   markFieldDirty('edit_visibility', executeUpdateProject)
                 }}
               >
-                <MenuItem value="public">Public (Visible to All)</MenuItem>
-                <MenuItem value="private">Private (Requires Access Code)</MenuItem>
+                <MenuItem value='public'>Public (Visible to All)</MenuItem>
+                <MenuItem value='private'>Private (Requires Access Code)</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" sx={getFieldSx('edit_copyright')}>
-              <InputLabel id="edit-copyright-label">Copyright Playback Status</InputLabel>
+            <FormControl fullWidth size='small' sx={getFieldSx('edit_copyright')}>
+              <InputLabel id='edit-copyright-label'>Copyright Playback Status</InputLabel>
               <Select
-                labelId="edit-copyright-label"
-                label="Copyright Playback Status"
+                labelId='edit-copyright-label'
+                label='Copyright Playback Status'
                 value={editCopyright}
                 onChange={(e) => {
                   const val = e.target.value
@@ -229,8 +254,8 @@ export default function ProjectEditForm({
                   markFieldDirty('edit_copyright', executeUpdateProject)
                 }}
               >
-                <MenuItem value="cleared">Cleared (Full In-Site Audio Playback)</MenuItem>
-                <MenuItem value="uncleared">Uncleared (Links Only, In-Site Audio Gated)</MenuItem>
+                <MenuItem value='cleared'>Cleared (Full In-Site Audio Playback)</MenuItem>
+                <MenuItem value='uncleared'>Uncleared (Links Only, In-Site Audio Gated)</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -238,15 +263,15 @@ export default function ProjectEditForm({
 
         <Divider sx={{ my: 2.5 }} />
 
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
+        <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1.5 }}>
           Cover Artwork
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           {editCoverPreview ? (
             <Box
-              component="img"
+              component='img'
               src={getMediaThumbnailUrl(editCoverPreview, 160)}
-              alt="Cover preview"
+              alt='Cover preview'
               onError={(e) => {
                 e.currentTarget.style.display = 'none'
                 const fallbackEl = document.getElementById(`cover-fallback-${projectSlug}`)
@@ -280,16 +305,18 @@ export default function ProjectEditForm({
             <AlbumIcon sx={{ fontSize: 32, color: 'text.secondary' }} />
           </Box>
           <Button
-            variant="outlined"
-            component="label"
+            variant='outlined'
+            component='label'
             startIcon={<CloudUploadIcon />}
-            size="small"
+            size='small'
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
-            {editCoverPreview || editCoverFile ? 'Replace Cover Image' : 'Upload Cover Image File (.jpg, .png)'}
+            {editCoverPreview || editCoverFile
+              ? 'Replace Cover Image'
+              : 'Upload Cover Image File (.jpg, .png)'}
             <input
-              type="file"
-              accept="image/*"
+              type='file'
+              accept='image/*'
               hidden
               onChange={(e) => {
                 if (e.target.files?.[0]) {
@@ -305,8 +332,8 @@ export default function ProjectEditForm({
             <Chip
               icon={<CheckCircleIcon />}
               label={`New: ${editCoverFile.name}`}
-              color="success"
-              size="small"
+              color='success'
+              size='small'
               onDelete={() => {
                 setEditCoverFile(null)
                 if (editCoverFileRef) editCoverFileRef.current = null
@@ -316,18 +343,18 @@ export default function ProjectEditForm({
             <Chip
               icon={<CheckCircleIcon />}
               label={`Cover art attached (${formatMediaPath(editCoverPreview, projectSlug, 'media')})`}
-              color="success"
-              variant="outlined"
-              size="small"
+              color='success'
+              variant='outlined'
+              size='small'
               sx={{ fontWeight: 600 }}
             />
           ) : (
             <Chip
               icon={<ImageIcon />}
-              label="No cover image attached"
-              color="warning"
-              variant="outlined"
-              size="small"
+              label='No cover image attached'
+              color='warning'
+              variant='outlined'
+              size='small'
               sx={{ fontWeight: 600 }}
             />
           )}
@@ -355,7 +382,7 @@ export default function ProjectEditForm({
             }}
           >
             <Typography
-              variant="caption"
+              variant='caption'
               sx={{
                 fontWeight: 700,
                 textTransform: 'uppercase',
@@ -369,31 +396,31 @@ export default function ProjectEditForm({
               <Chip
                 icon={<AutoFixHighIcon sx={{ fontSize: '14px !important' }} />}
                 label={`Sharp Optimizing (${coverJob.progress || 0}%)...`}
-                color="warning"
-                size="small"
+                color='warning'
+                size='small'
                 sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
               />
             ) : editCoverFile ? (
               <Chip
-                label="Staged (Pending Save)"
-                color="warning"
-                size="small"
-                variant="outlined"
+                label='Staged (Pending Save)'
+                color='warning'
+                size='small'
+                variant='outlined'
                 sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
               />
             ) : editCoverPreview ? (
               <Chip
-                label="Active & Pre-Cached"
-                color="success"
-                size="small"
+                label='Active & Pre-Cached'
+                color='success'
+                size='small'
                 sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
               />
             ) : (
               <Chip
-                label="No Artwork"
-                color="default"
-                size="small"
-                variant="outlined"
+                label='No Artwork'
+                color='default'
+                size='small'
+                variant='outlined'
                 sx={{ height: 22, fontSize: '0.72rem' }}
               />
             )}
@@ -420,20 +447,20 @@ export default function ProjectEditForm({
                 }}
               >
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{ color: '#81d4fa', fontWeight: 700, fontSize: '0.75rem' }}
                 >
                   {coverJob.currentStep || 'Sharp generating responsive WebP & AVIF tiers...'}
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{ color: '#81d4fa', fontWeight: 800, fontSize: '0.75rem' }}
                 >
                   {coverJob.progress || 0}%
                 </Typography>
               </Box>
               <LinearProgress
-                variant="determinate"
+                variant='determinate'
                 value={coverJob.progress || 0}
                 sx={{
                   height: 6,
@@ -461,7 +488,7 @@ export default function ProjectEditForm({
           >
             {editCoverFile ? (
               <Typography
-                variant="caption"
+                variant='caption'
                 sx={{
                   fontFamily: 'monospace',
                   color: 'warning.light',
@@ -474,7 +501,7 @@ export default function ProjectEditForm({
             ) : editCoverPreview ? (
               <>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{
                     fontFamily: 'monospace',
                     color: 'primary.light',
@@ -482,10 +509,11 @@ export default function ProjectEditForm({
                     wordBreak: 'break-all',
                   }}
                 >
-                  <strong>Base Artwork:</strong> {formatMediaPath(editCoverPreview, projectSlug, 'media')}
+                  <strong>Base Artwork:</strong>{' '}
+                  {formatMediaPath(editCoverPreview, projectSlug, 'media')}
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{
                     fontFamily: 'monospace',
                     color: 'text.secondary',
@@ -493,10 +521,11 @@ export default function ProjectEditForm({
                     wordBreak: 'break-all',
                   }}
                 >
-                  <strong>Cached Tiers:</strong> data/cache/images/ (*.webp &amp; *.avif @ 1920w, 1080w, 640w, 320w + 32w blur)
+                  <strong>Cached Tiers:</strong> data/cache/images/ (*.webp &amp; *.avif @ 1920w,
+                  1080w, 640w, 320w + 32w blur)
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{
                     fontFamily: 'monospace',
                     color: 'text.secondary',
@@ -504,12 +533,15 @@ export default function ProjectEditForm({
                     wordBreak: 'break-all',
                   }}
                 >
-                  <strong>Media Endpoint:</strong> {editCoverPreview.startsWith('/api/media/') ? editCoverPreview : `/api/media/projects/${projectSlug}/${editCoverPreview}`}
+                  <strong>Media Endpoint:</strong>{' '}
+                  {editCoverPreview.startsWith('/api/media/')
+                    ? editCoverPreview
+                    : `/api/media/projects/${projectSlug}/${editCoverPreview}`}
                 </Typography>
               </>
             ) : (
               <Typography
-                variant="caption"
+                variant='caption'
                 sx={{
                   fontFamily: 'monospace',
                   color: 'text.disabled',
@@ -521,19 +553,19 @@ export default function ProjectEditForm({
             )}
           </Box>
 
-          <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+          <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
             {editCoverFile
               ? `Staged file "${editCoverFile.name}" will be automatically converted to responsive WebP/AVIF variants (320w, 640w, 1080w, 1920w) and cached with HTTP 304 ETags.`
               : editCoverPreview
-              ? 'Optimized responsive WebP & AVIF tiers (320w, 640w, 1080w, 1920w) generated. Client LRU in-memory preloading and 1-day browser HTTP caching active.'
-              : 'No cover image file uploaded. The site will display the default vinyl disc placeholder.'}
+                ? 'Optimized responsive WebP & AVIF tiers (320w, 640w, 1080w, 1920w) generated. Client LRU in-memory preloading and 1-day browser HTTP caching active.'
+                : 'No cover image file uploaded. The site will display the default vinyl disc placeholder.'}
           </Typography>
         </Box>
       </Paper>
 
       {/* Edit Tracks */}
       <Paper
-        variant="outlined"
+        variant='outlined'
         sx={{
           p: 3,
           borderRadius: 2.5,
@@ -543,7 +575,7 @@ export default function ProjectEditForm({
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography
-            variant="h6"
+            variant='h6'
             sx={{
               fontWeight: 700,
               display: 'flex',
@@ -551,12 +583,12 @@ export default function ProjectEditForm({
               gap: 1,
             }}
           >
-            <MusicNoteIcon color="primary" /> Edit Tracks ({editTracks.length})
+            <MusicNoteIcon color='primary' /> Edit Tracks ({editTracks.length})
           </Typography>
           <Button
-            variant="contained"
-            color="secondary"
-            size="small"
+            variant='contained'
+            color='secondary'
+            size='small'
             startIcon={<AddIcon />}
             onClick={() => {
               const n = [...editTracks, createEmptyTrack()]
@@ -590,12 +622,14 @@ export default function ProjectEditForm({
               dirtyFields={dirtyFields}
               savedFields={savedFields}
               projectSlug={projectSlug}
-              processingJob={mediaJobs?.getJobForTrack?.({
-                projectSlug,
-                trackSlug: slugify(track.name || track.originalName || ''),
-                trackName: track.name || track.originalName,
-                fileName: track.audioFileName,
-              }) || mediaJobs?.getJobForFile?.(track.audioFileName)}
+              processingJob={
+                mediaJobs?.getJobForTrack?.({
+                  projectSlug,
+                  trackSlug: slugify(track.name || track.originalName || ''),
+                  trackName: track.name || track.originalName,
+                  fileName: track.audioFileName,
+                }) || mediaJobs?.getJobForFile?.(track.audioFileName)
+              }
               onUpdateName={handleUpdateEditTrackName}
               onUpdateArtist={handleUpdateEditTrackArtist}
               onUpdateLink={handleUpdateEditTrackLink}

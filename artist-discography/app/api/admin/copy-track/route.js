@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
+import {
+  loadConfigData,
+  loadAllProjectsData,
+  saveProjectData,
+  getProjectsDirPath,
+} from '../../../../lib/artistData'
 import { slugify } from '../../../../lib/slugs'
 import { warmMediaFiles } from '../../../../lib/mediaWarmer'
 import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
@@ -13,42 +18,32 @@ export async function POST(request) {
     const body = await request.json()
     const { password, sourceProjectIndex, sourceTrackIndex, targetProjectIndex } = body ?? {}
 
-    const dataResult = loadArtistData()
-    const currentData = dataResult?.data ?? {}
+    const configResult = loadConfigData()
+    const configData = configResult?.data ?? {}
 
-    const adminAccess = Boolean(currentData?.adminAccess)
-    const adminPassword = String(currentData?.adminPassword ?? '')
+    const adminAccess = Boolean(configData?.adminAccess)
+    const adminPassword = String(configData?.adminPassword ?? '')
 
     if (!adminAccess) {
       return NextResponse.json(
-        { success: false, error: 'Admin access is disabled in artist-data.json' },
-        { status: 403 }
+        { success: false, error: 'Admin access is disabled in config.json' },
+        { status: 403 },
       )
     }
 
     if (password !== adminPassword) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Invalid admin password' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
-    const filePath = path.join(process.cwd(), 'data', 'artist-data.json')
-    let fullJsonData = {}
-    if (fs.existsSync(filePath)) {
-      try {
-        fullJsonData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-      } catch (e) {
-        fullJsonData = currentData
-      }
-    } else {
-      fullJsonData = currentData
-    }
+    const projectsList = loadAllProjectsData(configData?.artist?.name)
 
-    if (!Array.isArray(fullJsonData.projects)) {
+    if (!Array.isArray(projectsList) || projectsList.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No projects found in dataset' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -57,22 +52,31 @@ export async function POST(request) {
     const tgtProjIdx = parseInt(targetProjectIndex, 10)
 
     if (
-      isNaN(srcProjIdx) || srcProjIdx < 0 || srcProjIdx >= fullJsonData.projects.length ||
-      isNaN(tgtProjIdx) || tgtProjIdx < 0 || tgtProjIdx >= fullJsonData.projects.length
+      isNaN(srcProjIdx) ||
+      srcProjIdx < 0 ||
+      srcProjIdx >= projectsList.length ||
+      isNaN(tgtProjIdx) ||
+      tgtProjIdx < 0 ||
+      tgtProjIdx >= projectsList.length
     ) {
       return NextResponse.json(
         { success: false, error: 'Invalid project selection' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    const sourceProject = fullJsonData.projects[srcProjIdx]
-    const targetProject = fullJsonData.projects[tgtProjIdx]
+    const sourceProject = projectsList[srcProjIdx]
+    const targetProject = projectsList[tgtProjIdx]
 
-    if (!Array.isArray(sourceProject.tracks) || isNaN(srcTrackIdx) || srcTrackIdx < 0 || srcTrackIdx >= sourceProject.tracks.length) {
+    if (
+      !Array.isArray(sourceProject.tracks) ||
+      isNaN(srcTrackIdx) ||
+      srcTrackIdx < 0 ||
+      srcTrackIdx >= sourceProject.tracks.length
+    ) {
       return NextResponse.json(
         { success: false, error: 'Invalid source track selection' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -84,7 +88,7 @@ export async function POST(request) {
     if (!targetProjectSlug) {
       return NextResponse.json(
         { success: false, error: 'Target project has invalid title/slug' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
@@ -104,7 +108,7 @@ export async function POST(request) {
       newTrackSlug = slugify(newTrackName)
     }
 
-    const projectsDir = path.join(process.cwd(), 'data', 'projects')
+    const projectsDir = getProjectsDirPath()
     const sourceProjDir = path.join(projectsDir, sourceProjectSlug)
     const targetProjDir = path.join(projectsDir, targetProjectSlug)
 
@@ -134,7 +138,13 @@ export async function POST(request) {
 
     // Copy custom track cover artwork if present
     let clonedCover = sourceTrack.cover || ''
-    if (clonedCover && !clonedCover.startsWith('http://') && !clonedCover.startsWith('https://') && !clonedCover.startsWith('/') && fs.existsSync(sourceProjDir)) {
+    if (
+      clonedCover &&
+      !clonedCover.startsWith('http://') &&
+      !clonedCover.startsWith('https://') &&
+      !clonedCover.startsWith('/') &&
+      fs.existsSync(sourceProjDir)
+    ) {
       const sourceCoverFile = path.join(sourceProjDir, clonedCover)
       if (fs.existsSync(sourceCoverFile)) {
         const ext = path.extname(clonedCover).toLowerCase() || '.jpg'
@@ -164,21 +174,24 @@ export async function POST(request) {
       youtube: '',
     }
 
-    const primaryArtistName = String(fullJsonData.artist?.name || 'Artist').trim()
+    const primaryArtistName = String(configData.artist?.name || 'Artist').trim()
     const clonedTrack = {
       name: newTrackName,
-      artist: String(sourceTrack.artist || '').trim() || String(targetProject.artist || '').trim() || primaryArtistName,
+      artist:
+        String(sourceTrack.artist || '').trim() ||
+        String(targetProject.artist || '').trim() ||
+        primaryArtistName,
       links: { ...defaultLinks, ...(sourceTrack.links || {}) },
       ...(clonedCover ? { cover: clonedCover } : {}),
     }
 
     targetProject.tracks.push(clonedTrack)
 
-    const saveResult = saveArtistData(fullJsonData)
+    const saveResult = saveProjectData(targetProjectSlug, targetProject)
     if (!saveResult.success) {
       return NextResponse.json(
         { success: false, error: `Failed to save copied track: ${saveResult.error}` },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
@@ -217,9 +230,12 @@ export async function POST(request) {
     const SUPPORTED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif']
     let resolvedTargetCover = ''
     if (targetProject.cover) {
-      resolvedTargetCover = targetProject.cover.startsWith('http://') || targetProject.cover.startsWith('https://') || targetProject.cover.startsWith('/')
-        ? targetProject.cover
-        : `/api/media/projects/${targetProjectSlug}/${targetProject.cover}?t=${timestamp}`
+      resolvedTargetCover =
+        targetProject.cover.startsWith('http://') ||
+        targetProject.cover.startsWith('https://') ||
+        targetProject.cover.startsWith('/')
+          ? targetProject.cover
+          : `/api/media/projects/${targetProjectSlug}/${targetProject.cover}?t=${timestamp}`
     } else if (targetProjDir && fs.existsSync(targetProjDir)) {
       for (const ext of SUPPORTED_IMAGE_EXTS) {
         if (fs.existsSync(path.join(targetProjDir, `art${ext}`))) {
@@ -246,7 +262,7 @@ export async function POST(request) {
     console.error('Error copying track:', err)
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

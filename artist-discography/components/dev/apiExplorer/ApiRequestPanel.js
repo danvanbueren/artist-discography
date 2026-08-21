@@ -1,14 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import {
-  Box,
-  Typography,
-  Grid,
-  TextField,
-  Button,
-  CircularProgress,
-} from '@mui/material'
+import { Box, Typography, Grid, TextField, Button, CircularProgress } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 
@@ -27,7 +20,7 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
       {/* Path Parameters Section */}
       {pathParamsList.length > 0 && (
         <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
+          <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
             Path Parameters
           </Typography>
           <Grid container spacing={2}>
@@ -42,7 +35,7 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
                 <Grid key={paramName} size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
-                    size="small"
+                    size='small'
                     label={`{${paramName}} (${paramDesc})`}
                     value={currentVal}
                     onChange={(e) => {
@@ -63,7 +56,7 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
       {/* Request Body Builder Section */}
       {route?.method === 'POST' && (
         <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
+          <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
             Request Body ({route.requestFormat === 'json' ? 'JSON' : 'Multipart Form-Data'})
           </Typography>
 
@@ -72,7 +65,7 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
               fullWidth
               multiline
               rows={6}
-              size="small"
+              size='small'
               value={state?.body ?? ''}
               onChange={(e) => {
                 const val = e.target.value
@@ -103,7 +96,7 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
                   <Grid key={pKey} size={{ xs: 12, sm: 6 }}>
                     <TextField
                       fullWidth
-                      size="small"
+                      size='small'
                       label={`${pKey} (${pDesc})`}
                       value={currentFormVal}
                       onChange={(e) => {
@@ -128,9 +121,11 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
       {/* Action Buttons: Execute & cURL Generator */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3, alignItems: 'center' }}>
         <Button
-          variant="contained"
-          color="primary"
-          startIcon={state?.isLoading ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
+          variant='contained'
+          color='primary'
+          startIcon={
+            state?.isLoading ? <CircularProgress size={18} color='inherit' /> : <PlayArrowIcon />
+          }
           disabled={Boolean(state?.isLoading)}
           onClick={onExecuteRequest}
           sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 3 }}
@@ -139,7 +134,7 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
         </Button>
 
         <Button
-          variant="outlined"
+          variant='outlined'
           startIcon={<ContentCopyIcon />}
           onClick={onCopyCurl}
           sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}

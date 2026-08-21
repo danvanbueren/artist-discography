@@ -57,6 +57,7 @@ export default function ProjectCreateForm({
   artistNameInput,
   defaultArtistName,
   isNewNameDuplicate,
+  newNameValidationError,
   newDupTrackIndexes,
   dirtyFields,
   savedFields,
@@ -74,14 +75,17 @@ export default function ProjectCreateForm({
   handleDeleteCreateTrack,
 }) {
   const projectSlug = slugify(name || '')
-  const coverJob = mediaJobs?.getJobForCover?.({
-    projectSlug,
-    fileName: coverFile?.name || 'art.jpg',
-  }) || mediaJobs?.getJobForFile?.(coverFile?.name) || null
+  const coverJob =
+    mediaJobs?.getJobForCover?.({
+      projectSlug,
+      fileName: coverFile?.name || 'art.jpg',
+    }) ||
+    mediaJobs?.getJobForFile?.(coverFile?.name) ||
+    null
   return (
     <Stack spacing={3}>
       <Paper
-        variant="outlined"
+        variant='outlined'
         sx={{
           p: 3,
           borderRadius: 2.5,
@@ -90,7 +94,7 @@ export default function ProjectCreateForm({
         }}
       >
         <Typography
-          variant="h6"
+          variant='h6'
           sx={{
             fontWeight: 700,
             mb: 2,
@@ -99,14 +103,14 @@ export default function ProjectCreateForm({
             gap: 1,
           }}
         >
-          <AddIcon color="secondary" /> Create New Project
+          <AddIcon color='secondary' /> Create New Project
         </Typography>
 
         <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, sm: 8 }}>
             <AdminTextInput
-              label="Project Title"
-              placeholder="e.g. Post Mortem, Sugar Water"
+              label='Project Title'
+              placeholder='e.g. Post Mortem, Sugar Water'
               fullWidth
               required
               value={name}
@@ -115,23 +119,21 @@ export default function ProjectCreateForm({
                 if (nameRef) nameRef.current = val
                 markFieldDirty('new_name', executeCreateProject)
               }}
-              error={isNewNameDuplicate}
-              helperText={isNewNameDuplicate ? 'A project with this title / URL slug already exists.' : null}
+              error={Boolean(isNewNameDuplicate || newNameValidationError)}
+              helperText={
+                newNameValidationError ||
+                (isNewNameDuplicate ? 'A project with this title / URL slug already exists.' : null)
+              }
               isDirty={dirtyFields.has('new_name')}
               isSaved={savedFields.has('new_name')}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 4 }}>
-            <FormControl
-              fullWidth
-              size="small"
-              required
-              sx={getFieldSx('new_type')}
-            >
-              <InputLabel id="new-type-label">Release Type</InputLabel>
+            <FormControl fullWidth size='small' required sx={getFieldSx('new_type')}>
+              <InputLabel id='new-type-label'>Release Type</InputLabel>
               <Select
-                labelId="new-type-label"
-                label="Release Type"
+                labelId='new-type-label'
+                label='Release Type'
                 value={type}
                 onChange={(e) => {
                   const val = e.target.value
@@ -141,14 +143,16 @@ export default function ProjectCreateForm({
                 }}
               >
                 {PROJECT_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>{t}</MenuItem>
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <AdminTextInput
-              label="Artist Name (Optional Override)"
+              label='Artist Name (Optional Override)'
               placeholder={`Defaults to "${artistNameInput?.trim() || defaultArtistName}"`}
               fullWidth
               value={artist}
@@ -163,7 +167,7 @@ export default function ProjectCreateForm({
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <AdminDateInput
-              label="Release Date"
+              label='Release Date'
               fullWidth
               required
               value={date}
@@ -177,11 +181,11 @@ export default function ProjectCreateForm({
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" sx={getFieldSx('new_visibility')}>
-              <InputLabel id="new-visibility-label">Visibility</InputLabel>
+            <FormControl fullWidth size='small' sx={getFieldSx('new_visibility')}>
+              <InputLabel id='new-visibility-label'>Visibility</InputLabel>
               <Select
-                labelId="new-visibility-label"
-                label="Visibility"
+                labelId='new-visibility-label'
+                label='Visibility'
                 value={visibility}
                 onChange={(e) => {
                   const val = e.target.value
@@ -190,17 +194,17 @@ export default function ProjectCreateForm({
                   markFieldDirty('new_visibility', executeCreateProject)
                 }}
               >
-                <MenuItem value="public">Public (Visible to All)</MenuItem>
-                <MenuItem value="private">Private (Requires Access Code)</MenuItem>
+                <MenuItem value='public'>Public (Visible to All)</MenuItem>
+                <MenuItem value='private'>Private (Requires Access Code)</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <FormControl fullWidth size="small" sx={getFieldSx('new_copyright')}>
-              <InputLabel id="new-copyright-label">Copyright Playback Status</InputLabel>
+            <FormControl fullWidth size='small' sx={getFieldSx('new_copyright')}>
+              <InputLabel id='new-copyright-label'>Copyright Playback Status</InputLabel>
               <Select
-                labelId="new-copyright-label"
-                label="Copyright Playback Status"
+                labelId='new-copyright-label'
+                label='Copyright Playback Status'
                 value={copyright}
                 onChange={(e) => {
                   const val = e.target.value
@@ -209,8 +213,8 @@ export default function ProjectCreateForm({
                   markFieldDirty('new_copyright', executeCreateProject)
                 }}
               >
-                <MenuItem value="cleared">Cleared (Full In-Site Audio Playback)</MenuItem>
-                <MenuItem value="uncleared">Uncleared (Links Only, In-Site Audio Gated)</MenuItem>
+                <MenuItem value='cleared'>Cleared (Full In-Site Audio Playback)</MenuItem>
+                <MenuItem value='uncleared'>Uncleared (Links Only, In-Site Audio Gated)</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -218,15 +222,15 @@ export default function ProjectCreateForm({
 
         <Divider sx={{ my: 2.5 }} />
 
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1.5 }}>
+        <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1.5 }}>
           Cover Artwork
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
           {coverPreview ? (
             <Box
-              component="img"
+              component='img'
               src={getMediaThumbnailUrl(coverPreview, 160)}
-              alt="Cover preview"
+              alt='Cover preview'
               onError={(e) => {
                 e.currentTarget.style.display = 'none'
                 const fallbackEl = document.getElementById('new-cover-fallback')
@@ -244,7 +248,7 @@ export default function ProjectCreateForm({
             />
           ) : null}
           <Box
-            id="new-cover-fallback"
+            id='new-cover-fallback'
             sx={{
               width: 64,
               height: 64,
@@ -260,15 +264,17 @@ export default function ProjectCreateForm({
             <AlbumIcon sx={{ fontSize: 32, color: 'text.secondary' }} />
           </Box>
           <Button
-            variant="contained"
-            component="label"
+            variant='contained'
+            component='label'
             startIcon={<CloudUploadIcon />}
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
-            {coverPreview || coverFile ? 'Replace Cover Image' : 'Upload Cover Image File (.jpg, .png)'}
+            {coverPreview || coverFile
+              ? 'Replace Cover Image'
+              : 'Upload Cover Image File (.jpg, .png)'}
             <input
-              type="file"
-              accept="image/*"
+              type='file'
+              accept='image/*'
               hidden
               onChange={(e) => {
                 if (e.target.files?.[0]) {
@@ -284,12 +290,12 @@ export default function ProjectCreateForm({
             <Chip
               icon={<CheckCircleIcon />}
               label={`New: ${coverFile.name}`}
-              color="success"
+              color='success'
               onDelete={() => {
                 setCoverFile(null)
                 if (coverFileRef) coverFileRef.current = null
               }}
-              size="small"
+              size='small'
             />
           )}
         </Box>
@@ -316,7 +322,7 @@ export default function ProjectCreateForm({
             }}
           >
             <Typography
-              variant="caption"
+              variant='caption'
               sx={{
                 fontWeight: 700,
                 textTransform: 'uppercase',
@@ -330,24 +336,24 @@ export default function ProjectCreateForm({
               <Chip
                 icon={<AutoFixHighIcon sx={{ fontSize: '14px !important' }} />}
                 label={`Sharp Optimizing (${coverJob.progress || 0}%)...`}
-                color="warning"
-                size="small"
+                color='warning'
+                size='small'
                 sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
               />
             ) : coverFile ? (
               <Chip
-                label="Staged for Project Creation"
-                color="warning"
-                size="small"
-                variant="outlined"
+                label='Staged for Project Creation'
+                color='warning'
+                size='small'
+                variant='outlined'
                 sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700 }}
               />
             ) : (
               <Chip
-                label="No Artwork Staged"
-                color="default"
-                size="small"
-                variant="outlined"
+                label='No Artwork Staged'
+                color='default'
+                size='small'
+                variant='outlined'
                 sx={{ height: 22, fontSize: '0.72rem' }}
               />
             )}
@@ -374,20 +380,20 @@ export default function ProjectCreateForm({
                 }}
               >
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{ color: '#81d4fa', fontWeight: 700, fontSize: '0.75rem' }}
                 >
                   {coverJob.currentStep || 'Sharp generating responsive WebP & AVIF tiers...'}
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{ color: '#81d4fa', fontWeight: 800, fontSize: '0.75rem' }}
                 >
                   {coverJob.progress || 0}%
                 </Typography>
               </Box>
               <LinearProgress
-                variant="determinate"
+                variant='determinate'
                 value={coverJob.progress || 0}
                 sx={{
                   height: 6,
@@ -416,7 +422,7 @@ export default function ProjectCreateForm({
             {coverFile ? (
               <>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{
                     fontFamily: 'monospace',
                     color: 'warning.light',
@@ -427,7 +433,7 @@ export default function ProjectCreateForm({
                   <strong>Staged Source:</strong> {coverFile.name}
                 </Typography>
                 <Typography
-                  variant="caption"
+                  variant='caption'
                   sx={{
                     fontFamily: 'monospace',
                     color: 'text.secondary',
@@ -435,12 +441,13 @@ export default function ProjectCreateForm({
                     wordBreak: 'break-all',
                   }}
                 >
-                  <strong>Target Cache Path:</strong> data/cache/images/ (*.webp &amp; *.avif multi-res tiers)
+                  <strong>Target Cache Path:</strong> data/cache/images/ (*.webp &amp; *.avif
+                  multi-res tiers)
                 </Typography>
               </>
             ) : (
               <Typography
-                variant="caption"
+                variant='caption'
                 sx={{
                   fontFamily: 'monospace',
                   color: 'text.disabled',
@@ -452,7 +459,7 @@ export default function ProjectCreateForm({
             )}
           </Box>
 
-          <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+          <Typography variant='caption' sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
             {coverFile
               ? `Cover image "${coverFile.name}" is staged. It will be pre-compressed into WebP/AVIF multi-resolution variants upon project creation.`
               : 'No cover image file staged. The project will use the default artwork placeholder until uploaded.'}
@@ -462,7 +469,7 @@ export default function ProjectCreateForm({
 
       {/* Track Builder */}
       <Paper
-        variant="outlined"
+        variant='outlined'
         sx={{
           p: 3,
           borderRadius: 2.5,
@@ -472,7 +479,7 @@ export default function ProjectCreateForm({
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography
-            variant="h6"
+            variant='h6'
             sx={{
               fontWeight: 700,
               display: 'flex',
@@ -480,12 +487,12 @@ export default function ProjectCreateForm({
               gap: 1,
             }}
           >
-            <MusicNoteIcon color="primary" /> Track List ({tracks.length})
+            <MusicNoteIcon color='primary' /> Track List ({tracks.length})
           </Typography>
           <Button
-            variant="contained"
-            color="secondary"
-            size="small"
+            variant='contained'
+            color='secondary'
+            size='small'
             startIcon={<AddIcon />}
             onClick={() => {
               setTracks((prev) => [...prev, createEmptyTrack()])
@@ -516,12 +523,14 @@ export default function ProjectCreateForm({
               isSavedArtist={savedFields.has(`new_track_${index}_artist`)}
               dirtyFields={dirtyFields}
               savedFields={savedFields}
-              processingJob={mediaJobs?.getJobForTrack?.({
-                projectSlug,
-                trackSlug: slugify(track.name || ''),
-                trackName: track.name,
-                fileName: track.audioFileName,
-              }) || mediaJobs?.getJobForFile?.(track.audioFileName)}
+              processingJob={
+                mediaJobs?.getJobForTrack?.({
+                  projectSlug,
+                  trackSlug: slugify(track.name || ''),
+                  trackName: track.name,
+                  fileName: track.audioFileName,
+                }) || mediaJobs?.getJobForFile?.(track.audioFileName)
+              }
               onUpdateName={handleUpdateCreateTrackName}
               onUpdateArtist={handleUpdateCreateTrackArtist}
               onUpdateLink={handleUpdateCreateTrackLink}

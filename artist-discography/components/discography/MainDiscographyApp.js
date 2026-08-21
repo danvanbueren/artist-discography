@@ -19,7 +19,6 @@ import {
   Badge,
 } from '@mui/material'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
-import BugReportIcon from '@mui/icons-material/BugReport'
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import ArtistHero, { getSortedActiveLinks } from '../artist/ArtistHero'
@@ -33,20 +32,24 @@ import AudioQualityModal from '../player/AudioQualityModal'
 import OnboardingPlatformBanner from './OnboardingPlatformBanner'
 import OnboardingThemeBanner from './OnboardingThemeBanner'
 import PlaybackQualityBanner from '../player/PlaybackQualityBanner'
-import DevHealthDrawer from '../dev/DevHealthDrawer'
 import SubduedText from '../ui/SubduedText'
 import AmbientBackground from '../layout/AmbientBackground'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../../lib/slugs'
 import { useLogoAnalysis, getLogoFilter } from '../../lib/hooks/useLogoAnalysis'
 import { getCookie, setCookie } from '../../lib/cookies'
 import { mediaPreloader } from '../../lib/mediaPreloader'
-import { detectInitialAudioQuality, saveAudioQuality, getSavedAudioQuality, QUALITY_TIER_CONFIG } from '../../lib/networkProbe'
+import {
+  detectInitialAudioQuality,
+  saveAudioQuality,
+  getSavedAudioQuality,
+  QUALITY_TIER_CONFIG,
+} from '../../lib/networkProbe'
 
 function shuffleArray(array) {
   const arr = [...array]
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
   return arr
 }
@@ -56,10 +59,10 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
     const nameA = (a.track?.name || a.name || '').toLowerCase()
     const nameB = (b.track?.name || b.name || '').toLowerCase()
     const indexA = discographyList.findIndex(
-      item => (item.track.name || '').toLowerCase() === nameA
+      (item) => (item.track.name || '').toLowerCase() === nameA,
     )
     const indexB = discographyList.findIndex(
-      item => (item.track.name || '').toLowerCase() === nameB
+      (item) => (item.track.name || '').toLowerCase() === nameB,
     )
     if (indexA === -1) return 1
     if (indexB === -1) return -1
@@ -67,7 +70,12 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
   })
 }
 
-export default function MainDiscographyApp({ data, health, initialSlug = [], initialThemeMode = null }) {
+export default function MainDiscographyApp({
+  data,
+  health,
+  initialSlug = [],
+  initialThemeMode = null,
+}) {
   // Mounting & Hydration state
   const [mounted, setMounted] = useState(false)
 
@@ -93,13 +101,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
   }, [systemPrefersDark])
 
   const handleToggleTheme = useCallback(() => {
-    setDarkMode(prev => {
+    setDarkMode((prev) => {
       const nextMode = !prev
       const nextThemeStr = nextMode ? 'dark' : 'light'
       try {
         setCookie('theme_mode', nextThemeStr)
         localStorage.setItem('themeMode', nextThemeStr)
-      } catch { }
+      } catch {}
       return nextMode
     })
   }, [])
@@ -231,18 +239,20 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     }
   }, [])
 
-  const handleSelectQuality = useCallback((tier) => {
-    setAudioQuality(tier)
-    saveAudioQuality(tier)
-    const tierLabel = QUALITY_TIER_CONFIG[tier]?.label || tier
-    showToast(`Audio quality set to ${tierLabel}`)
-  }, [showToast])
+  const handleSelectQuality = useCallback(
+    (tier) => {
+      setAudioQuality(tier)
+      saveAudioQuality(tier)
+      const tierLabel = QUALITY_TIER_CONFIG[tier]?.label || tier
+      showToast(`Audio quality set to ${tierLabel}`)
+    },
+    [showToast],
+  )
 
   // Audio Player & Queue State
   const [playingTrack, setPlayingTrack] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [manualQueue, setManualQueue] = useState([])
-  const [devDrawerOpen, setDevDrawerOpen] = useState(false)
   const [restartCount, setRestartCount] = useState(0)
 
   // Ref for the projects container — used by the scroll-aware mask effect below
@@ -286,13 +296,13 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           fontFamily: 'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         },
       }),
-    [darkMode]
+    [darkMode],
   )
 
   // Available platforms calculated from links across all posted projects & tracks
   const availablePlatformIds = useMemo(() => {
     const availableSet = new Set()
-    for (const proj of (projects || [])) {
+    for (const proj of projects || []) {
       if (proj?.links && typeof proj.links === 'object') {
         for (const [key, url] of Object.entries(proj.links)) {
           if (url && typeof url === 'string' && url.trim() !== '') {
@@ -300,7 +310,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           }
         }
       }
-      for (const track of (proj?.tracks || [])) {
+      for (const track of proj?.tracks || []) {
         if (track?.links && typeof track.links === 'object') {
           for (const [key, url] of Object.entries(track.links)) {
             if (url && typeof url === 'string' && url.trim() !== '') {
@@ -310,19 +320,21 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
         }
       }
     }
-    return STREAMING_PLATFORMS
-      .map(p => p.id)
-      .filter(id => availableSet.has(id))
+    return STREAMING_PLATFORMS.map((p) => p.id).filter((id) => availableSet.has(id))
   }, [projects])
 
   const availablePlatforms = useMemo(() => {
-    return STREAMING_PLATFORMS.filter(p => availablePlatformIds.includes(p.id))
+    return STREAMING_PLATFORMS.filter((p) => availablePlatformIds.includes(p.id))
   }, [availablePlatformIds])
 
   // Load preferred platform and theme from cookies on mount, fallback if saved platform is unavailable
   useEffect(() => {
     try {
-      const savedPlatform = (getCookie('preferred_music_platform') || localStorage.getItem('preferred_music_platform') || '').toLowerCase()
+      const savedPlatform = (
+        getCookie('preferred_music_platform') ||
+        localStorage.getItem('preferred_music_platform') ||
+        ''
+      ).toLowerCase()
       if (availablePlatformIds.length > 0) {
         if (savedPlatform && availablePlatformIds.includes(savedPlatform)) {
           setSelectedPlatform(savedPlatform)
@@ -335,7 +347,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       } else {
         setSelectedPlatform('')
       }
-    } catch { }
+    } catch {}
   }, [availablePlatformIds])
 
   // Preload top project cover artwork during idle browser time
@@ -344,7 +356,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     const topProjects = projects.slice(0, 4)
     for (const proj of topProjects) {
       if (proj?.cover && typeof proj.cover === 'string' && proj.cover.startsWith('/api/media')) {
-        mediaPreloader.preloadImage(`${proj.cover}${proj.cover.includes('?') ? '&' : '?'}w=400&q=80&fmt=webp`)
+        mediaPreloader.preloadImage(
+          `${proj.cover}${proj.cover.includes('?') ? '&' : '?'}w=400&q=80&fmt=webp`,
+        )
       }
     }
   }, [projects])
@@ -354,12 +368,12 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     try {
       setCookie('preferred_music_platform', platformId)
       localStorage.setItem('preferred_music_platform', platformId)
-    } catch { }
+    } catch {}
   }
 
   const handleToggleType = (type) => {
-    setActiveTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    setActiveTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     )
   }
 
@@ -428,10 +442,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     }
 
     // Collect essential initial images
-    const essentialImages = [
-      '/api/logo?w=240&fmt=webp',
-      '/api/logo?w=96&fmt=webp',
-    ]
+    const essentialImages = ['/api/logo?w=240&fmt=webp', '/api/logo?w=96&fmt=webp']
 
     // Add active platform & social icons
     const activeLinks = getSortedActiveLinks(artist)
@@ -442,7 +453,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     }
 
     // Include icons for available project platforms
-    for (const pId of (availablePlatformIds || [])) {
+    for (const pId of availablePlatformIds || []) {
       const iconPath = `/platforms/${pId}.webp`
       if (!essentialImages.includes(iconPath)) {
         essentialImages.push(iconPath)
@@ -477,7 +488,14 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
     // Priority 1: Currently Playing Song (Highest Priority)
     if (playingTrack?.name) {
-      const projName = playingTrack.project || projects?.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()))?.name || ''
+      const projName =
+        playingTrack.project ||
+        projects?.find((p) =>
+          (p.tracks || []).some(
+            (t) => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase(),
+          ),
+        )?.name ||
+        ''
       document.title = projName
         ? `${artistName} | ${playingTrack.name} (${projName})`
         : `${artistName} | ${playingTrack.name}`
@@ -487,7 +505,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     // Priority 2: Single Project / Track View
     if (currentView === 'SINGLE_PROJECT' && selectedProject) {
       if (highlightedTrackSlug) {
-        const matchedTrack = (selectedProject.tracks || []).find(t => slugify(t.name || '') === highlightedTrackSlug)
+        const matchedTrack = (selectedProject.tracks || []).find(
+          (t) => slugify(t.name || '') === highlightedTrackSlug,
+        )
         if (matchedTrack?.name) {
           const projName = selectedProject.name || matchedTrack.project || ''
           document.title = projName
@@ -507,32 +527,38 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
   }, [mounted, currentView, selectedProject, highlightedTrackSlug, artist, playingTrack, projects])
 
   // Navigation handlers (client-side SPA, uninterrupted audio!)
-  const navigateToProject = (project) => {
-    if (project) {
-      const projSlug = slugify(project.name)
-      if (projSlug) {
-        window.history.pushState({}, '', `/${projSlug}`)
+  const navigateToProject = useCallback(
+    (project) => {
+      if (project) {
+        const projSlug = slugify(project.name)
+        if (projSlug) {
+          window.history.pushState({}, '', `/${projSlug}`)
+        }
+        setSelectedProject(project)
+        setHighlightedTrackSlug(null)
+        setCurrentView('SINGLE_PROJECT')
+        scrollToTop()
       }
-      setSelectedProject(project)
-      setHighlightedTrackSlug(null)
-      setCurrentView('SINGLE_PROJECT')
-      scrollToTop()
-    }
-  }
+    },
+    [scrollToTop],
+  )
 
-  const navigateToTrack = (project, track) => {
-    if (project && track) {
-      const projSlug = slugify(project.name)
-      const trkSlug = slugify(track.name)
-      if (projSlug && trkSlug) {
-        window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
+  const navigateToTrack = useCallback(
+    (project, track) => {
+      if (project && track) {
+        const projSlug = slugify(project.name)
+        const trkSlug = slugify(track.name)
+        if (projSlug && trkSlug) {
+          window.history.pushState({}, '', `/${projSlug}/${trkSlug}`)
+        }
+        setSelectedProject(project)
+        setHighlightedTrackSlug(trkSlug)
+        setCurrentView('SINGLE_PROJECT')
+        scrollToTop()
       }
-      setSelectedProject(project)
-      setHighlightedTrackSlug(trkSlug)
-      setCurrentView('SINGLE_PROJECT')
-      scrollToTop()
-    }
-  }
+    },
+    [scrollToTop],
+  )
 
   const selectTrackOnProjectPage = (project, track) => {
     if (project && track) {
@@ -576,9 +602,20 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
   const handleNavigateToCurrentTrack = useCallback(() => {
     if (!playingTrack) return
-    const parentProj = projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase())) || projects.find(p => (p.name || '').toLowerCase() === (playingTrack.project || '').toLowerCase())
+    const parentProj =
+      projects.find((p) =>
+        (p.tracks || []).some(
+          (t) => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase(),
+        ),
+      ) ||
+      projects.find(
+        (p) => (p.name || '').toLowerCase() === (playingTrack.project || '').toLowerCase(),
+      )
     if (parentProj) {
-      const matchedTrack = (parentProj.tracks || []).find(t => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()) || playingTrack
+      const matchedTrack =
+        (parentProj.tracks || []).find(
+          (t) => (t.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase(),
+        ) || playingTrack
       navigateToTrack(parentProj, matchedTrack)
     }
   }, [playingTrack, projects, navigateToTrack])
@@ -589,18 +626,18 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
     // Multi-Select Type Filter
     if (activeTypes.length > 0) {
-      result = result.filter(p =>
-        activeTypes.some(t => (p.type || '').toLowerCase() === t.toLowerCase())
+      result = result.filter((p) =>
+        activeTypes.some((t) => (p.type || '').toLowerCase() === t.toLowerCase()),
       )
     }
 
     // Search filter
     if (searchQuery && searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim()
-      result = result.filter(p => {
+      result = result.filter((p) => {
         const nameMatch = (p.name || '').toLowerCase().includes(q)
         const artistMatch = (p.artist || '').toLowerCase().includes(q)
-        const trackMatch = (p.tracks || []).some(t => (t.name || '').toLowerCase().includes(q))
+        const trackMatch = (p.tracks || []).some((t) => (t.name || '').toLowerCase().includes(q))
         return nameMatch || artistMatch || trackMatch
       })
     }
@@ -642,7 +679,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
 
     // Approximate bar heights in px. Nav is only present on the main discography view.
-    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : (isMobile ? 76 : 88)
+    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : isMobile ? 76 : 88
     // Player bar total height including container padding from bottom of viewport
     const PLAYER_H = isMobile ? 80 : 120
     const FADE = isMobile ? 24 : 50 // px: length of the fade gradient transition
@@ -669,9 +706,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       const bottomFadeEnd = showBottom
         ? Math.min(rect.height, Math.max(topFadeEnd, playerTopY - rect.top))
         : rect.height
-      const bottomFadeStart = showBottom
-        ? Math.max(topFadeEnd, bottomFadeEnd - FADE)
-        : rect.height
+      const bottomFadeStart = showBottom ? Math.max(topFadeEnd, bottomFadeEnd - FADE) : rect.height
 
       if (showTop && showBottom && bottomFadeStart > topFadeEnd) {
         mask = `linear-gradient(to bottom, transparent 0px, transparent ${topFadeStart}px, black ${topFadeEnd}px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px, transparent 100%)`
@@ -727,13 +762,12 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
 
   // All Playable Tracks in Currently Presented Top-to-Bottom Order (factors in single project view, filters, search, & sorting)
   const displayedDiscographyTracks = useMemo(() => {
-    const activeProjects = currentView === 'SINGLE_PROJECT' && selectedProject
-      ? [selectedProject]
-      : filteredProjects
+    const activeProjects =
+      currentView === 'SINGLE_PROJECT' && selectedProject ? [selectedProject] : filteredProjects
 
     const list = []
-    for (const proj of (activeProjects || [])) {
-      for (const track of (proj.tracks || [])) {
+    for (const proj of activeProjects || []) {
+      for (const track of proj.tracks || []) {
         if (track.hasAudio && track.audioUrl) {
           list.push({
             track: {
@@ -757,67 +791,89 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
   const [repeatMode, setRepeatMode] = useState('off') // 'off' | 'all' | 'one'
 
   const handleToggleShuffle = useCallback(() => {
-    setIsShuffle(prev => {
+    setIsShuffle((prev) => {
       const nextShuffle = !prev
       if (nextShuffle) {
-        setAutoplayTracks(current => shuffleArray(current))
+        setAutoplayTracks((current) => shuffleArray(current))
       } else {
-        setAutoplayTracks(current => sortTracksByDiscographyOrder(current, displayedDiscographyTracks))
+        setAutoplayTracks((current) =>
+          sortTracksByDiscographyOrder(current, displayedDiscographyTracks),
+        )
       }
       return nextShuffle
     })
   }, [displayedDiscographyTracks])
 
   // Audio Playback Handler (Invoked when user physically clicks PLAY on a track)
-  const handlePlayTrack = useCallback((track, proj, options = {}) => {
-    if (!track) return
-    if (!track.hasAudio || !track.audioUrl) {
-      showToast(`No audio available for "${track.name || 'this track'}"`)
-      return
-    }
-    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
-    const projName = parentProj?.name || track.project || ''
-    const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
+  const handlePlayTrack = useCallback(
+    (track, proj, options = {}) => {
+      if (!track) return
+      if (!track.hasAudio || !track.audioUrl) {
+        showToast(`No audio available for "${track.name || 'this track'}"`)
+        return
+      }
+      const parentProj =
+        proj ||
+        selectedProject ||
+        projects.find((p) =>
+          (p.tracks || []).some(
+            (t) => (t.name || '').toLowerCase() === (track.name || '').toLowerCase(),
+          ),
+        )
+      const projName = parentProj?.name || track.project || ''
+      const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
 
-    const isSameTrack = (playingTrack?.name || '').toLowerCase() === (track.name || '').toLowerCase()
+      const isSameTrack =
+        (playingTrack?.name || '').toLowerCase() === (track.name || '').toLowerCase()
 
-    if (isSameTrack && isPlaying) {
-      if (options?.touchMode || options?.restart || options?.restartIfSame) {
-        setRestartCount((c) => c + 1)
+      if (isSameTrack && isPlaying) {
+        if (options?.touchMode || options?.restart || options?.restartIfSame) {
+          setRestartCount((c) => c + 1)
+        } else {
+          setIsPlaying(false)
+        }
       } else {
-        setIsPlaying(false)
-      }
-    } else {
-      const trackWithProject = {
-        ...track,
-        project: projName,
-        projectType: parentProj?.type || track.projectType || '',
-        projectArtist: parentProj?.artist || artist.name || '',
-        projectCover: projCover,
-        artist: track.artist || parentProj?.artist || artist.name || '',
-      }
-      setPlayingTrack(trackWithProject)
-      setIsPlaying(true)
+        const trackWithProject = {
+          ...track,
+          project: projName,
+          projectType: parentProj?.type || track.projectType || '',
+          projectArtist: parentProj?.artist || artist.name || '',
+          projectCover: projCover,
+          artist: track.artist || parentProj?.artist || artist.name || '',
+        }
+        setPlayingTrack(trackWithProject)
+        setIsPlaying(true)
 
-      // Direct track play clears manual queue immediately
-      setManualQueue([])
+        // Direct track play clears manual queue immediately
+        setManualQueue([])
 
-      // User physically clicked PLAY -> populate autoplay queue with tracks that follow it in current view
-      const currIndex = (displayedDiscographyTracks || []).findIndex(
-        (item) => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase()
-      )
-      if (currIndex !== -1) {
-        const remaining = displayedDiscographyTracks.slice(currIndex + 1)
-        setAutoplayTracks(isShuffle ? shuffleArray(remaining) : remaining)
-      } else {
-        setAutoplayTracks([])
-      }
+        // User physically clicked PLAY -> populate autoplay queue with tracks that follow it in current view
+        const currIndex = (displayedDiscographyTracks || []).findIndex(
+          (item) => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase(),
+        )
+        if (currIndex !== -1) {
+          const remaining = displayedDiscographyTracks.slice(currIndex + 1)
+          setAutoplayTracks(isShuffle ? shuffleArray(remaining) : remaining)
+        } else {
+          setAutoplayTracks([])
+        }
 
-      if (isSameTrack && (options?.restart || options?.restartIfSame)) {
-        setRestartCount((c) => c + 1)
+        if (isSameTrack && (options?.restart || options?.restartIfSame)) {
+          setRestartCount((c) => c + 1)
+        }
       }
-    }
-  }, [playingTrack, isPlaying, selectedProject, projects, artist.name, showToast, displayedDiscographyTracks, isShuffle])
+    },
+    [
+      playingTrack,
+      isPlaying,
+      selectedProject,
+      projects,
+      artist.name,
+      showToast,
+      displayedDiscographyTracks,
+      isShuffle,
+    ],
+  )
 
   // Compute the most contextually relevant cover art to use as the full-page ambient background
   const ambientImage = useMemo(() => {
@@ -829,29 +885,39 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       return selectedProject.cover || selectedProject.image || ''
     }
     // Priority 3: first visible project in the current filtered list
-    for (const proj of (filteredProjects || [])) {
+    for (const proj of filteredProjects || []) {
       const img = proj.cover || proj.image || ''
       if (img) return img
     }
     return ''
   }, [playingTrack, currentView, selectedProject, filteredProjects])
 
-  const handleAddToQueue = useCallback((track, proj) => {
-    if (!track || !track.hasAudio || !track.audioUrl) {
-      showToast(`No audio available for "${track?.name || 'this track'}"`)
-      return
-    }
-    const parentProj = proj || selectedProject || projects.find(p => (p.tracks || []).some(t => (t.name || '').toLowerCase() === (track.name || '').toLowerCase()))
-    const trackWithProject = {
-      ...track,
-      project: parentProj?.name || track.project || '',
-      projectType: parentProj?.type || track.projectType || '',
-      projectArtist: parentProj?.artist || artist.name || '',
-      projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
-    }
-    setManualQueue(prev => [...prev, { track: trackWithProject, project: parentProj }])
-    showToast(`Added "${track?.name || 'track'}" to queue`)
-  }, [selectedProject, projects, showToast, artist?.name])
+  const handleAddToQueue = useCallback(
+    (track, proj) => {
+      if (!track || !track.hasAudio || !track.audioUrl) {
+        showToast(`No audio available for "${track?.name || 'this track'}"`)
+        return
+      }
+      const parentProj =
+        proj ||
+        selectedProject ||
+        projects.find((p) =>
+          (p.tracks || []).some(
+            (t) => (t.name || '').toLowerCase() === (track.name || '').toLowerCase(),
+          ),
+        )
+      const trackWithProject = {
+        ...track,
+        project: parentProj?.name || track.project || '',
+        projectType: parentProj?.type || track.projectType || '',
+        projectArtist: parentProj?.artist || artist.name || '',
+        projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
+      }
+      setManualQueue((prev) => [...prev, { track: trackWithProject, project: parentProj }])
+      showToast(`Added "${track?.name || 'track'}" to queue`)
+    },
+    [selectedProject, projects, showToast, artist?.name],
+  )
 
   const handleSkipNext = useCallback(() => {
     if (repeatMode === 'one' && playingTrack) {
@@ -872,7 +938,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       setPlayingTrack(nextItem.track)
       setIsPlaying(true)
     } else if (repeatMode === 'all' && displayedDiscographyTracks.length > 0) {
-      const freshTracks = isShuffle ? shuffleArray(displayedDiscographyTracks) : [...displayedDiscographyTracks]
+      const freshTracks = isShuffle
+        ? shuffleArray(displayedDiscographyTracks)
+        : [...displayedDiscographyTracks]
       const [firstItem, ...rest] = freshTracks
       setAutoplayTracks(rest)
       setPlayingTrack(firstItem.track)
@@ -888,7 +956,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
       let currIndex = -1
       if (playingTrack) {
         currIndex = displayedDiscographyTracks.findIndex(
-          item => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase()
+          (item) =>
+            (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase(),
         )
       }
       if (currIndex > 0) {
@@ -915,43 +984,46 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
     }
   }, [playingTrack, displayedDiscographyTracks, isShuffle, repeatMode])
 
-  const handleQueueDragDrop = useCallback(({ fromList, fromIndex, toList, toIndex }) => {
-    let currentQueue = [...manualQueue]
-    let currentAutoplay = [...autoplayTracks]
+  const handleQueueDragDrop = useCallback(
+    ({ fromList, fromIndex, toList, toIndex }) => {
+      let currentQueue = [...manualQueue]
+      let currentAutoplay = [...autoplayTracks]
 
-    if (fromList === 'queue' && toList === 'queue') {
-      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
-      const [moved] = currentQueue.splice(fromIndex, 1)
-      const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
-      const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentQueue.length))
-      currentQueue.splice(targetIdx, 0, moved)
-      setManualQueue(currentQueue)
-    } else if (fromList === 'autoplay' && toList === 'autoplay') {
-      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
-      const [moved] = currentAutoplay.splice(fromIndex, 1)
-      const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
-      const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentAutoplay.length))
-      currentAutoplay.splice(targetIdx, 0, moved)
-      setAutoplayTracks(currentAutoplay)
-    } else if (fromList === 'autoplay' && toList === 'queue') {
-      if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
-      const [moved] = currentAutoplay.splice(fromIndex, 1)
-      const targetIdx = Math.max(0, Math.min(toIndex, currentQueue.length))
-      currentQueue.splice(targetIdx, 0, moved)
-      setManualQueue(currentQueue)
-      setAutoplayTracks(currentAutoplay)
-    } else if (fromList === 'queue' && toList === 'autoplay') {
-      if (fromIndex < 0 || fromIndex >= currentQueue.length) return
-      const [moved] = currentQueue.splice(fromIndex, 1)
-      const targetIdx = Math.max(0, Math.min(toIndex, currentAutoplay.length))
-      currentAutoplay.splice(targetIdx, 0, moved)
-      setManualQueue(currentQueue)
-      setAutoplayTracks(currentAutoplay)
-    }
-  }, [manualQueue, autoplayTracks])
+      if (fromList === 'queue' && toList === 'queue') {
+        if (fromIndex < 0 || fromIndex >= currentQueue.length) return
+        const [moved] = currentQueue.splice(fromIndex, 1)
+        const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
+        const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentQueue.length))
+        currentQueue.splice(targetIdx, 0, moved)
+        setManualQueue(currentQueue)
+      } else if (fromList === 'autoplay' && toList === 'autoplay') {
+        if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
+        const [moved] = currentAutoplay.splice(fromIndex, 1)
+        const rawTargetIdx = fromIndex < toIndex ? toIndex - 1 : toIndex
+        const targetIdx = Math.max(0, Math.min(rawTargetIdx, currentAutoplay.length))
+        currentAutoplay.splice(targetIdx, 0, moved)
+        setAutoplayTracks(currentAutoplay)
+      } else if (fromList === 'autoplay' && toList === 'queue') {
+        if (fromIndex < 0 || fromIndex >= currentAutoplay.length) return
+        const [moved] = currentAutoplay.splice(fromIndex, 1)
+        const targetIdx = Math.max(0, Math.min(toIndex, currentQueue.length))
+        currentQueue.splice(targetIdx, 0, moved)
+        setManualQueue(currentQueue)
+        setAutoplayTracks(currentAutoplay)
+      } else if (fromList === 'queue' && toList === 'autoplay') {
+        if (fromIndex < 0 || fromIndex >= currentQueue.length) return
+        const [moved] = currentQueue.splice(fromIndex, 1)
+        const targetIdx = Math.max(0, Math.min(toIndex, currentAutoplay.length))
+        currentAutoplay.splice(targetIdx, 0, moved)
+        setManualQueue(currentQueue)
+        setAutoplayTracks(currentAutoplay)
+      }
+    },
+    [manualQueue, autoplayTracks],
+  )
 
   const handleRemoveFromAutoplay = useCallback((index) => {
-    setAutoplayTracks(prev => {
+    setAutoplayTracks((prev) => {
       const current = [...prev]
       if (index >= 0 && index < current.length) {
         current.splice(index, 1)
@@ -979,9 +1051,9 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
         }}
       >
         <Box
-          component="img"
-          src="/api/logo?w=240&fmt=webp"
-          alt="Loading"
+          component='img'
+          src='/api/logo?w=240&fmt=webp'
+          alt='Loading'
           draggable={false}
           sx={{
             maxHeight: 90,
@@ -1091,32 +1163,56 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             backgroundColor: 'transparent !important',
           },
           '::-webkit-scrollbar-thumb': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
-            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
+            background: darkMode
+              ? 'rgba(255, 255, 255, 0.45) !important'
+              : 'rgba(0, 0, 0, 0.45) !important',
+            backgroundColor: darkMode
+              ? 'rgba(255, 255, 255, 0.45) !important'
+              : 'rgba(0, 0, 0, 0.45) !important',
             borderRadius: '99px !important',
             transition: 'background 0.2s ease',
           },
           '*::-webkit-scrollbar-thumb': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
-            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.45) !important' : 'rgba(0, 0, 0, 0.45) !important',
+            background: darkMode
+              ? 'rgba(255, 255, 255, 0.45) !important'
+              : 'rgba(0, 0, 0, 0.45) !important',
+            backgroundColor: darkMode
+              ? 'rgba(255, 255, 255, 0.45) !important'
+              : 'rgba(0, 0, 0, 0.45) !important',
             borderRadius: '99px !important',
             transition: 'background 0.2s ease',
           },
           '::-webkit-scrollbar-thumb:hover': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
-            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
+            background: darkMode
+              ? 'rgba(255, 255, 255, 0.75) !important'
+              : 'rgba(0, 0, 0, 0.7) !important',
+            backgroundColor: darkMode
+              ? 'rgba(255, 255, 255, 0.75) !important'
+              : 'rgba(0, 0, 0, 0.7) !important',
           },
           '*::-webkit-scrollbar-thumb:hover': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
-            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.75) !important' : 'rgba(0, 0, 0, 0.7) !important',
+            background: darkMode
+              ? 'rgba(255, 255, 255, 0.75) !important'
+              : 'rgba(0, 0, 0, 0.7) !important',
+            backgroundColor: darkMode
+              ? 'rgba(255, 255, 255, 0.75) !important'
+              : 'rgba(0, 0, 0, 0.7) !important',
           },
           '::-webkit-scrollbar-thumb:active': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
-            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
+            background: darkMode
+              ? 'rgba(255, 255, 255, 0.95) !important'
+              : 'rgba(0, 0, 0, 0.9) !important',
+            backgroundColor: darkMode
+              ? 'rgba(255, 255, 255, 0.95) !important'
+              : 'rgba(0, 0, 0, 0.9) !important',
           },
           '*::-webkit-scrollbar-thumb:active': {
-            background: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
-            backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.95) !important' : 'rgba(0, 0, 0, 0.9) !important',
+            background: darkMode
+              ? 'rgba(255, 255, 255, 0.95) !important'
+              : 'rgba(0, 0, 0, 0.9) !important',
+            backgroundColor: darkMode
+              ? 'rgba(255, 255, 255, 0.95) !important'
+              : 'rgba(0, 0, 0, 0.9) !important',
           },
           '::-webkit-scrollbar-button': {
             display: 'none !important',
@@ -1158,8 +1254,8 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
             pb: playingTrack ? { xs: 14, sm: 16 } : { xs: 5, sm: 6 },
           }}
         >
-          {/* Floating Dev & Admin Alert Cards (Top Left) */}
-          {(data?.adminAccess !== false || Boolean(data?.devAccess)) && (
+          {/* Floating Admin Alert Card (Top Left) */}
+          {data?.adminAccess !== false && (
             <Stack
               spacing={1}
               sx={{
@@ -1168,252 +1264,214 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
                 left: { xs: 12, sm: 16 },
                 zIndex: 3000,
                 pointerEvents: 'none',
-                maxWidth: { xs: 'calc(100vw - 24px)', sm: 380 },
+                maxWidth: { xs: 'calc(100vw - 24px)', sm: 420 },
               }}
             >
-              {data?.adminAccess !== false && (
-                <Paper
-                  elevation={6}
-                  sx={{
-                    pointerEvents: 'auto',
-                    borderRadius: 3,
-                    px: { xs: 1, sm: 2 },
-                    py: { xs: 0.75, sm: 1.25 },
-                    bgcolor: '#b71c1c',
-                    color: '#ffffff',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                    boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: { xs: 0.75, sm: 1.5 },
-                    animation: 'pulseAdminAlert 2s infinite ease-in-out',
-                    '@keyframes pulseAdminAlert': {
-                      '0%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
-                      '50%': { backgroundColor: '#d32f2f', boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)' },
-                      '100%': { backgroundColor: '#b71c1c', boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)' },
+              <Paper
+                elevation={6}
+                sx={{
+                  pointerEvents: 'auto',
+                  borderRadius: 3,
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.75, sm: 1.25 },
+                  bgcolor: '#b71c1c',
+                  color: '#ffffff',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: { xs: 0.75, sm: 1.5 },
+                  animation: 'pulseAdminAlert 2s infinite ease-in-out',
+                  '@keyframes pulseAdminAlert': {
+                    '0%': {
+                      backgroundColor: '#b71c1c',
+                      boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)',
                     },
-                  }}
-                >
-                  <LockOpenIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }} />
-                  <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
-                      Admin Access Open
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
-                      Set adminAccess: false for prod
-                    </Typography>
-                  </Box>
-                  <Tooltip title="Open Admin Portal" arrow>
-                    <IconButton
-                      component="a"
-                      href="/_sys/_admin"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      size="small"
-                      sx={{
-                        color: '#ffffff',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        p: { xs: 0.5, sm: 0.75 },
-                        ml: 'auto',
-                        flexShrink: 0,
-                        '&:hover': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.35)',
-                          transform: 'scale(1.08)',
-                        },
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <OpenInNewRoundedIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
-              )}
-
-              {Boolean(data?.devAccess) && (
-                <Paper
-                  elevation={6}
-                  sx={{
-                    pointerEvents: 'auto',
-                    borderRadius: 3,
-                    px: { xs: 1, sm: 2 },
-                    py: { xs: 0.75, sm: 1.25 },
-                    bgcolor: '#e65100',
-                    color: '#ffffff',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
-                    boxShadow: '0 8px 24px rgba(230, 81, 0, 0.45)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: { xs: 0.75, sm: 1.5 },
-                    animation: 'pulseDevAlert 2s infinite ease-in-out',
-                    '@keyframes pulseDevAlert': {
-                      '0%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
-                      '50%': { backgroundColor: '#f57c00', boxShadow: '0 10px 28px rgba(245, 124, 0, 0.65)' },
-                      '100%': { backgroundColor: '#e65100', boxShadow: '0 6px 18px rgba(230, 81, 0, 0.4)' },
+                    '50%': {
+                      backgroundColor: '#d32f2f',
+                      boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)',
                     },
-                  }}
-                >
-                  {/* Clickable Bug Icon which opens the Dev Data Health Report Drawer */}
-                  <Tooltip title="View Dev Data Health Report" arrow>
-                    <IconButton
-                      size="small"
-                      onClick={() => setDevDrawerOpen(true)}
-                      sx={{
-                        color: '#ffffff',
-                        p: 0.5,
-                        flexShrink: 0,
-                        '&:hover': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                          transform: 'scale(1.1)',
-                        },
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <Badge
-                        badgeContent={health?.issues?.length || null}
-                        color="error"
-                        sx={{
-                          '& .MuiBadge-badge': {
-                            fontSize: '0.65rem',
-                            height: 16,
-                            minWidth: 16,
-                            padding: '0 4px',
-                          },
-                        }}
-                      >
-                        <BugReportIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff' }} />
-                      </Badge>
-                    </IconButton>
-                  </Tooltip>
-
-                  <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#ffffff', display: 'block', lineHeight: 1.25, fontSize: '0.775rem' }}>
-                      Dev Mode Enabled
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.85)', display: 'block', fontSize: '0.7rem', lineHeight: 1.2 }}>
-                      Set devAccess: false for prod
-                    </Typography>
-                  </Box>
-
-                  <Tooltip title="Open Dev Tool" arrow>
-                    <IconButton
-                      component="a"
-                      href="/_sys/_dev"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      size="small"
-                      sx={{
-                        color: '#ffffff',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        p: { xs: 0.5, sm: 0.75 },
-                        ml: 'auto',
-                        flexShrink: 0,
-                        '&:hover': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.35)',
-                          transform: 'scale(1.08)',
-                        },
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <OpenInNewRoundedIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Paper>
-              )}
+                    '100%': {
+                      backgroundColor: '#b71c1c',
+                      boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)',
+                    },
+                  },
+                }}
+              >
+                <LockOpenIcon
+                  sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }}
+                />
+                <Box sx={{ display: { xs: 'none', sm: 'block' }, minWidth: 0, flexGrow: 1 }}>
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      fontWeight: 800,
+                      color: '#ffffff',
+                      display: 'block',
+                      lineHeight: 1.25,
+                      fontSize: '0.775rem',
+                    }}
+                  >
+                    Admin Dashboard
+                  </Typography>
+                  <Typography
+                    variant='caption'
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.85)',
+                      display: 'block',
+                      fontSize: '0.7rem',
+                      lineHeight: 1.25,
+                    }}
+                  >
+                    The admin dashboard is currently accessible. Ensure it is disabled before
+                    deploying to a production environment.
+                  </Typography>
+                </Box>
+                <Tooltip title='Open Admin Portal' arrow>
+                  <IconButton
+                    component='a'
+                    href='/_sys/_admin'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    size='small'
+                    sx={{
+                      color: '#ffffff',
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      p: { xs: 0.5, sm: 0.75 },
+                      ml: 'auto',
+                      flexShrink: 0,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.35)',
+                        transform: 'scale(1.08)',
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <OpenInNewRoundedIcon fontSize='small' />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
             </Stack>
           )}
-          {/* Dev Data Health Drawer (Triggered by clicking bug icon) */}
-          {Boolean(data?.devAccess) && (
-            <DevHealthDrawer
-              health={health}
-              open={devDrawerOpen}
-              onClose={() => setDevDrawerOpen(false)}
-            />
-          )}
-          {/* Top Screen-Height Hero Section (Only on main discography view) */}
-          {currentView !== 'SINGLE_PROJECT' && (
-            <ArtistHero
-              artist={artist}
-              onLogoClick={undefined}
-              ambientImage={ambientImage}
-            />
-          )}
 
-          {/* Contained Floating Sticky Nav Bar (Only on main discography view) */}
-          {currentView !== 'SINGLE_PROJECT' && (
-            <FloatingNavBar
-              activeTypes={activeTypes}
-              onToggleType={handleToggleType}
-              onResetTypes={handleResetTypes}
-              sortOrder={sortOrder}
-              onSortChange={setSortOrder}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              darkMode={darkMode}
-              onToggleTheme={handleToggleTheme}
-              selectedPlatform={selectedPlatform}
-              onOpenPlatformModal={() => setPlatformModalOpen(true)}
-              hasAvailablePlatforms={availablePlatformIds.length > 0}
-              audioQuality={audioQuality}
-              isStuttering={isPlaybackStuttering}
-              onOpenQualityModal={() => setQualityModalOpen(true)}
-              isPrivateAuthenticated={isPrivateAccessAuthenticated}
-              onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
-              showScrollTop={showScrollTop}
-              onScrollToTop={scrollToTop}
-            />
-          )}
+          {/* Top Screen-Height Hero Section (Only visible on main discography view) */}
+          <Box sx={{ display: currentView === 'SINGLE_PROJECT' ? 'none' : 'block' }}>
+            <ArtistHero artist={artist} onLogoClick={undefined} ambientImage={ambientImage} />
+          </Box>
+
+          {/* Contained Floating Sticky Nav Bar (Only visible on main discography view) */}
+          <FloatingNavBar
+            activeTypes={activeTypes}
+            onToggleType={handleToggleType}
+            onResetTypes={handleResetTypes}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            darkMode={darkMode}
+            onToggleTheme={handleToggleTheme}
+            selectedPlatform={selectedPlatform}
+            onOpenPlatformModal={() => setPlatformModalOpen(true)}
+            hasAvailablePlatforms={availablePlatformIds.length > 0}
+            audioQuality={audioQuality}
+            isStuttering={isPlaybackStuttering}
+            onOpenQualityModal={() => setQualityModalOpen(true)}
+            isPrivateAuthenticated={isPrivateAccessAuthenticated}
+            onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
+            showScrollTop={showScrollTop}
+            onScrollToTop={scrollToTop}
+            sx={{
+              display: currentView === 'SINGLE_PROJECT' ? 'none' : 'block',
+            }}
+          />
 
           {/* Main Content Projects Container */}
           <Container
             ref={projectsContainerRef}
-            maxWidth="md"
+            maxWidth='md'
             sx={{
               px: { xs: 2, sm: 3 },
-              mt: { xs: 2, sm: 3 },
+              mt: currentView === 'SINGLE_PROJECT' ? 0 : { xs: 2, sm: 3 },
               flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            {currentView === 'SINGLE_PROJECT' && selectedProject ? (
-              <Stack spacing={3}>
-                {/* Single Project Page Header: Compact Artist Header */}
-                <CompactArtistHeader
-                  artist={artist}
-                  onNavigateHome={navigateToAllProjects}
-                  darkMode={darkMode}
-                  onToggleTheme={handleToggleTheme}
-                  selectedPlatform={selectedPlatform}
-                  onOpenPlatformModal={() => setPlatformModalOpen(true)}
-                  ambientImage={ambientImage}
-                  hasAvailablePlatforms={availablePlatformIds.length > 0}
-                />
+            {/* Single Project View */}
+            {selectedProject && (
+              <Box
+                sx={{
+                  display: currentView === 'SINGLE_PROJECT' ? 'flex' : 'none',
+                  flexDirection: 'column',
+                  flexGrow: 1,
+                  width: '100%',
+                  py: { xs: 2, sm: 3 },
+                }}
+              >
+                {/* Top flexible spacer (1 part) */}
+                <Box sx={{ flexGrow: 1, flexBasis: 0, minHeight: 0 }} />
 
-                <ProjectCard
-                  project={selectedProject}
-                  artistName={artist.name}
-                  onSelectProject={navigateToProject}
-                  isSingleView={true}
-                  onPlayTrack={handlePlayTrack}
-                  onAddToQueue={handleAddToQueue}
-                  onShowToast={showToast}
-                  playingTrack={playingTrack}
-                  isPlaying={isPlaying}
-                  highlightedTrackSlug={highlightedTrackSlug}
-                  onSelectTrackRow={(track) => selectTrackOnProjectPage(selectedProject, track)}
-                  onSelectTrackTitle={(track) => selectTrackOnProjectPage(selectedProject, track)}
-                  selectedPlatform={selectedPlatform}
-                  isPrivateAuthenticated={isPrivateAccessAuthenticated}
-                />
-              </Stack>
-            ) : (
+                <Stack
+                  spacing={3}
+                  sx={{
+                    width: '100%',
+                    flexShrink: 0,
+                  }}
+                >
+                  <CompactArtistHeader
+                    artist={artist}
+                    onNavigateHome={navigateToAllProjects}
+                    darkMode={darkMode}
+                    onToggleTheme={handleToggleTheme}
+                    selectedPlatform={selectedPlatform}
+                    onOpenPlatformModal={() => setPlatformModalOpen(true)}
+                    ambientImage={ambientImage}
+                    hasAvailablePlatforms={availablePlatformIds.length > 0}
+                    audioQuality={audioQuality}
+                    isStuttering={isPlaybackStuttering}
+                    onOpenQualityModal={() => setQualityModalOpen(true)}
+                    isPrivateAuthenticated={isPrivateAccessAuthenticated}
+                    onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
+                  />
+
+                  <ProjectCard
+                    project={selectedProject}
+                    artistName={artist.name}
+                    onSelectProject={navigateToProject}
+                    isSingleView={true}
+                    onPlayTrack={handlePlayTrack}
+                    onAddToQueue={handleAddToQueue}
+                    onShowToast={showToast}
+                    playingTrack={playingTrack}
+                    isPlaying={isPlaying}
+                    highlightedTrackSlug={highlightedTrackSlug}
+                    onSelectTrackRow={(track) => selectTrackOnProjectPage(selectedProject, track)}
+                    onSelectTrackTitle={(track) => selectTrackOnProjectPage(selectedProject, track)}
+                    selectedPlatform={selectedPlatform}
+                    isPrivateAuthenticated={isPrivateAccessAuthenticated}
+                  />
+                </Stack>
+
+                {/* Bottom flexible spacer (2 parts - positions content ~1/3 from top) */}
+                <Box sx={{ flexGrow: 2, flexBasis: 0, minHeight: 0 }} />
+              </Box>
+            )}
+
+            {/* All Projects View (Preserved in DOM for instant seamless navigation) */}
+            <Box
+              sx={{
+                display: currentView === 'SINGLE_PROJECT' ? 'none' : 'block',
+                width: '100%',
+              }}
+            >
               <Stack spacing={4}>
                 {filteredProjects.length === 0 ? (
                   <Box sx={{ py: 10, textAlign: 'center' }}>
                     <SubduedText
-                      value=""
-                      placeholder="No projects match your selected filter or search query."
-                      variant="h6"
+                      value=''
+                      placeholder='No projects match your selected filter or search query.'
+                      variant='h6'
                     />
                   </Box>
                 ) : (
@@ -1446,7 +1504,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
                   })
                 )}
               </Stack>
-            )}
+            </Box>
           </Container>
         </Box>
 
@@ -1522,7 +1580,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           audioQuality={audioQuality}
           onOpenQualityModal={() => setQualityModalOpen(true)}
           onStutterChange={setIsPlaybackStuttering}
-          onTogglePlay={() => setIsPlaying(prev => !prev)}
+          onTogglePlay={() => setIsPlaying((prev) => !prev)}
           onClosePlayer={() => {
             mediaPreloader.clearAudioPreload()
             setPlayingTrack(null)
@@ -1533,14 +1591,14 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           autoplayTracks={autoplayTracks}
           onQueueDragDrop={handleQueueDragDrop}
           onRemoveFromManualQueue={(index) => {
-            setManualQueue(prev => prev.filter((_, i) => i !== index))
+            setManualQueue((prev) => prev.filter((_, i) => i !== index))
           }}
           onRemoveFromAutoplay={handleRemoveFromAutoplay}
           onPlayQueuedTrack={(item, index, isManual = true) => {
             if (isManual) {
-              setManualQueue(prev => prev.filter((_, i) => i !== index))
+              setManualQueue((prev) => prev.filter((_, i) => i !== index))
             } else {
-              setAutoplayTracks(prev => prev.slice(index + 1))
+              setAutoplayTracks((prev) => prev.slice(index + 1))
             }
             setPlayingTrack(item.track)
             setIsPlaying(true)
@@ -1553,7 +1611,7 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           onToggleShuffle={handleToggleShuffle}
           repeatMode={repeatMode}
           onCycleRepeatMode={() => {
-            setRepeatMode(prev => {
+            setRepeatMode((prev) => {
               if (prev === 'off') return 'all'
               if (prev === 'all') return 'one'
               return 'off'
@@ -1570,9 +1628,6 @@ export default function MainDiscographyApp({ data, health, initialSlug = [], ini
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           sx={{ mb: playingTrack ? 10 : 2 }}
         />
-
-        {/* Dev Data Health Drawer Badge (Only rendered when devAccess is enabled) */}
-        {data?.devAccess !== false && <DevHealthDrawer health={health} />}
       </Box>
     </ThemeProvider>
   )

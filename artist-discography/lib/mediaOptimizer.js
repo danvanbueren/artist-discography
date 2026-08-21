@@ -40,15 +40,10 @@ export const IMAGE_CACHE_DIR = CACHE_DIR
  */
 export function computeImageCacheKey(sourceFilePath, stat, options = {}) {
   const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
-  const {
-    width = null,
-    quality = null,
-    format = 'webp',
-    blur = null,
-  } = options
+  const { width = null, quality = null, format = 'webp', blur = null } = options
 
   const targetFormat = format === 'original' ? (ext === 'jpg' ? 'jpeg' : ext) : format
-  const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : (blur ? 30 : 80)
+  const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : blur ? 30 : 80
   const targetWidth = width ? Math.min(3840, Math.max(16, parseInt(width, 10))) : null
   const targetBlur = blur ? Math.min(50, Math.max(0.3, parseFloat(blur))) : null
 
@@ -97,15 +92,10 @@ export function ensureCacheDir() {
  * @returns {Promise<{ buffer: Buffer, mimeType: string, isFromCache: boolean }>}
  */
 export async function getOptimizedImage(sourceFilePath, options = {}) {
-  const {
-    width = null,
-    quality = null,
-    format = 'webp',
-    blur = null,
-  } = options
+  const { width = null, quality = null, format = 'webp', blur = null } = options
 
   const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
-  
+
   // Non-raster / animated vector types that should not be converted with sharp
   if (['svg', 'ico', 'gif'].includes(ext) && !width && !blur) {
     const rawBuffer = fs.readFileSync(/*turbopackIgnore: true*/ sourceFilePath)
@@ -127,11 +117,15 @@ export async function getOptimizedImage(sourceFilePath, options = {}) {
   }
 
   const stat = fs.statSync(/*turbopackIgnore: true*/ sourceFilePath)
-  const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : (blur ? 30 : 80)
+  const targetQuality = quality ? Math.min(100, Math.max(1, parseInt(quality, 10))) : blur ? 30 : 80
   const targetWidth = width ? Math.min(3840, Math.max(16, parseInt(width, 10))) : null
   const targetBlur = blur ? Math.min(50, Math.max(0.3, parseFloat(blur))) : null
 
-  const { cacheHash, cacheFileName, targetFormat } = computeImageCacheKey(sourceFilePath, stat, options)
+  const { cacheHash, cacheFileName, targetFormat } = computeImageCacheKey(
+    sourceFilePath,
+    stat,
+    options,
+  )
   const cacheFilePath = path.join(CACHE_DIR, cacheFileName)
 
   // 1. In-memory fast tier check
@@ -219,7 +213,9 @@ export async function getOptimizedImage(sourceFilePath, options = {}) {
           try {
             fs.rename(tempFilePath, cacheFilePath, () => {})
           } catch (renameErr) {
-            try { fs.unlink(tempFilePath, () => {}) } catch (e) {}
+            try {
+              fs.unlink(tempFilePath, () => {})
+            } catch (e) {}
           }
         }
       })
@@ -233,7 +229,10 @@ export async function getOptimizedImage(sourceFilePath, options = {}) {
       isFromCache: false,
     }
   } catch (err) {
-    console.warn(`Sharp optimization failed for ${sourceFilePath}, falling back to original:`, err.message)
+    console.warn(
+      `Sharp optimization failed for ${sourceFilePath}, falling back to original:`,
+      err.message,
+    )
     const fallbackBuffer = fs.readFileSync(/*turbopackIgnore: true*/ sourceFilePath)
     return {
       buffer: fallbackBuffer,
@@ -284,12 +283,7 @@ export function isImageVariantCached(sourceFilePath, options = {}) {
     if (!stat.isFile()) return false
 
     const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
-    const {
-      width = null,
-      quality = null,
-      format = 'webp',
-      blur = null,
-    } = options
+    const { width = null, quality = null, format = 'webp', blur = null } = options
 
     if (['svg', 'ico', 'gif'].includes(ext) && !options.width && !options.blur) return true
 
@@ -314,7 +308,7 @@ export function isImageFullyCached(sourceFilePath) {
     const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
     if (['svg', 'ico'].includes(ext)) return true
 
-    return STANDARD_IMAGE_VARIANTS.every(variant => isImageVariantCached(sourceFilePath, variant))
+    return STANDARD_IMAGE_VARIANTS.every((variant) => isImageVariantCached(sourceFilePath, variant))
   } catch {
     return false
   }
@@ -328,10 +322,21 @@ export function isImageFullyCached(sourceFilePath) {
  * @param {Object} [jobOptions={}]
  * @returns {Promise<{ total: number, generated: number, cached: number }>}
  */
-export async function optimizeAndCacheImage(sourceFilePath, variants = STANDARD_IMAGE_VARIANTS, jobOptions = {}) {
+export async function optimizeAndCacheImage(
+  sourceFilePath,
+  variants = STANDARD_IMAGE_VARIANTS,
+  jobOptions = {},
+) {
   const fileName = path.basename(sourceFilePath || '')
-  const jobId = jobOptions.jobId || `img_${crypto.createHash('md5').update(sourceFilePath || '').digest('hex').slice(0, 8)}_${Date.now()}`
-  const targetLabel = jobOptions.target || (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
+  const jobId =
+    jobOptions.jobId ||
+    `img_${crypto
+      .createHash('md5')
+      .update(sourceFilePath || '')
+      .digest('hex')
+      .slice(0, 8)}_${Date.now()}`
+  const targetLabel =
+    jobOptions.target || (fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName)
 
   try {
     if (!sourceFilePath || !fs.existsSync(sourceFilePath)) {

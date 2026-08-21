@@ -66,19 +66,21 @@ export function useVibrantColors(imageSrc) {
 
   useEffect(() => {
     if (!imageSrc) {
-      const emptyState = {
-        colors: DEFAULT_FALLBACK_COLORS,
-        isMonochrome: false,
-        avgSaturation: 0,
-        isLoaded: true,
-      }
-      setPalette(emptyState)
+      setPalette((prev) => {
+        if (prev.isLoaded && prev.colors === DEFAULT_FALLBACK_COLORS) return prev
+        return {
+          colors: DEFAULT_FALLBACK_COLORS,
+          isMonochrome: false,
+          avgSaturation: 0,
+          isLoaded: true,
+        }
+      })
       return
     }
 
     const cached = getCachedVibrantPalette(imageSrc)
     if (cached.isLoaded) {
-      setPalette(cached)
+      setPalette((prev) => (prev === cached ? prev : cached))
       return
     }
 
@@ -91,7 +93,7 @@ export function useVibrantColors(imageSrc) {
         const canvas = document.createElement('canvas')
         const ctx = canvas.getContext('2d')
         if (!ctx) {
-          if (isMounted) setPalette(p => ({ ...p, isLoaded: true }))
+          if (isMounted) setPalette((p) => ({ ...p, isLoaded: true }))
           return
         }
 
@@ -162,7 +164,7 @@ export function useVibrantColors(imageSrc) {
         }
 
         if (opaqueCount === 0) {
-          if (isMounted) setPalette(p => ({ ...p, isLoaded: true }))
+          if (isMounted) setPalette((p) => ({ ...p, isLoaded: true }))
           return
         }
 
@@ -176,7 +178,11 @@ export function useVibrantColors(imageSrc) {
           const sortedByLightness = [...allPixels].sort((a, b) => b.l - a.l)
           const step = Math.max(1, Math.floor(sortedByLightness.length / 5))
           for (let i = 0; i < 5; i++) {
-            const sample = sortedByLightness[Math.min(i * step, sortedByLightness.length - 1)] || { h: 0, s: 0, l: 50 }
+            const sample = sortedByLightness[Math.min(i * step, sortedByLightness.length - 1)] || {
+              h: 0,
+              s: 0,
+              l: 50,
+            }
             selected.push({
               h: sample.h,
               s: Math.min(sample.s, 10), // Strictly low saturation for monochrome
@@ -185,7 +191,7 @@ export function useVibrantColors(imageSrc) {
           }
         } else {
           // Filter pixels with actual color saturation
-          const colorful = allPixels.filter(p => p.s >= 15)
+          const colorful = allPixels.filter((p) => p.s >= 15)
 
           // Sort by color saturation & balanced lightness
           colorful.sort((a, b) => {
@@ -197,7 +203,7 @@ export function useVibrantColors(imageSrc) {
           const minHueDiff = 25
           for (const sample of colorful) {
             if (selected.length >= 5) break
-            const isFarEnough = selected.every(sel => {
+            const isFarEnough = selected.every((sel) => {
               const diff = Math.abs(sel.h - sample.h)
               const circularDiff = Math.min(diff, 360 - diff)
               return circularDiff >= minHueDiff
@@ -218,7 +224,7 @@ export function useVibrantColors(imageSrc) {
             let idx = 0
             while (selected.length < 5) {
               const base = selected[idx % baseCount]
-              const lightMod = ((selected.length % 2 === 0 ? 18 : -18) + (idx * 4))
+              const lightMod = (selected.length % 2 === 0 ? 18 : -18) + idx * 4
               const newL = Math.min(78, Math.max(22, base.l + lightMod))
               selected.push({
                 h: base.h,
@@ -230,9 +236,10 @@ export function useVibrantColors(imageSrc) {
           }
         }
 
-        const finalColors = selected.length >= 3
-          ? selected.slice(0, 5).map(c => `hsl(${c.h}, ${c.s}%, ${c.l}%)`)
-          : DEFAULT_FALLBACK_COLORS
+        const finalColors =
+          selected.length >= 3
+            ? selected.slice(0, 5).map((c) => `hsl(${c.h}, ${c.s}%, ${c.l}%)`)
+            : DEFAULT_FALLBACK_COLORS
 
         const result = {
           colors: finalColors,
@@ -244,8 +251,10 @@ export function useVibrantColors(imageSrc) {
         saveCachedVibrantPalette(imageSrc, result)
 
         if (isMounted) {
-          setPalette(prev => {
-            const sameColors = prev.colors.length === finalColors.length && prev.colors.every((col, i) => col === finalColors[i])
+          setPalette((prev) => {
+            const sameColors =
+              prev.colors.length === finalColors.length &&
+              prev.colors.every((col, i) => col === finalColors[i])
             if (sameColors && prev.isMonochrome === isMonochrome && prev.avgSaturation === avgSat) {
               return prev
             }

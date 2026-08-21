@@ -114,7 +114,7 @@ export default function PrivateAccessModal({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="xs"
+      maxWidth='xs'
       fullWidth
       slotProps={{
         paper: {
@@ -139,7 +139,7 @@ export default function PrivateAccessModal({
           justifyContent: 'space-between',
         }}
       >
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+        <Stack direction='row' spacing={1.5} sx={{ alignItems: 'center' }}>
           <Box
             sx={{
               width: 36,
@@ -153,21 +153,17 @@ export default function PrivateAccessModal({
             }}
           >
             {isAuthenticated ? (
-              <LockOpenRoundedIcon fontSize="small" />
+              <LockOpenRoundedIcon fontSize='small' />
             ) : (
-              <LockRoundedIcon fontSize="small" />
+              <LockRoundedIcon fontSize='small' />
             )}
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          <Typography variant='h6' sx={{ fontWeight: 800 }}>
             Private Access
           </Typography>
         </Stack>
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{ color: 'text.secondary', p: 0.5 }}
-        >
-          <CloseRoundedIcon fontSize="small" />
+        <IconButton aria-label='close' onClick={onClose} sx={{ color: 'text.secondary', p: 0.5 }}>
+          <CloseRoundedIcon fontSize='small' />
         </IconButton>
       </DialogTitle>
 
@@ -176,27 +172,28 @@ export default function PrivateAccessModal({
           <Stack spacing={2.5} sx={{ py: 1, alignItems: 'center', textAlign: 'center' }}>
             <Chip
               icon={<CheckCircleRoundedIcon />}
-              label="Private Access Unlocked"
-              color="success"
-              variant="outlined"
+              label='Private Access Unlocked'
+              color='success'
               sx={{ fontWeight: 700, px: 1, py: 2, borderRadius: 2 }}
             />
-            <Typography variant="body2" color="text.secondary">
-              Private tracks and unreleased audio playback are currently unlocked for this device session.
+            <Typography variant='body2' color='text.secondary'>
+              Private tracks and unreleased audio playback are currently unlocked for this device
+              session.
             </Typography>
           </Stack>
         ) : (
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 0.5 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Enter the private access code to reveal hidden tracks and unlock audio streaming for uncleared releases.
+          <Box component='form' onSubmit={handleSubmit} noValidate sx={{ mt: 0.5 }}>
+            <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
+              Enter the private access code to reveal hidden tracks and unlock audio streaming for
+              uncleared releases.
             </Typography>
             <TextField
               inputRef={inputRef}
               fullWidth
-              size="small"
+              size='small'
               type={showPassword ? 'text' : 'password'}
-              label="Access Code"
-              placeholder="Enter private code"
+              label='Access Code'
+              placeholder='Enter private code'
               value={accessCode}
               onChange={(e) => {
                 setAccessCode(e.target.value)
@@ -204,21 +201,21 @@ export default function PrivateAccessModal({
               }}
               error={Boolean(error)}
               helperText={error || ' '}
-              autoComplete="off"
+              autoComplete='off'
               slotProps={{
                 input: {
                   endAdornment: (
-                    <InputAdornment position="end">
+                    <InputAdornment position='end'>
                       <IconButton
-                        size="small"
+                        size='small'
                         onClick={() => setShowPassword((prev) => !prev)}
-                        edge="end"
+                        edge='end'
                         sx={{ color: 'text.secondary' }}
                       >
                         {showPassword ? (
-                          <VisibilityOffRoundedIcon fontSize="small" />
+                          <VisibilityOffRoundedIcon fontSize='small' />
                         ) : (
-                          <VisibilityRoundedIcon fontSize="small" />
+                          <VisibilityRoundedIcon fontSize='small' />
                         )}
                       </IconButton>
                     </InputAdornment>
@@ -233,8 +230,19 @@ export default function PrivateAccessModal({
       <DialogActions sx={{ p: 1.5, pt: 0, justifyContent: 'space-between' }}>
         <Button
           onClick={onClose}
-          size="medium"
-          sx={{ textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
+          size='medium'
+          variant='outlined'
+          sx={{
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: 2,
+            borderColor: 'divider',
+            color: 'text.primary',
+            '&:hover': {
+              borderColor: 'text.primary',
+              bgcolor: 'action.hover',
+            },
+          }}
         >
           Cancel
         </Button>
@@ -243,8 +251,8 @@ export default function PrivateAccessModal({
           <Button
             onClick={handleLock}
             disabled={loading}
-            variant="outlined"
-            color="warning"
+            variant='outlined'
+            color='warning'
             startIcon={loading ? <CircularProgress size={16} /> : <LockResetRoundedIcon />}
             sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
           >
@@ -254,9 +262,11 @@ export default function PrivateAccessModal({
           <Button
             onClick={handleSubmit}
             disabled={loading || !accessCode.trim()}
-            variant="contained"
-            color="primary"
-            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <LockOpenRoundedIcon />}
+            variant='contained'
+            color='primary'
+            startIcon={
+              loading ? <CircularProgress size={16} color='inherit' /> : <LockOpenRoundedIcon />
+            }
             sx={{
               textTransform: 'none',
               fontWeight: 700,

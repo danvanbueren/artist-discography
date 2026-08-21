@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function useDevDummySeeder(onSuccessData) {
+export function useDevDummySeeder(onSuccessData, adminPassword = '') {
   const router = useRouter()
   const [isGeneratingDummy, setIsGeneratingDummy] = useState(false)
   const [seedMessage, setSeedMessage] = useState('')
@@ -17,7 +17,11 @@ export function useDevDummySeeder(onSuccessData) {
     try {
       const res = await fetch('/api/dev/seed-dummy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+        },
+        body: JSON.stringify({ password: adminPassword || '' }),
       })
       const result = await res.json().catch(() => ({}))
 
@@ -28,7 +32,7 @@ export function useDevDummySeeder(onSuccessData) {
         }
         try {
           router.refresh()
-        } catch (e) { }
+        } catch (e) {}
       } else {
         setSeedError(result?.error || 'Failed to generate dummy data.')
       }

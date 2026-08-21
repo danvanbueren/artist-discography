@@ -14,11 +14,7 @@ const ACTIVE_TRANSCODE_PROMISES = new Map()
  * Computes deterministic cache key, filename, and format parameters for an audio transcode variant.
  */
 export function computeAudioCacheKey(sourceFilePath, stat, options = {}) {
-  const {
-    quality = 'high',
-    bitrate = null,
-    format = 'mp3',
-  } = options
+  const { quality = 'high', bitrate = null, format = 'mp3' } = options
 
   const isLosslessRequested =
     quality === 'original' ||
@@ -92,7 +88,10 @@ export async function isFfmpegAvailable() {
     await execFileAsync('ffmpeg', ['-version'])
     ffmpegAvailable = true
   } catch (err) {
-    console.warn('FFmpeg not available, audio optimizer will serve source files directly:', err.message)
+    console.warn(
+      'FFmpeg not available, audio optimizer will serve source files directly:',
+      err.message,
+    )
     ffmpegAvailable = false
   }
   return ffmpegAvailable
@@ -111,11 +110,7 @@ export async function isFfmpegAvailable() {
  * @returns {Promise<{ filePath: string, mimeType: string, isFromCache: boolean, size: number, mtimeMs: number }>}
  */
 export async function getOptimizedAudio(sourceFilePath, options = {}) {
-  const {
-    quality = 'high',
-    bitrate = null,
-    format = 'mp3',
-  } = options
+  const { quality = 'high', bitrate = null, format = 'mp3' } = options
 
   const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
   const stat = fs.statSync(/*turbopackIgnore: true*/ sourceFilePath)
@@ -140,7 +135,11 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
     }
   }
 
-  const { cacheHash, cacheFileName, targetFormat, targetBitrate } = computeAudioCacheKey(sourceFilePath, stat, options)
+  const { cacheHash, cacheFileName, targetFormat, targetBitrate } = computeAudioCacheKey(
+    sourceFilePath,
+    stat,
+    options,
+  )
 
   const hasFfmpeg = await isFfmpegAvailable()
   if (!hasFfmpeg) {
@@ -165,7 +164,8 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
       if (cachedStat.size > 0) {
         return {
           filePath: cacheFilePath,
-          mimeType: AUDIO_MIME_MAP[targetFormat] || (targetFormat === 'flac' ? 'audio/flac' : 'audio/mpeg'),
+          mimeType:
+            AUDIO_MIME_MAP[targetFormat] || (targetFormat === 'flac' ? 'audio/flac' : 'audio/mpeg'),
           isFromCache: true,
           size: cachedStat.size,
           mtimeMs: cachedStat.mtimeMs,
@@ -186,35 +186,45 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
     try {
       const ffmpegArgs = [
         '-y',
-        '-i', sourceFilePath,
+        '-i',
+        sourceFilePath,
         '-vn', // Disable video streams / album art extraction
       ]
 
       if (targetFormat === 'mp3') {
         ffmpegArgs.push(
-          '-c:a', 'libmp3lame',
-          '-b:a', targetBitrate || '320k',
-          '-ar', '44100',
-          '-ac', '2',
-          '-id3v2_version', '3',
-          '-write_xing', '1',
-          '-f', 'mp3'
+          '-c:a',
+          'libmp3lame',
+          '-b:a',
+          targetBitrate || '320k',
+          '-ar',
+          '44100',
+          '-ac',
+          '2',
+          '-id3v2_version',
+          '3',
+          '-write_xing',
+          '1',
+          '-f',
+          'mp3',
         )
       } else if (targetFormat === 'm4a') {
         ffmpegArgs.push(
-          '-c:a', 'aac',
-          '-b:a', targetBitrate || '320k',
-          '-ar', '44100',
-          '-ac', '2',
-          '-movflags', '+faststart',
-          '-f', 'ipod'
+          '-c:a',
+          'aac',
+          '-b:a',
+          targetBitrate || '320k',
+          '-ar',
+          '44100',
+          '-ac',
+          '2',
+          '-movflags',
+          '+faststart',
+          '-f',
+          'ipod',
         )
       } else if (targetFormat === 'flac') {
-        ffmpegArgs.push(
-          '-c:a', 'flac',
-          '-compression_level', '5',
-          '-f', 'flac'
-        )
+        ffmpegArgs.push('-c:a', 'flac', '-compression_level', '5', '-f', 'flac')
       }
 
       ffmpegArgs.push(tempFilePath)
@@ -227,7 +237,8 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
         const finalStat = fs.statSync(/*turbopackIgnore: true*/ cacheFilePath)
         return {
           filePath: cacheFilePath,
-          mimeType: AUDIO_MIME_MAP[targetFormat] || (targetFormat === 'flac' ? 'audio/flac' : 'audio/mpeg'),
+          mimeType:
+            AUDIO_MIME_MAP[targetFormat] || (targetFormat === 'flac' ? 'audio/flac' : 'audio/mpeg'),
           isFromCache: false,
           size: finalStat.size,
           mtimeMs: finalStat.mtimeMs,
@@ -248,13 +259,19 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
           const fallbackTempPath = path.join(AUDIO_CACHE_DIR, fallbackTemp)
           await execFileAsync('ffmpeg', [
             '-y',
-            '-i', sourceFilePath,
+            '-i',
+            sourceFilePath,
             '-vn',
-            '-c:a', 'libmp3lame',
-            '-b:a', '320k',
-            '-ar', '44100',
-            '-ac', '2',
-            '-f', 'mp3',
+            '-c:a',
+            'libmp3lame',
+            '-b:a',
+            '320k',
+            '-ar',
+            '44100',
+            '-ac',
+            '2',
+            '-f',
+            'mp3',
             fallbackTempPath,
           ])
           if (fs.existsSync(fallbackTempPath)) {
@@ -321,11 +338,7 @@ export function isAudioVariantCached(sourceFilePath, options = {}) {
     const ext = path.extname(sourceFilePath).toLowerCase().replace('.', '')
     const isUncompressedSource = ext === 'wav' || ext === 'aiff' || ext === 'aif' || ext === 'pcm'
 
-    const {
-      quality = 'high',
-      bitrate = null,
-      format = 'mp3',
-    } = options
+    const { quality = 'high', bitrate = null, format = 'mp3' } = options
 
     const isLosslessRequested =
       quality === 'original' ||
@@ -357,7 +370,7 @@ export function isAudioVariantCached(sourceFilePath, options = {}) {
 export function isAudioFullyCached(sourceFilePath) {
   try {
     if (!sourceFilePath || !fs.existsSync(sourceFilePath)) return false
-    return STANDARD_AUDIO_VARIANTS.every(variant => isAudioVariantCached(sourceFilePath, variant))
+    return STANDARD_AUDIO_VARIANTS.every((variant) => isAudioVariantCached(sourceFilePath, variant))
   } catch {
     return false
   }
@@ -371,9 +384,19 @@ export function isAudioFullyCached(sourceFilePath) {
  * @param {Object} [jobOptions={}]
  * @returns {Promise<{ total: number, generated: number, cached: number }>}
  */
-export async function optimizeAndCacheAudio(sourceFilePath, variants = STANDARD_AUDIO_VARIANTS, jobOptions = {}) {
+export async function optimizeAndCacheAudio(
+  sourceFilePath,
+  variants = STANDARD_AUDIO_VARIANTS,
+  jobOptions = {},
+) {
   const fileName = path.basename(sourceFilePath || '')
-  const jobId = jobOptions.jobId || `aud_${crypto.createHash('md5').update(sourceFilePath || '').digest('hex').slice(0, 8)}_${Date.now()}`
+  const jobId =
+    jobOptions.jobId ||
+    `aud_${crypto
+      .createHash('md5')
+      .update(sourceFilePath || '')
+      .digest('hex')
+      .slice(0, 8)}_${Date.now()}`
   const targetLabel = jobOptions.target || fileName
 
   try {
@@ -399,9 +422,10 @@ export async function optimizeAndCacheAudio(sourceFilePath, variants = STANDARD_
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]
-      const tierName = variant.format === 'flac' || variant.quality === 'lossless'
-        ? 'Lossless FLAC Master'
-        : `${variant.format?.toUpperCase() || 'MP3'} ${variant.bitrate || '320k'}`
+      const tierName =
+        variant.format === 'flac' || variant.quality === 'lossless'
+          ? 'Lossless FLAC Master'
+          : `${variant.format?.toUpperCase() || 'MP3'} ${variant.bitrate || '320k'}`
 
       const stepDescription = `Transcoding Tier ${i + 1}/${variants.length}: ${tierName}`
 

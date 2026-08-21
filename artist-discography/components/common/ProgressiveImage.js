@@ -28,22 +28,32 @@ export default function ProgressiveImage({
 }) {
   const isApiMedia = typeof src === 'string' && src.startsWith('/api/media')
 
-  const targetHighResSrc = isApiMedia && targetWidth
-    ? (src.includes('?') ? `${src}&w=${targetWidth}&q=${quality}&fmt=webp` : `${src}?w=${targetWidth}&q=${quality}&fmt=webp`)
-    : (src || '')
+  const targetHighResSrc =
+    isApiMedia && targetWidth
+      ? src.includes('?')
+        ? `${src}&w=${targetWidth}&q=${quality}&fmt=webp`
+        : `${src}?w=${targetWidth}&q=${quality}&fmt=webp`
+      : src || ''
 
-  const lowResSrc = isApiMedia && src
-    ? (src.includes('?') ? `${src}&w=${placeholderWidth}&q=30&blur=${blur}` : `${src}?w=${placeholderWidth}&q=30&blur=${blur}`)
-    : (src || '')
+  const lowResSrc =
+    isApiMedia && src
+      ? src.includes('?')
+        ? `${src}&w=${placeholderWidth}&q=30&blur=${blur}`
+        : `${src}?w=${placeholderWidth}&q=30&blur=${blur}`
+      : src || ''
 
   const [imgSrc, setImgSrc] = useState(targetHighResSrc)
   const [isLoaded, setIsLoaded] = useState(() => isHighResCached(targetHighResSrc))
   const [hasError, setHasError] = useState(false)
   const onLoadRef = useRef(onLoad)
   onLoadRef.current = onLoad
+  const prevSrcRef = useRef(targetHighResSrc)
 
   // Synchronize when the target source URL changes
   useEffect(() => {
+    if (prevSrcRef.current === targetHighResSrc) return
+    prevSrcRef.current = targetHighResSrc
+
     if (!targetHighResSrc) {
       setImgSrc('')
       setIsLoaded(false)
@@ -111,8 +121,8 @@ export default function ProgressiveImage({
       {/* 0. Skeleton Wave Background (only when not yet loaded) */}
       {!isLoaded && (
         <Skeleton
-          variant="rectangular"
-          animation="wave"
+          variant='rectangular'
+          animation='wave'
           sx={{
             position: 'absolute',
             top: 0,
@@ -128,7 +138,7 @@ export default function ProgressiveImage({
       {/* 1. Low-Resolution Blurred Placeholder (LQIP) - Skipped if already loaded */}
       {!isLoaded && isApiMedia && (
         <Box
-          component="img"
+          component='img'
           src={lowResSrc}
           alt={alt}
           loading={priority ? 'eager' : 'lazy'}
@@ -150,7 +160,7 @@ export default function ProgressiveImage({
 
       {/* 2. Main High-Resolution Image */}
       <Box
-        component="img"
+        component='img'
         src={imgSrc}
         alt={alt}
         loading={priority ? 'eager' : 'lazy'}

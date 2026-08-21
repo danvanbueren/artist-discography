@@ -1,4 +1,8 @@
-import { slugify } from '../../lib/slugs'
+import { slugify, isSlugReserved } from '../../lib/slugs'
+
+export function isProjectSlugReserved(name) {
+  return isSlugReserved(name)
+}
 
 export function resolveOverrideArtist(artistValue, primaryArtist = '', projectArtist = '') {
   if (!artistValue || typeof artistValue !== 'string') return ''
@@ -60,6 +64,18 @@ export function isProjectSlugDuplicate(name, projectsList, excludeIndex = -1) {
   })
 }
 
+export function getProjectNameValidationError(name, projectsList, excludeIndex = -1) {
+  if (!name || typeof name !== 'string' || !name.trim()) return null
+  if (isProjectSlugReserved(name)) {
+    const slug = slugify(name) || name.trim()
+    return `The name / URL slug "${slug}" is reserved for system routes (e.g. _sys) and cannot be used.`
+  }
+  if (isProjectSlugDuplicate(name, projectsList, excludeIndex)) {
+    return 'A project with this title / URL slug already exists.'
+  }
+  return null
+}
+
 export function getDuplicateTrackSlugIndexes(tracksList) {
   const dupIndexes = new Set()
   const map = new Map()
@@ -103,7 +119,12 @@ export function createEmptyTrack() {
 /**
  * Constructs a targeted search URL for a given platform, artist, and track/project name.
  */
-export function buildPlatformSearchUrl(platformKey, artistName = '', trackName = '', projectName = '') {
+export function buildPlatformSearchUrl(
+  platformKey,
+  artistName = '',
+  trackName = '',
+  projectName = '',
+) {
   const cleanArtist = (artistName || '').trim()
   const cleanTrack = (trackName || '').trim()
   const cleanProject = (projectName || '').trim()
@@ -165,6 +186,47 @@ function getPlatformLabel(key) {
   return PLATFORM_NAME_MAP[key] || (key ? key.charAt(0).toUpperCase() + key.slice(1) : '')
 }
 
+let cachedProjectsRef = null
+let cachedLinksIndex = null
+
+/**
+ * Builds a fast Map index of all streaming links across all projects.
+ * Cached by allProjects reference for instant O(1) duplicate checks.
+ */
+export function getProjectsLinkIndex(allProjects) {
+  if (cachedProjectsRef === allProjects && cachedLinksIndex) {
+    return cachedLinksIndex
+  }
+  const index = new Map()
+  if (Array.isArray(allProjects)) {
+    for (let pIdx = 0; pIdx < allProjects.length; pIdx++) {
+      const project = allProjects[pIdx]
+      if (!project) continue
+      const tracks = project.tracks ?? []
+      for (let tIdx = 0; tIdx < tracks.length; tIdx++) {
+        const track = tracks[tIdx]
+        if (!track?.links) continue
+        for (const [key, linkVal] of Object.entries(track.links)) {
+          if (!linkVal || typeof linkVal !== 'string') continue
+          const norm = normalizeLinkForComparison(linkVal)
+          if (norm && norm.length >= 5 && !index.has(norm)) {
+            index.set(norm, {
+              projectIndex: pIdx,
+              trackIndex: tIdx,
+              projectName: project.name || `Project #${pIdx + 1}`,
+              trackName: track.name || `Track #${tIdx + 1}`,
+              platformKey: key,
+            })
+          }
+        }
+      }
+    }
+  }
+  cachedProjectsRef = allProjects
+  cachedLinksIndex = index
+  return index
+}
+
 /**
  * Checks if a streaming link is already used by another project, another track in the same project, or another field on the same track.
  */
@@ -181,41 +243,28 @@ export function findDuplicateStreamingLink(url, context = {}, allProjects = []) 
     currentTrackLinks = null,
   } = context
 
-  // 1. PRIMARY SEARCH: Check other projects in allProjects
-  if (Array.isArray(allProjects)) {
-    for (let pIdx = 0; pIdx < allProjects.length; pIdx++) {
-      if (pIdx === currentProjectIndex) continue // Evaluated in secondary check
-      const project = allProjects[pIdx]
-      if (!project) continue
-      const tracks = project.tracks ?? []
-
-      for (let tIdx = 0; tIdx < tracks.length; tIdx++) {
-        const track = tracks[tIdx]
-        if (!track?.links) continue
-
-        for (const [key, linkVal] of Object.entries(track.links)) {
-          if (linkVal && normalizeLinkForComparison(linkVal) === normalizedTarget) {
-            const platformName = getPlatformLabel(key)
-            const projName = project.name || `Project #${pIdx + 1}`
-            const trkName = track.name || `Track #${tIdx + 1}`
-            return {
-              isDuplicate: true,
-              scope: 'other_project',
-              projectName: projName,
-              trackName: trkName,
-              platform: key,
-              message: `⚠️ Duplicate link: matches Track '${trkName}' in Project '${projName}' (${platformName})`,
-            }
-          }
-        }
+  // 1. PRIMARY SEARCH: O(1) index lookup across all other projects
+  if (Array.isArray(allProjects) && allProjects.length > 0) {
+    const linkIndex = getProjectsLinkIndex(allProjects)
+    const match = linkIndex.get(normalizedTarget)
+    if (match && match.projectIndex !== currentProjectIndex) {
+      const platformName = getPlatformLabel(match.platformKey)
+      return {
+        isDuplicate: true,
+        scope: 'other_project',
+        projectName: match.projectName,
+        trackName: match.trackName,
+        platform: match.platformKey,
+        message: `⚠️ Duplicate link: matches Track '${match.trackName}' in Project '${match.projectName}' (${platformName})`,
       }
     }
   }
 
   // 2. SECONDARY SEARCH: Check all other tracks within the same project
-  const activeTracks = Array.isArray(currentTracks) && currentTracks.length > 0
-    ? currentTracks
-    : (currentProjectIndex >= 0 && allProjects?.[currentProjectIndex]?.tracks) || []
+  const activeTracks =
+    Array.isArray(currentTracks) && currentTracks.length > 0
+      ? currentTracks
+      : (currentProjectIndex >= 0 && allProjects?.[currentProjectIndex]?.tracks) || []
 
   for (let tIdx = 0; tIdx < activeTracks.length; tIdx++) {
     if (tIdx === currentTrackIndex) continue // Skip self track for tertiary check
@@ -238,7 +287,8 @@ export function findDuplicateStreamingLink(url, context = {}, allProjects = []) 
   }
 
   // 3. TERTIARY SEARCH: Check all other platform fields on the exact same track
-  const thisTrackLinks = currentTrackLinks || (currentTrackIndex >= 0 && activeTracks[currentTrackIndex]?.links) || null
+  const thisTrackLinks =
+    currentTrackLinks || (currentTrackIndex >= 0 && activeTracks[currentTrackIndex]?.links) || null
   if (thisTrackLinks && typeof thisTrackLinks === 'object') {
     for (const [key, linkVal] of Object.entries(thisTrackLinks)) {
       if (key === platformKey) continue // Don't compare field to itself
@@ -268,7 +318,12 @@ export function isAlbumLevelUrl(url) {
   if (lower.includes('spotify.com/album/')) return true
 
   // Apple Music: /album/ without ?i= or &i=
-  if (lower.includes('music.apple.com/') && lower.includes('/album/') && !lower.includes('?i=') && !lower.includes('&i=')) {
+  if (
+    lower.includes('music.apple.com/') &&
+    lower.includes('/album/') &&
+    !lower.includes('?i=') &&
+    !lower.includes('&i=')
+  ) {
     return true
   }
 
@@ -276,10 +331,12 @@ export function isAlbumLevelUrl(url) {
   if (lower.includes('soundcloud.com/') && lower.includes('/sets/')) return true
 
   // Tidal: /album/ without /track/
-  if (lower.includes('tidal.com/') && lower.includes('/album/') && !lower.includes('/track/')) return true
+  if (lower.includes('tidal.com/') && lower.includes('/album/') && !lower.includes('/track/'))
+    return true
 
   // Deezer: /album/ without /track/
-  if (lower.includes('deezer.com/') && lower.includes('/album/') && !lower.includes('/track/')) return true
+  if (lower.includes('deezer.com/') && lower.includes('/album/') && !lower.includes('/track/'))
+    return true
 
   return false
 }
@@ -323,6 +380,61 @@ export function analyzeYouTubeUrl(url) {
 
   return {
     hasPlaylist: true,
+    cleanedUrl,
+  }
+}
+
+/**
+ * Analyzes a Spotify URL to check for tracking/share parameters (like ?si=...) and generates a clean canonical Spotify URL.
+ */
+export function analyzeSpotifyUrl(url) {
+  if (!url || typeof url !== 'string') return { hasTrackingParams: false, cleanedUrl: url || '' }
+  const trimmed = url.trim()
+  const lower = trimmed.toLowerCase()
+
+  const isSpotify = lower.includes('spotify.com') || lower.includes('spotify.link')
+  if (!isSpotify) {
+    return { hasTrackingParams: false, cleanedUrl: trimmed }
+  }
+
+  const hasTracking = /[?&](si|context|utm_[a-zA-Z0-9_]+|nd|go)=/i.test(trimmed)
+  if (!hasTracking) {
+    return { hasTrackingParams: false, cleanedUrl: trimmed }
+  }
+
+  let cleanedUrl = trimmed
+  try {
+    const hasProtocol = /^https?:\/\//i.test(trimmed)
+    const urlToParse = hasProtocol ? trimmed : `https://${trimmed}`
+    const parsed = new URL(urlToParse)
+
+    parsed.searchParams.delete('si')
+    parsed.searchParams.delete('context')
+    parsed.searchParams.delete('utm_source')
+    parsed.searchParams.delete('utm_medium')
+    parsed.searchParams.delete('utm_campaign')
+    parsed.searchParams.delete('utm_term')
+    parsed.searchParams.delete('utm_content')
+    parsed.searchParams.delete('nd')
+    parsed.searchParams.delete('go')
+
+    const search = parsed.searchParams.toString()
+    const resultWithProtocol = `${parsed.origin}${parsed.pathname}${search ? `?${search}` : ''}`
+    cleanedUrl = hasProtocol ? resultWithProtocol : resultWithProtocol.replace(/^https?:\/\//, '')
+  } catch {
+    cleanedUrl = trimmed
+      .replace(/([?&])si=[^&]+/gi, '')
+      .replace(/([?&])context=[^&]+/gi, '')
+      .replace(/([?&])utm_[a-zA-Z0-9_]+=[^&]+/gi, '')
+      .replace(/([?&])nd=[^&]+/gi, '')
+      .replace(/([?&])go=[^&]+/gi, '')
+      .replace(/\?&/, '?')
+      .replace(/&&/, '&')
+      .replace(/[?&]$/, '')
+  }
+
+  return {
+    hasTrackingParams: true,
     cleanedUrl,
   }
 }

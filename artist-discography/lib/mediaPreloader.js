@@ -64,9 +64,8 @@ class MediaPreloadManager {
 
     this.currentPreloadUrl = audioUrl
 
-    const schedule = 'requestIdleCallback' in window
-      ? window.requestIdleCallback
-      : (cb) => setTimeout(cb, 200)
+    const schedule =
+      'requestIdleCallback' in window ? window.requestIdleCallback : (cb) => setTimeout(cb, 200)
 
     schedule(() => {
       // Check if URL changed while waiting for idle tick
@@ -137,7 +136,8 @@ class MediaPreloadManager {
     img.fetchPriority = 'low'
     img.src = imageUrl
     if (img.decode) {
-      img.decode()
+      img
+        .decode()
         .then(() => {
           markHighResCached(imageUrl)
         })

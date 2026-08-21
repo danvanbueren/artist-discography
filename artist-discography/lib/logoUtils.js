@@ -142,7 +142,7 @@ export const FAVICON_CONFIG = [
  * @returns {Promise<{ avgLuminance: number, isLight: boolean }>}
  */
 export async function detectLogoLuminance(source, sharpInstance = null) {
-  const sharp = sharpInstance || await getSharp()
+  const sharp = sharpInstance || (await getSharp())
   if (!sharp) return { avgLuminance: 255, isLight: true }
 
   try {
@@ -202,9 +202,7 @@ export async function generateFaviconSuite(source) {
   const { isLight } = await detectLogoLuminance(input, sharp)
 
   // Contrast background: Dark obsidian for light/white logos; Pure White for dark logos
-  const bgColor = isLight
-    ? { r: 15, g: 15, b: 20, alpha: 1 }
-    : { r: 255, g: 255, b: 255, alpha: 1 }
+  const bgColor = isLight ? { r: 15, g: 15, b: 20, alpha: 1 } : { r: 255, g: 255, b: 255, alpha: 1 }
 
   const results = {}
 
@@ -346,30 +344,73 @@ export async function getFaviconPath(requestedSize = 32) {
 
   // Fallback to static public/favicons/
   if (fs.existsSync(/*turbopackIgnore: true*/ publicFaviconsDir)) {
-    if (targetSize >= 500 && fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'web-app-manifest-512x512.png'))) {
+    if (
+      targetSize >= 500 &&
+      fs.existsSync(
+        /*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'web-app-manifest-512x512.png'),
+      )
+    ) {
       const p = path.join(publicFaviconsDir, 'web-app-manifest-512x512.png')
       const s = fs.statSync(/*turbopackIgnore: true*/ p)
-      return { filePath: p, isCustom: false, mimeType: 'image/png', sizeBytes: s.size, mtimeMs: s.mtimeMs }
+      return {
+        filePath: p,
+        isCustom: false,
+        mimeType: 'image/png',
+        sizeBytes: s.size,
+        mtimeMs: s.mtimeMs,
+      }
     }
-    if (targetSize >= 190 && fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'web-app-manifest-192x192.png'))) {
+    if (
+      targetSize >= 190 &&
+      fs.existsSync(
+        /*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'web-app-manifest-192x192.png'),
+      )
+    ) {
       const p = path.join(publicFaviconsDir, 'web-app-manifest-192x192.png')
       const s = fs.statSync(/*turbopackIgnore: true*/ p)
-      return { filePath: p, isCustom: false, mimeType: 'image/png', sizeBytes: s.size, mtimeMs: s.mtimeMs }
+      return {
+        filePath: p,
+        isCustom: false,
+        mimeType: 'image/png',
+        sizeBytes: s.size,
+        mtimeMs: s.mtimeMs,
+      }
     }
-    if (targetSize >= 180 && fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'apple-icon.png'))) {
+    if (
+      targetSize >= 180 &&
+      fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'apple-icon.png'))
+    ) {
       const p = path.join(publicFaviconsDir, 'apple-icon.png')
       const s = fs.statSync(/*turbopackIgnore: true*/ p)
-      return { filePath: p, isCustom: false, mimeType: 'image/png', sizeBytes: s.size, mtimeMs: s.mtimeMs }
+      return {
+        filePath: p,
+        isCustom: false,
+        mimeType: 'image/png',
+        sizeBytes: s.size,
+        mtimeMs: s.mtimeMs,
+      }
     }
     if (fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'icon1.png'))) {
       const p = path.join(publicFaviconsDir, 'icon1.png')
       const s = fs.statSync(/*turbopackIgnore: true*/ p)
-      return { filePath: p, isCustom: false, mimeType: 'image/png', sizeBytes: s.size, mtimeMs: s.mtimeMs }
+      return {
+        filePath: p,
+        isCustom: false,
+        mimeType: 'image/png',
+        sizeBytes: s.size,
+        mtimeMs: s.mtimeMs,
+      }
     }
     if (fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'favicon.ico'))) {
       const p = path.join(publicFaviconsDir, 'favicon.ico')
       const s = fs.statSync(/*turbopackIgnore: true*/ p)
-      return { filePath: p, isCustom: false, mimeType: 'image/x-icon', sizeBytes: s.size, mtimeMs: s.mtimeMs }
+      return {
+        filePath: p,
+        isCustom: false,
+        mimeType: 'image/x-icon',
+        sizeBytes: s.size,
+        mtimeMs: s.mtimeMs,
+      }
     }
   }
 
@@ -485,4 +526,3 @@ export function deleteCustomLogo() {
     }
   }
 }
-

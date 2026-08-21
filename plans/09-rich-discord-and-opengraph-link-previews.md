@@ -63,7 +63,8 @@ export async function generateMetadata({ params }) {
   const projects = (data?.projects ?? []).filter(p => p.visibility !== 'private')
   
   // Base absolute URL resolution helper
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://polybitmusic.com'
+  const siteUrl = data?.siteUrl?.trim() || data?.artist?.siteUrl?.trim() || ''
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || siteUrl || 'http://localhost:3000'
   const getAbsoluteUrl = (path) => {
     if (!path) return `${baseUrl}/api/logo?w=1200&fmt=png`
     if (/^https?:\/\//i.test(path)) return path

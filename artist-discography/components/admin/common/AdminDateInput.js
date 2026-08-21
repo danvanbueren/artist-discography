@@ -47,31 +47,31 @@ const AdminDateInput = memo(function AdminDateInput({
         ...sx,
       }
     : warning
-    ? {
-        ...fieldSx,
-        '& .MuiOutlinedInput-root': {
-          backgroundColor: 'rgba(255, 179, 0, 0.06)',
-          '& fieldset': {
-            borderColor: '#fbbf24 !important',
-            borderWidth: 1.5,
+      ? {
+          ...fieldSx,
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: 'rgba(255, 179, 0, 0.06)',
+            '& fieldset': {
+              borderColor: '#fbbf24 !important',
+              borderWidth: 1.5,
+            },
           },
-        },
-        '& .MuiFormHelperText-root': {
-          color: '#fbbf24 !important',
-        },
-        ...sx,
-      }
-    : {
-        ...fieldSx,
-        ...sx,
-      }
+          '& .MuiFormHelperText-root': {
+            color: '#fbbf24 !important',
+          },
+          ...sx,
+        }
+      : {
+          ...fieldSx,
+          ...sx,
+        }
 
   return (
     <DatePicker
       label={label}
       value={dateValue}
       onChange={handleChange}
-      format="YYYY-MM-DD"
+      format='YYYY-MM-DD'
       slotProps={{
         textField: {
           size,

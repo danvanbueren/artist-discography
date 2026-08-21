@@ -23,9 +23,10 @@ export default function ProjectCard({
   isPrivateAuthenticated = false,
 }) {
   const cover = project?.cover ?? project?.image ?? ''
-  const ambientCover = cover && typeof cover === 'string' && cover.startsWith('/api/media')
-    ? `${cover}${cover.includes('?') ? '&' : '?'}w=48&q=20&blur=8`
-    : cover
+  const ambientCover =
+    cover && typeof cover === 'string' && cover.startsWith('/api/media')
+      ? `${cover}${cover.includes('?') ? '&' : '?'}w=48&q=20&blur=8`
+      : cover
 
   return (
     <Paper

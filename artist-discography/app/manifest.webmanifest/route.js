@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { loadArtistData } from '../../lib/artistData'
+import { loadConfigData } from '../../lib/artistData'
 import { getLogoDetails } from '../../lib/logoUtils'
 
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export async function GET() {
   let artistName = 'Artist'
   let artistBio = ''
   try {
-    const { data } = loadArtistData()
+    const { data } = loadConfigData()
     if (data?.artist?.name) artistName = data.artist.name.trim()
     if (data?.artist?.bio) artistBio = data.artist.bio.trim()
   } catch (err) {

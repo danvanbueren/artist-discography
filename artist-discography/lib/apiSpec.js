@@ -1,7 +1,16 @@
 export const API_TAGS = [
-  { name: 'Admin Portal', description: 'Endpoints for managing artist profile, projects, track copying, and file uploads' },
-  { name: 'Dev Utilities', description: 'Development tools, data seeding, and API specification exports' },
-  { name: 'Media & Streaming', description: 'Public endpoints for streaming audio tracks, album artwork, and logo assets' },
+  {
+    name: 'Admin Portal',
+    description: 'Endpoints for managing artist profile, projects, track copying, and file uploads',
+  },
+  {
+    name: 'Dev Utilities',
+    description: 'Development tools, data seeding, and API specification exports',
+  },
+  {
+    name: 'Media & Streaming',
+    description: 'Public endpoints for streaming audio tracks, album artwork, and logo assets',
+  },
 ]
 
 export const API_ROUTES_SPEC = [
@@ -11,14 +20,23 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Admin Portal',
     summary: 'Authenticate Admin Password',
-    description: 'Verifies the provided password against the configured adminPassword in artist-data.json.',
+    description:
+      'Verifies the provided password against the configured adminPassword in config.json.',
     requiresAdminAuth: true,
     requestFormat: 'json',
     defaultBody: JSON.stringify({ password: 'admin' }, null, 2),
     responses: [
       { status: 200, description: 'Authentication successful', example: { authenticated: true } },
-      { status: 401, description: 'Incorrect password', example: { authenticated: false, error: 'Incorrect password' } },
-      { status: 403, description: 'Admin access disabled', example: { authenticated: false, error: 'Admin access is disabled in artist-data.json' } },
+      {
+        status: 401,
+        description: 'Incorrect password',
+        example: { authenticated: false, error: 'Incorrect password' },
+      },
+      {
+        status: 403,
+        description: 'Admin access disabled',
+        example: { authenticated: false, error: 'Admin access is disabled in config.json' },
+      },
     ],
   },
   {
@@ -26,8 +44,9 @@ export const API_ROUTES_SPEC = [
     path: '/api/admin/artist',
     method: 'POST',
     tag: 'Admin Portal',
-    summary: 'Update Artist Profile & Links',
-    description: 'Updates artist name, biography, streaming platform URLs, and social media profile links.',
+    summary: 'Update Profile, Settings & Links',
+    description:
+      'Updates artist metadata, platform/social links, and server/system settings (adminAccess, adminPassword, privateAccessCode, siteUrl).',
     requiresAdminAuth: true,
     requestFormat: 'json',
     defaultBody: JSON.stringify(
@@ -35,6 +54,10 @@ export const API_ROUTES_SPEC = [
         password: 'admin',
         name: 'Astraea & The Neon Sun',
         bio: 'Ambient synthwave composer and sound designer.',
+        adminAccess: true,
+        adminPassword: 'admin',
+        siteUrl: 'localhost',
+        privateAccessCode: 'access123',
         platforms: {
           spotify: 'https://open.spotify.com/artist/astraea',
           apple: 'https://music.apple.com/artist/astraea',
@@ -45,11 +68,19 @@ export const API_ROUTES_SPEC = [
         },
       },
       null,
-      2
+      2,
     ),
     responses: [
-      { status: 200, description: 'Profile updated successfully', example: { success: true, message: 'Artist profile updated successfully!' } },
-      { status: 401, description: 'Unauthorized', example: { success: false, error: 'Unauthorized: Invalid admin password' } },
+      {
+        status: 200,
+        description: 'Profile and settings updated successfully',
+        example: { success: true, message: 'Profile and server settings updated successfully!' },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
     ],
   },
   {
@@ -58,7 +89,8 @@ export const API_ROUTES_SPEC = [
     method: 'GET',
     tag: 'Admin Portal',
     summary: 'Get Logo Status & Details',
-    description: 'Returns the current active logo metadata, whether it is custom (data/logo.*) or default (public/logo.*).',
+    description:
+      'Returns the current active logo metadata, whether it is custom (data/logo.*) or default (public/logo.*).',
     requiresAdminAuth: false,
     requestFormat: 'none',
     responses: [
@@ -86,18 +118,39 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Admin Portal',
     summary: 'Upload, Replace, or Reset Artist Logo',
-    description: 'Uploads a custom artist logo (stored in data/logo.<ext>), pre-warms media caches, or reverts to default public/logo.png if action is "delete".',
+    description:
+      'Uploads a custom artist logo (stored in data/logo.<ext>), pre-warms media caches, or reverts to default public/logo.png if action is "delete".',
     requiresAdminAuth: true,
     requestFormat: 'formdata',
     defaultParams: [
       { key: 'password', value: 'admin', type: 'text', description: 'Admin access password' },
       { key: 'action', value: 'upload', type: 'text', description: 'Action: "upload" or "delete"' },
-      { key: 'logoFile', value: '', type: 'file', description: 'Logo image file (.png, .jpg, .webp, .svg, .avif)' },
+      {
+        key: 'logoFile',
+        value: '',
+        type: 'file',
+        description: 'Logo image file (.png, .jpg, .webp, .svg, .avif)',
+      },
     ],
     responses: [
-      { status: 200, description: 'Logo updated or reset', example: { success: true, message: 'Custom logo (logo.png) uploaded and optimized successfully!' } },
-      { status: 400, description: 'Missing logo file', example: { success: false, error: 'No logo image file was provided.' } },
-      { status: 401, description: 'Unauthorized', example: { success: false, error: 'Unauthorized: Invalid admin password' } },
+      {
+        status: 200,
+        description: 'Logo updated or reset',
+        example: {
+          success: true,
+          message: 'Custom logo (logo.png) uploaded and optimized successfully!',
+        },
+      },
+      {
+        status: 400,
+        description: 'Missing logo file',
+        example: { success: false, error: 'No logo image file was provided.' },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
     ],
   },
   {
@@ -106,24 +159,57 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Admin Portal',
     summary: 'Update or Delete Project',
-    description: 'Updates an existing project release and its tracks, or deletes the project if action is "delete". Supports multipart/form-data for artwork and audio files.',
+    description:
+      'Updates an existing project release and its tracks, or deletes the project if action is "delete". Supports multipart/form-data for artwork and audio files.',
     requiresAdminAuth: true,
     requestFormat: 'formdata',
     defaultParams: [
       { key: 'password', value: 'admin', type: 'text', description: 'Admin access password' },
       { key: 'action', value: 'update', type: 'text', description: 'Action: "update" or "delete"' },
-      { key: 'projectIndex', value: '0', type: 'text', description: '0-based index of project in array' },
+      {
+        key: 'projectIndex',
+        value: '0',
+        type: 'text',
+        description: '0-based index of project in array',
+      },
       { key: 'name', value: 'Midnight Echoes', type: 'text', description: 'Project title' },
       { key: 'type', value: 'Album', type: 'text', description: 'Single | EP | Album' },
       { key: 'artist', value: '', type: 'text', description: 'Optional project artist override' },
       { key: 'date', value: '2026-01-15', type: 'text', description: 'Release date (YYYY-MM-DD)' },
-      { key: 'tracks', value: '[{"name":"Track 1","links":{}}]', type: 'text', description: 'JSON string array of track objects' },
-      { key: 'coverFile', value: '', type: 'file', description: 'Optional cover image file (.jpg, .png, .webp)' },
-      { key: 'track_0_audioFile', value: '', type: 'file', description: 'Optional audio file for track index 0' },
+      {
+        key: 'tracks',
+        value: '[{"name":"Track 1","links":{}}]',
+        type: 'text',
+        description: 'JSON string array of track objects',
+      },
+      {
+        key: 'coverFile',
+        value: '',
+        type: 'file',
+        description: 'Optional cover image file (.jpg, .png, .webp)',
+      },
+      {
+        key: 'track_0_audioFile',
+        value: '',
+        type: 'file',
+        description: 'Optional audio file for track index 0',
+      },
     ],
     responses: [
-      { status: 200, description: 'Project updated', example: { success: true, projectSlug: 'midnight-echoes', message: 'Project updated successfully!' } },
-      { status: 400, description: 'Validation error', example: { success: false, error: 'Project name is required' } },
+      {
+        status: 200,
+        description: 'Project updated',
+        example: {
+          success: true,
+          projectSlug: 'midnight-echoes',
+          message: 'Project updated successfully!',
+        },
+      },
+      {
+        status: 400,
+        description: 'Validation error',
+        example: { success: false, error: 'Project name is required' },
+      },
     ],
   },
   {
@@ -132,7 +218,8 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Admin Portal',
     summary: 'Create / Upload New Release Project',
-    description: 'Creates a new project release along with optional cover artwork image and audio files for each track.',
+    description:
+      'Creates a new project release along with optional cover artwork image and audio files for each track.',
     requiresAdminAuth: true,
     requestFormat: 'formdata',
     defaultParams: [
@@ -141,13 +228,38 @@ export const API_ROUTES_SPEC = [
       { key: 'type', value: 'EP', type: 'text', description: 'Single | EP | Album' },
       { key: 'artist', value: '', type: 'text', description: 'Optional artist override' },
       { key: 'date', value: '2026-08-15', type: 'text', description: 'Release date (YYYY-MM-DD)' },
-      { key: 'tracks', value: '[{"name":"Orbiting","links":{}}]', type: 'text', description: 'JSON string array of tracks' },
+      {
+        key: 'tracks',
+        value: '[{"name":"Orbiting","links":{}}]',
+        type: 'text',
+        description: 'JSON string array of tracks',
+      },
       { key: 'coverFile', value: '', type: 'file', description: 'Optional cover image file' },
-      { key: 'track_0_audioFile', value: '', type: 'file', description: 'Optional audio file for track 0' },
+      {
+        key: 'track_0_audioFile',
+        value: '',
+        type: 'file',
+        description: 'Optional audio file for track 0',
+      },
     ],
     responses: [
-      { status: 200, description: 'Project created', example: { success: true, projectSlug: 'celestial-horizon', message: 'Project created successfully!' } },
-      { status: 400, description: 'Duplicate title or missing fields', example: { success: false, error: 'A project with title "Celestial Horizon" already exists.' } },
+      {
+        status: 200,
+        description: 'Project created',
+        example: {
+          success: true,
+          projectSlug: 'celestial-horizon',
+          message: 'Project created successfully!',
+        },
+      },
+      {
+        status: 400,
+        description: 'Duplicate title or missing fields',
+        example: {
+          success: false,
+          error: 'A project with title "Celestial Horizon" already exists.',
+        },
+      },
     ],
   },
   {
@@ -156,7 +268,8 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Admin Portal',
     summary: 'Duplicate Track Across Projects',
-    description: 'Copies a track (including physical audio and custom cover artwork files if present) from a source project to a target project.',
+    description:
+      'Copies a track (including physical audio and custom cover artwork files if present) from a source project to a target project.',
     requiresAdminAuth: true,
     requestFormat: 'json',
     defaultBody: JSON.stringify(
@@ -167,11 +280,23 @@ export const API_ROUTES_SPEC = [
         targetProjectIndex: 1,
       },
       null,
-      2
+      2,
     ),
     responses: [
-      { status: 200, description: 'Track copied', example: { success: true, message: 'Successfully copied track "Track 1" to project "EP Title"!', targetProjectIndex: 1 } },
-      { status: 400, description: 'Invalid selection', example: { success: false, error: 'Invalid project selection' } },
+      {
+        status: 200,
+        description: 'Track copied',
+        example: {
+          success: true,
+          message: 'Successfully copied track "Track 1" to project "EP Title"!',
+          targetProjectIndex: 1,
+        },
+      },
+      {
+        status: 400,
+        description: 'Invalid selection',
+        example: { success: false, error: 'Invalid project selection' },
+      },
     ],
   },
   {
@@ -180,10 +305,15 @@ export const API_ROUTES_SPEC = [
     method: 'GET',
     tag: 'Admin Portal',
     summary: 'Get Real-Time Media Processing Jobs',
-    description: 'Returns active and recent Sharp image optimization and FFmpeg audio transcoding jobs. Supports SSE streaming with ?stream=1.',
+    description:
+      'Returns active and recent Sharp image optimization and FFmpeg audio transcoding jobs. Supports SSE streaming with ?stream=1.',
     requiresAdminAuth: false,
     responses: [
-      { status: 200, description: 'Active & completed jobs snapshot', example: { success: true, active: [], completed: [], totalCount: 0 } },
+      {
+        status: 200,
+        description: 'Active & completed jobs snapshot',
+        example: { success: true, active: [], completed: [], totalCount: 0 },
+      },
     ],
   },
   {
@@ -192,7 +322,8 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Admin Portal',
     summary: 'Trigger Catalog Media Warming / Clear Jobs',
-    description: 'Triggers background warming/optimization across catalog media or clears completed jobs.',
+    description:
+      'Triggers background warming/optimization across catalog media or clears completed jobs.',
     requiresAdminAuth: true,
     requestFormat: 'json',
     defaultBody: JSON.stringify(
@@ -201,11 +332,22 @@ export const API_ROUTES_SPEC = [
         action: 'warm-all',
       },
       null,
-      2
+      2,
     ),
     responses: [
-      { status: 200, description: 'Action executed', example: { success: true, message: 'Catalog media optimization and pre-transcoding started.' } },
-      { status: 401, description: 'Unauthorized', example: { success: false, error: 'Unauthorized: Invalid admin password' } },
+      {
+        status: 200,
+        description: 'Action executed',
+        example: {
+          success: true,
+          message: 'Catalog media optimization and pre-transcoding started.',
+        },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
     ],
   },
   {
@@ -214,13 +356,27 @@ export const API_ROUTES_SPEC = [
     method: 'POST',
     tag: 'Dev Utilities',
     summary: 'Randomize Dummy Data',
-    description: 'Generates and saves randomized dummy artist information, projects, and track listings for development testing.',
-    requiresAdminAuth: false,
+    description:
+      'Generates and saves randomized dummy artist information, projects, and track listings for development testing.',
+    requiresAdminAuth: true,
     requestFormat: 'json',
-    defaultBody: '{}',
+    defaultBody: '{\n  "password": "admin"\n}',
     responses: [
-      { status: 200, description: 'Dummy data generated', example: { success: true, message: 'Successfully randomized artist-data.json with dummy data!' } },
-      { status: 403, description: 'Dev access disabled', example: { success: false, error: 'Dev access is disabled in artist-data.json' } },
+      {
+        status: 200,
+        description: 'Dummy data generated',
+        example: { success: true, message: 'Successfully randomized discography data!' },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
+      {
+        status: 403,
+        description: 'Dev access disabled',
+        example: { success: false, error: 'Dev access is disabled in config.json' },
+      },
     ],
   },
   {
@@ -229,11 +385,16 @@ export const API_ROUTES_SPEC = [
     method: 'GET',
     tag: 'Dev Utilities',
     summary: 'OpenAPI 3.0 Specification Export',
-    description: 'Returns formal OpenAPI 3.0 specification JSON for importing into Postman, OpenAPI tools, or API client generators.',
+    description:
+      'Returns formal OpenAPI 3.0 specification JSON for importing into Postman, OpenAPI tools, or API client generators.',
     requiresAdminAuth: false,
     requestFormat: 'none',
     responses: [
-      { status: 200, description: 'OpenAPI JSON spec', example: { openapi: '3.0.3', info: { title: 'Artist Discography API', version: '1.0.0' } } },
+      {
+        status: 200,
+        description: 'OpenAPI JSON spec',
+        example: { openapi: '3.0.3', info: { title: 'Artist Discography API', version: '1.0.0' } },
+      },
     ],
   },
   {
@@ -242,12 +403,17 @@ export const API_ROUTES_SPEC = [
     method: 'GET',
     tag: 'Media & Streaming',
     summary: 'Stream Track Audio File',
-    description: 'Streams project audio files (.mp3, .wav, .flac, .m4a, .ogg) with full HTTP 206 Range Request support for HTML5 seeking.',
+    description:
+      'Streams project audio files (.mp3, .wav, .flac, .m4a, .ogg) with full HTTP 206 Range Request support for HTML5 seeking.',
     requiresAdminAuth: false,
     requestFormat: 'params',
     pathParams: [
       { name: 'projectSlug', example: 'midnight-echoes', description: 'Project directory slug' },
-      { name: 'trackFilename', example: 'starlight-pulse.mp3', description: 'Audio filename with extension' },
+      {
+        name: 'trackFilename',
+        example: 'starlight-pulse.mp3',
+        description: 'Audio filename with extension',
+      },
     ],
     responses: [
       { status: 200, description: 'Audio Binary Stream (Full)' },
@@ -279,7 +445,8 @@ export const API_ROUTES_SPEC = [
     method: 'GET',
     tag: 'Media & Streaming',
     summary: 'Get Custom or Default Logo',
-    description: 'Returns the artist logo from data/ directory override or public/ default logo asset.',
+    description:
+      'Returns the artist logo from data/ directory override or public/ default logo asset.',
     requiresAdminAuth: false,
     requestFormat: 'none',
     responses: [
@@ -394,7 +561,8 @@ export function generateOpenApiSpec(baseUrl = 'http://localhost:3000') {
     openapi: '3.0.3',
     info: {
       title: 'Artist Discography API',
-      description: 'OpenAPI documentation for the Artist Discography application backend and media streaming routes.',
+      description:
+        'OpenAPI documentation for the Artist Discography application backend and media streaming routes.',
       version: '2026.3.0',
     },
     servers: [

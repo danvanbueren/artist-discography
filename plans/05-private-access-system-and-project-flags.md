@@ -7,7 +7,7 @@
 ## 1. Verification Checklist & Status Log
 
 - [x] Add `privateAccessCode` to `DEFAULT_DATA_SCAFFOLD` and `validateAndRepair` in `lib/artistData.js`.
-- [x] Add `copyright` (`'cleared'` | `'uncleared'`, default: `'cleared'`) and `visibility` (`'public'` | `'private'`, default: `'public'`) properties to projects in `artist-data.json` scaffold & schema validation.
+- [x] Add `copyright` (`'cleared'` | `'uncleared'`, default: `'cleared'`) and `visibility` (`'public'` | `'private'`, default: `'public'`) properties to projects in `project.json` schema validation & disk persistence.
 - [x] Update Admin Dashboard project editor (`ProjectEditForm.js` and `ProjectCreateForm.js`) to provide dropdown / selector controls for `visibility` and `copyright` flags.
 - [x] Update Admin Dashboard artist profile (`ArtistProfileTab.js`) to display and configure `privateAccessCode` with show/hide password visibility toggle and random generator.
 - [x] Create `PrivateAccessModal.js` authentication dialog with password input, authentication state checking, error shake / message, and logout / re-lock capability.
@@ -29,7 +29,7 @@
 Artists frequently host unreleased tracks, VIP edits, or demo projects that require private sharing with label reps or select fans via an access code. Furthermore, copyright regulations may prevent in-browser streaming of uncleared remixes or bootlegs while still allowing the artist to list official streaming links (or stream audio only to authorized listeners with the code).
 
 ### Core Goals:
-1. **Private Access Code Configuration**: Stored in `data/artist-data.json` (`privateAccessCode: "secret123"`).
+1. **Private Access Code Configuration**: Stored in `data/config.json` (`privateAccessCode: "secret123"`).
 2. **Project Visibility (`public` vs. `private`)**:
    - `public`: Always visible to everyone.
    - `private`: Completely hidden from the site (not rendered in discography, not in search, not in filters) unless authenticated with the private access code.

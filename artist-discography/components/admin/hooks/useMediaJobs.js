@@ -26,44 +26,48 @@ export function useMediaJobs() {
     setLastUpdated(Date.now())
   }, [])
 
-  const applyJobUpdate = useCallback((payload) => {
-    if (!payload) return
-    if (payload.summary) {
-      applySnapshot(payload.summary)
-      return
-    }
-
-    if (payload.job) {
-      const updatedJob = payload.job
-      if (updatedJob.status === 'processing' || updatedJob.status === 'queued') {
-        setActiveJobs((prev) => {
-          const idx = prev.findIndex((j) => j.id === updatedJob.id)
-          if (idx >= 0) {
-            const next = [...prev]
-            next[idx] = updatedJob
-            return next
-          }
-          return [updatedJob, ...prev]
-        })
-      } else {
-        // Move to completed
-        setActiveJobs((prev) => prev.filter((j) => j.id !== updatedJob.id))
-        setCompletedJobs((prev) => {
-          const exists = prev.some((j) => j.id === updatedJob.id)
-          if (exists) {
-            return prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
-          }
-          return [updatedJob, ...prev.slice(0, 49)]
-        })
+  const applyJobUpdate = useCallback(
+    (payload) => {
+      if (!payload) return
+      if (payload.summary) {
+        applySnapshot(payload.summary)
+        return
       }
-      setLastUpdated(Date.now())
-    }
-  }, [applySnapshot])
+
+      if (payload.job) {
+        const updatedJob = payload.job
+        if (updatedJob.status === 'processing' || updatedJob.status === 'queued') {
+          setActiveJobs((prev) => {
+            const idx = prev.findIndex((j) => j.id === updatedJob.id)
+            if (idx >= 0) {
+              const next = [...prev]
+              next[idx] = updatedJob
+              return next
+            }
+            return [updatedJob, ...prev]
+          })
+        } else {
+          // Move to completed
+          setActiveJobs((prev) => prev.filter((j) => j.id !== updatedJob.id))
+          setCompletedJobs((prev) => {
+            const exists = prev.some((j) => j.id === updatedJob.id)
+            if (exists) {
+              return prev.map((j) => (j.id === updatedJob.id ? updatedJob : j))
+            }
+            return [updatedJob, ...prev.slice(0, 49)]
+          })
+        }
+        setLastUpdated(Date.now())
+      }
+    },
+    [applySnapshot],
+  )
 
   // Real-Time SSE Stream with Polling Fallback
   useEffect(() => {
     let eventSource = null
     let pollTimer = null
+    let reconnectTimer = null
     let isSubscribed = true
 
     const fetchSnapshot = async () => {
@@ -80,16 +84,60 @@ export function useMediaJobs() {
       }
     }
 
-    // Initial snapshot fetch
-    fetchSnapshot()
+    const stopPolling = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer)
+        pollTimer = null
+      }
+    }
 
-    // Setup SSE if supported in browser
-    if (typeof window !== 'undefined' && window.EventSource) {
+    const startPolling = () => {
+      if (!isSubscribed || pollTimer) return
+      fetchSnapshot()
+      pollTimer = setInterval(() => {
+        if (!isSubscribed) return
+        fetchSnapshot()
+      }, 3000)
+    }
+
+    const scheduleReconnect = () => {
+      if (!isSubscribed || reconnectTimer) return
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null
+        if (isSubscribed) {
+          connectSSE()
+        }
+      }, 10000)
+    }
+
+    const connectSSE = () => {
+      if (!isSubscribed) return
+
+      if (typeof window === 'undefined' || !window.EventSource) {
+        startPolling()
+        return
+      }
+
+      if (eventSource) {
+        try {
+          eventSource.close()
+        } catch (e) {}
+        eventSource = null
+      }
+
       try {
-        eventSource = new EventSource('/api/admin/media-jobs?stream=1')
+        const es = new EventSource('/api/admin/media-jobs?stream=1')
+        eventSource = es
 
-        eventSource.onmessage = (event) => {
+        es.onopen = () => {
+          // SSE stream connected successfully, stop HTTP polling fallback
+          stopPolling()
+        }
+
+        es.onmessage = (event) => {
           if (!isSubscribed || !event.data) return
+          // Message received confirms stream is healthy
+          stopPolling()
           try {
             const parsed = JSON.parse(event.data)
             if (parsed.type === 'snapshot') {
@@ -100,36 +148,39 @@ export function useMediaJobs() {
           } catch (e) {}
         }
 
-        eventSource.onerror = () => {
-          // SSE connection dropped, fall back to interval polling
-          if (eventSource) {
-            eventSource.close()
+        es.onerror = () => {
+          // SSE connection dropped or error occurred, close and fallback to polling
+          if (eventSource === es) {
+            try {
+              es.close()
+            } catch (e) {}
             eventSource = null
           }
+          startPolling()
+          scheduleReconnect()
         }
       } catch (e) {
         eventSource = null
+        startPolling()
+        scheduleReconnect()
       }
     }
 
-    // Polling interval as resilient sync mechanism
-    const runPolling = () => {
-      pollTimer = setInterval(() => {
-        if (!isSubscribed) return
-        fetchSnapshot()
-      }, 2500)
-    }
-    runPolling()
+    // Connect SSE as primary transport
+    connectSSE()
 
     return () => {
       isSubscribed = false
       if (eventSource) {
-        eventSource.close()
+        try {
+          eventSource.close()
+        } catch (e) {}
         eventSource = null
       }
-      if (pollTimer) {
-        clearInterval(pollTimer)
-        pollTimer = null
+      stopPolling()
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
       }
     }
   }, [applySnapshot, applyJobUpdate])
@@ -269,21 +320,31 @@ export function useMediaJobs() {
   const getJobForFile = useCallback((filePattern) => {
     if (!filePattern) return null
     const patternLower = String(filePattern).toLowerCase()
-    
+
     // Check active jobs first
     const active = activeJobsRef.current.find((j) => {
       const fileLower = (j.file || '').toLowerCase()
       const targetLower = (j.target || '').toLowerCase()
-      return fileLower === patternLower || fileLower.includes(patternLower) || targetLower.includes(patternLower)
+      return (
+        fileLower === patternLower ||
+        fileLower.includes(patternLower) ||
+        targetLower.includes(patternLower)
+      )
     })
     if (active) return active
 
     // Check completed jobs
-    return completedJobsRef.current.find((j) => {
-      const fileLower = (j.file || '').toLowerCase()
-      const targetLower = (j.target || '').toLowerCase()
-      return fileLower === patternLower || fileLower.includes(patternLower) || targetLower.includes(patternLower)
-    }) || null
+    return (
+      completedJobsRef.current.find((j) => {
+        const fileLower = (j.file || '').toLowerCase()
+        const targetLower = (j.target || '').toLowerCase()
+        return (
+          fileLower === patternLower ||
+          fileLower.includes(patternLower) ||
+          targetLower.includes(patternLower)
+        )
+      }) || null
+    )
   }, [])
 
   return {

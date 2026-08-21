@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { loadArtistData } from '../../lib/artistData'
+import { loadArtistData, normalizeSiteUrl } from '../../lib/artistData'
 import MainDiscographyApp from '../../components/discography/MainDiscographyApp'
 import { slugify, findProjectBySlug, findTrackBySlug } from '../../lib/slugs'
 import { formatProjectDate } from '../../lib/dateUtils'
@@ -22,7 +22,9 @@ export async function generateMetadata({ params }) {
   const publicProjects = (data?.projects ?? []).filter((p) => p.visibility !== 'private')
   const slug = resolvedParams?.slug ?? []
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://polybitmusic.com'
+  const rawSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || data?.siteUrl || data?.artist?.siteUrl || ''
+  const baseUrl = normalizeSiteUrl(rawSiteUrl)
   const getAbsoluteUrl = (path) => {
     if (!path) return `${baseUrl}/api/logo?w=1200&fmt=png`
     if (/^https?:\/\//i.test(path)) return path
@@ -51,7 +53,9 @@ export async function generateMetadata({ params }) {
         let rawCover = track.cover || project.cover || ''
         let coverWithParams = rawCover
         if (rawCover && rawCover.startsWith('/api/media')) {
-          coverWithParams = rawCover.includes('?') ? `${rawCover}&w=1200&q=90&fmt=jpg` : `${rawCover}?w=1200&q=90&fmt=jpg`
+          coverWithParams = rawCover.includes('?')
+            ? `${rawCover}&w=1200&q=90&fmt=jpg`
+            : `${rawCover}?w=1200&q=90&fmt=jpg`
         }
         const coverArtUrl = getAbsoluteUrl(coverWithParams)
 
@@ -99,7 +103,9 @@ export async function generateMetadata({ params }) {
       let rawCover = project.cover || ''
       let coverWithParams = rawCover
       if (rawCover && rawCover.startsWith('/api/media')) {
-        coverWithParams = rawCover.includes('?') ? `${rawCover}&w=1200&q=90&fmt=jpg` : `${rawCover}?w=1200&q=90&fmt=jpg`
+        coverWithParams = rawCover.includes('?')
+          ? `${rawCover}&w=1200&q=90&fmt=jpg`
+          : `${rawCover}?w=1200&q=90&fmt=jpg`
       }
       const coverArtUrl = getAbsoluteUrl(coverWithParams)
 
@@ -133,7 +139,10 @@ export async function generateMetadata({ params }) {
 
   // 3. MAIN SITE URL: /
   const title = `${artistName} - Artist Discography`
-  const topProjects = publicProjects.slice(0, 3).map((p) => p.name).filter(Boolean)
+  const topProjects = publicProjects
+    .slice(0, 3)
+    .map((p) => p.name)
+    .filter(Boolean)
 
   let description = `All music by ${artistName}, in one place.`
   if (topProjects.length >= 3) {
@@ -195,7 +204,11 @@ export default async function Page({ params }) {
   }
 
   const data = dataResult?.data ?? {}
-  const health = dataResult?.health ?? { isHealthy: false, createdNewFile: false, issues: ['Failed to load data'] }
+  const health = dataResult?.health ?? {
+    isHealthy: false,
+    createdNewFile: false,
+    issues: ['Failed to load data'],
+  }
 
   // Background fallback check: verifies and warms any missing optimized media assets
   try {

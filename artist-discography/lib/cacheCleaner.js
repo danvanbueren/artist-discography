@@ -6,11 +6,7 @@ import {
   computeImageCacheKey,
   purgeInvalidMemoryCache,
 } from './mediaOptimizer'
-import {
-  AUDIO_CACHE_DIR,
-  STANDARD_AUDIO_VARIANTS,
-  computeAudioCacheKey,
-} from './audioOptimizer'
+import { AUDIO_CACHE_DIR, STANDARD_AUDIO_VARIANTS, computeAudioCacheKey } from './audioOptimizer'
 import { collectAllMediaFiles } from './mediaWarmer'
 
 const CACHE_PRUNE_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour cooldown for regular background periodic scans
@@ -120,11 +116,8 @@ export async function pruneUnusedCacheFiles(options = {}) {
 
   activePrunePromise = (async () => {
     try {
-      const {
-        validImageFiles,
-        validImageHashes,
-        validAudioFiles,
-      } = getActiveValidCacheEntries(artistData)
+      const { validImageFiles, validImageHashes, validAudioFiles } =
+        getActiveValidCacheEntries(artistData)
 
       let imagesPruned = 0
       let imagesBytesReclaimed = 0

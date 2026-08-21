@@ -6,22 +6,22 @@
 
 ## 1. Verification Checklist & Status Log
 
-- [x] **Atomic File Persistence (`saveArtistData`)**:
-  - Implement atomic write pattern: serialize data to a temporary swap file (`data/.artist-data.json.tmp.<pid>.<timestamp>.<rand>`) and execute atomic rename (`fs.renameSync`) over `data/artist-data.json`.
+- [x] **Atomic File Persistence (`saveConfig`, `saveProject`)**:
+  - Implement atomic write pattern: serialize data to a temporary swap file (`data/.<filename>.tmp.<pid>.<timestamp>.<rand>`) and execute atomic rename (`fs.renameSync`) over `data/config.json` and `data/projects/<slug>/project.json`.
   - Guarantees zero partial file corruption during unexpected server restarts or process termination.
 - [x] **Automated Rolling Backups (`data/backups/`)**:
-  - Before overwriting `data/artist-data.json` during admin save operations or auto-repairs, generate a timestamped snapshot in `data/backups/artist-data-<YYYYMMDD-HHMMSS>.json`.
-  - Maintain a bounded rolling window (keeps latest 15 snapshots) and prunes older backups to prevent unbounded disk usage.
+  - Before overwriting `data/config.json` or any `data/projects/<slug>/project.json` during admin save operations or auto-repairs, generate a timestamped snapshot in `data/backups/config-<timestamp>.json` or `data/backups/project-<slug>-<timestamp>.json`.
+  - Maintain a bounded rolling window (keeps latest 15 snapshots per target) and prunes older backups to prevent unbounded disk usage.
 - [x] **Non-Destructive Corrupted File Archival (`archiveMalformedFile`)**:
   - If `fs.readFileSync` reads a file that fails `JSON.parse()`:
     - Attempt automated syntax repair (cleaning trailing commas, unbalanced braces/brackets, unclosed quotes, comments).
     - If automated parsing still fails: **NEVER overwrite the file with default data**.
-    - Immediately copy/rename the corrupted file to `data/artist-data.corrupted-<timestamp>.json`.
+    - Immediately copy/rename the corrupted file to `data/config.corrupted-<timestamp>.json` or `data/projects/<slug>/project.corrupted-<timestamp>.json`.
     - Only then initialize the fallback default scaffold so the application stays operational while preserving 100% of the raw user content for inspection/recovery.
-- [x] **Deep Graceful Field Normalization & Defaulting (`validateAndRepair`)**:
-  - **Top-Level Root**: Check `adminAccess` (boolean), `adminPassword` (string), `devAccess` (boolean), `privateAccessCode` (string), `artist` (object), `projects` (array).
+- [x] **Deep Graceful Field Normalization & Defaulting (`validateAndRepairConfig`, `loadProject`)**:
+  - **Global Config Root**: Check `adminAccess` (boolean), `adminPassword` (string), `devAccess` (boolean), `privateAccessCode` (string), `siteUrl` (string), `artist` (object).
   - **Artist Object**: Gracefully default `name`, `bio`, `links.platforms` (all standard platform keys), `links.socials` (all standard social keys). Convert null/undefined/number values to strings.
-  - **Projects Array**:
+  - **Per-Project Metadata Isolation**:
     - Gracefully repair malformed project objects, missing project names, types, artists, dates.
     - Guarantee `visibility` defaults to `'public'` and `copyright` defaults to `'cleared'`.
     - Guarantee `tracks` is always an array of valid track objects.
@@ -31,7 +31,7 @@
   - Gracefully heal missing cover arts and broken relative audio paths without deleting valid user data.
 - [x] **Verify Error Resilience**:
   - Test reading partially corrupted JSON (trailing commas, comments, missing closing braces) -> verified automatic syntax repair.
-  - Test reading completely broken raw bytes -> verified creation of `artist-data.corrupted-<timestamp>.json` with zero data loss.
+  - Test reading completely broken raw bytes -> verified creation of `.corrupted-<timestamp>.json` with zero data loss.
 
 ---
 
@@ -43,7 +43,7 @@ User data is the single most valuable asset in the entire application. A corrupt
 1. **Atomic Writes**: Writes are completed to temporary swap files first and atomically swapped onto the destination.
 2. **Rolling Snapshot Backups**: Pre-save backups guarantee rollback availability if an accidental delete or unwanted batch edit occurs.
 3. **Graceful Schema Healing**: Missing or corrupt fields are repaired in memory with sensible defaults without wiping the surrounding project data.
-4. **Corrupted File Quarantine**: Irreparable JSON files are preserved under timestamped archive names (`artist-data.corrupted-<timestamp>.json`) before generating a clean working state.
+4. **Corrupted File Quarantine**: Irreparable JSON files are preserved under timestamped archive names (`config.corrupted-<timestamp>.json` / `project.corrupted-<timestamp>.json`) before generating a clean working state.
 
 ---
 
@@ -51,14 +51,14 @@ User data is the single most valuable asset in the entire application. A corrupt
 
 ```mermaid
 graph TD
-  LoadFile["loadArtistData() Reads data/artist-data.json"] --> ParseJSON{"Is JSON Syntax Valid?"}
+  LoadFile["loadConfig() / loadProject() Reads JSON"] --> ParseJSON{"Is JSON Syntax Valid?"}
   
   ParseJSON -->|Yes| ValidateRepair["Run Deep validateAndRepair(parsedData)"]
   ParseJSON -->|Syntax Error| TryRepair["Attempt JSON Syntax Auto-Fixer (strip trailing commas, heal braces)"]
   
   TryRepair --> ReParse{"Did Auto-Fixer Succeed?"}
   ReParse -->|Yes| ValidateRepair
-  ReParse -->|No| ArchiveCorrupt["Archive to data/artist-data.corrupted-<timestamp>.json"]
+  ReParse -->|No| ArchiveCorrupt["Archive to data/...corrupted-<timestamp>.json"]
   ArchiveCorrupt --> FallbackScaffold["Load Safe Default Scaffold & Report Health Issue"]
   
   ValidateRepair --> CheckChanges{"Were any missing fields repaired?"}

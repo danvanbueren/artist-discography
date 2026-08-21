@@ -8,7 +8,7 @@ export async function generateMetadata() {
   try {
     const { data } = loadArtistData()
     artistName = data?.artist?.name?.trim() || ''
-  } catch (err) { }
+  } catch (err) {}
 
   const name = artistName || 'Artist'
 

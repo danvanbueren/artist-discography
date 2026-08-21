@@ -51,10 +51,12 @@ const ApiEndpointAccordion = memo(function ApiEndpointAccordion({
           '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.02)' },
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', flexWrap: 'wrap' }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', flexWrap: 'wrap' }}
+        >
           <Chip
             label={methodKey}
-            size="small"
+            size='small'
             sx={{
               fontWeight: 900,
               fontSize: '0.78rem',
@@ -68,7 +70,7 @@ const ApiEndpointAccordion = memo(function ApiEndpointAccordion({
           />
 
           <Typography
-            variant="subtitle1"
+            variant='subtitle1'
             sx={{
               fontFamily: 'monospace',
               fontWeight: 700,
@@ -79,25 +81,25 @@ const ApiEndpointAccordion = memo(function ApiEndpointAccordion({
             {route.path || '/api'}
           </Typography>
 
-          <Typography variant="body2" sx={{ color: 'text.secondary', flexGrow: 1 }}>
+          <Typography variant='body2' sx={{ color: 'text.secondary', flexGrow: 1 }}>
             {route.summary || ''}
           </Typography>
 
           {route.requiresAdminAuth && (
             <Chip
-              icon={<LockIcon fontSize="small" />}
-              label="Admin Auth"
-              color="warning"
-              variant="outlined"
-              size="small"
+              icon={<LockIcon fontSize='small' />}
+              label='Admin Auth'
+              color='warning'
+              variant='outlined'
+              size='small'
               sx={{ fontWeight: 600 }}
             />
           )}
 
           <Chip
             label={route.tag || 'API'}
-            variant="outlined"
-            size="small"
+            variant='outlined'
+            size='small'
             sx={{ color: 'text.secondary', borderColor: 'rgba(255,255,255,0.1)' }}
           />
         </Box>
@@ -106,7 +108,7 @@ const ApiEndpointAccordion = memo(function ApiEndpointAccordion({
       <AccordionDetails sx={{ px: 3, pb: 3, pt: 1 }}>
         <Divider sx={{ mb: 2.5 }} />
 
-        <Typography variant="body2" sx={{ color: 'text.primary', mb: 3 }}>
+        <Typography variant='body2' sx={{ color: 'text.primary', mb: 3 }}>
           {route.description || ''}
         </Typography>
 

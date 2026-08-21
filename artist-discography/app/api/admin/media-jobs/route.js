@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { loadArtistData } from '../../../../lib/artistData'
+import { loadConfigData } from '../../../../lib/artistData'
 import { getAllJobs, clearCompletedJobs, subscribeToJobs } from '../../../../lib/jobTracker'
 import { warmAllArtistMedia } from '../../../../lib/mediaWarmer'
 
 export const dynamic = 'force-dynamic'
 
 function authenticateAdmin(request, bodyPassword = '') {
-  const dataResult = loadArtistData()
+  const dataResult = loadConfigData()
   const currentData = dataResult?.data ?? {}
 
   const adminAccess = Boolean(currentData?.adminAccess)
@@ -16,8 +16,8 @@ function authenticateAdmin(request, bodyPassword = '') {
     return {
       authenticated: false,
       response: NextResponse.json(
-        { success: false, error: 'Admin access is disabled in artist-data.json' },
-        { status: 403 }
+        { success: false, error: 'Admin access is disabled in config.json' },
+        { status: 403 },
       ),
     }
   }
@@ -28,7 +28,7 @@ function authenticateAdmin(request, bodyPassword = '') {
       authenticated: false,
       response: NextResponse.json(
         { success: false, error: 'Unauthorized: Invalid admin password' },
-        { status: 401 }
+        { status: 401 },
       ),
     }
   }
@@ -55,12 +55,16 @@ export async function GET(request) {
       start(controller) {
         // Send initial state snapshot
         const initialSnapshot = getAllJobs()
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'snapshot', ...initialSnapshot })}\n\n`))
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'snapshot', ...initialSnapshot })}\n\n`),
+        )
 
         // Subscribe to job events
         const unsubscribe = subscribeToJobs((payload) => {
           try {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'update', ...payload })}\n\n`))
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: 'update', ...payload })}\n\n`),
+            )
           } catch {
             // Client may have disconnected
           }
@@ -90,7 +94,7 @@ export async function GET(request) {
       headers: {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
         'X-Accel-Buffering': 'no',
       },
     })
@@ -98,7 +102,7 @@ export async function GET(request) {
     console.error('Error in media-jobs GET handler:', err)
     return NextResponse.json(
       { success: false, error: `Failed to retrieve media jobs: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
@@ -139,13 +143,13 @@ export async function POST(request) {
 
     return NextResponse.json(
       { success: false, error: `Unknown action: ${action}` },
-      { status: 400 }
+      { status: 400 },
     )
   } catch (err) {
     console.error('Error in media-jobs POST handler:', err)
     return NextResponse.json(
       { success: false, error: `Server error: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

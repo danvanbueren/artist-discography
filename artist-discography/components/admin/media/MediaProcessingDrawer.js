@@ -33,7 +33,7 @@ export default function MediaProcessingDrawer({
 
   return (
     <Drawer
-      anchor="right"
+      anchor='right'
       open={open}
       onClose={onClose}
       slotProps={{
@@ -72,27 +72,27 @@ export default function MediaProcessingDrawer({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+            <Typography variant='h6' sx={{ fontWeight: 800 }}>
               Media Processing Center
             </Typography>
             {hasActive && (
               <Chip
-                size="small"
+                size='small'
                 label={`${activeJobs.length} active`}
-                color="warning"
+                color='warning'
                 sx={{ fontWeight: 700, height: 22 }}
               />
             )}
           </Box>
           <IconButton
             onClick={onClose}
-            size="small"
+            size='small'
             sx={{
               color: 'text.secondary',
               '&:hover': { color: 'text.primary', backgroundColor: 'rgba(255, 255, 255, 0.08)' },
             }}
           >
-            <CloseIcon fontSize="small" />
+            <CloseIcon fontSize='small' />
           </IconButton>
         </Box>
 
@@ -106,15 +106,15 @@ export default function MediaProcessingDrawer({
                 alignItems: 'center',
               }}
             >
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+              <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 600 }}>
                 Total Active Progress
               </Typography>
-              <Typography variant="caption" sx={{ color: 'primary.light', fontWeight: 700 }}>
+              <Typography variant='caption' sx={{ color: 'primary.light', fontWeight: 700 }}>
                 {overallProgress}%
               </Typography>
             </Box>
             <LinearProgress
-              variant="determinate"
+              variant='determinate'
               value={overallProgress}
               sx={{
                 height: 6,
@@ -132,9 +132,9 @@ export default function MediaProcessingDrawer({
         {/* Actions Bar */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
           <Button
-            size="small"
-            variant="outlined"
-            color="primary"
+            size='small'
+            variant='outlined'
+            color='primary'
             startIcon={<WhatshotIcon />}
             disabled={isTriggeringWarm || isProcessing}
             onClick={() => onTriggerWarmAll?.(adminPassword)}
@@ -151,9 +151,9 @@ export default function MediaProcessingDrawer({
 
           {hasCompleted && (
             <Button
-              size="small"
-              variant="outlined"
-              color="inherit"
+              size='small'
+              variant='outlined'
+              color='inherit'
               startIcon={<DeleteSweepIcon />}
               onClick={() => onClearCompleted?.(adminPassword)}
               sx={{
@@ -190,7 +190,7 @@ export default function MediaProcessingDrawer({
         {/* Active Jobs Section */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Typography
-            variant="overline"
+            variant='overline'
             sx={{
               fontWeight: 800,
               letterSpacing: 1.2,
@@ -220,11 +220,12 @@ export default function MediaProcessingDrawer({
               }}
             >
               <CheckCircleIcon sx={{ color: 'text.disabled', fontSize: 32 }} />
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              <Typography variant='body2' sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 No media jobs running
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.disabled', maxWidth: 300 }}>
-                Uploading track audio, cover images, or site logo will display live Sharp and FFmpeg progress here.
+              <Typography variant='caption' sx={{ color: 'text.disabled', maxWidth: 300 }}>
+                Uploading track audio, cover images, or site logo will display live Sharp and FFmpeg
+                progress here.
               </Typography>
             </Box>
           )}
@@ -236,7 +237,7 @@ export default function MediaProcessingDrawer({
             <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <Typography
-                variant="overline"
+                variant='overline'
                 sx={{
                   fontWeight: 800,
                   letterSpacing: 1.2,

@@ -35,7 +35,7 @@ export default function AdminLoginView({
         boxSizing: 'border-box',
       }}
     >
-      <Container maxWidth="sm" sx={{ py: 10 }}>
+      <Container maxWidth='sm' sx={{ py: 10 }}>
         <Paper
           elevation={6}
           sx={{
@@ -68,26 +68,22 @@ export default function AdminLoginView({
             >
               <LockIcon sx={{ fontSize: 32, color: 'primary.contrastText' }} />
             </Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
+            <Typography variant='h5' component='h1' sx={{ fontWeight: 700 }}>
               Site Owner Portal
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            <Typography variant='body2' sx={{ color: 'text.secondary', mt: 0.5 }}>
               Enter password to unlock site management tools
             </Typography>
           </Box>
 
           {authError && (
-            <Alert
-              severity="error"
-              onClose={() => setAuthError('')}
-              sx={{ mb: 3 }}
-            >
+            <Alert severity='error' onClose={() => setAuthError('')} sx={{ mb: 3 }}>
               {authError}
             </Alert>
           )}
 
           <Box
-            component="form"
+            component='form'
             onSubmit={handleLogin}
             sx={{
               display: 'flex',
@@ -96,9 +92,9 @@ export default function AdminLoginView({
             }}
           >
             <TextField
-              label="Admin Password"
-              type="password"
-              variant="outlined"
+              label='Admin Password'
+              type='password'
+              variant='outlined'
               fullWidth
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -106,18 +102,18 @@ export default function AdminLoginView({
               autoFocus
             />
             <Button
-              type="submit"
-              variant="contained"
-              size="large"
+              type='submit'
+              variant='contained'
+              size='large'
               disabled={isAuthLoading || !password}
               sx={{ py: 1.4, borderRadius: 2, fontWeight: 600 }}
             >
               {isAuthLoading ? <CircularProgress size={24} /> : 'Unlock Admin Panel'}
             </Button>
             <Button
-              variant="text"
+              variant='text'
               startIcon={<HomeIcon />}
-              href="/"
+              href='/'
               sx={{ color: 'text.secondary', textTransform: 'none' }}
             >
               Back to Discography

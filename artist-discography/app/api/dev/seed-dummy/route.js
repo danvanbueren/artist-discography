@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
 import path from 'path'
 import fs from 'fs'
-import { loadArtistData, saveArtistData } from '../../../../lib/artistData'
+import {
+  loadConfigData,
+  saveConfigData,
+  saveProjectData,
+  loadArtistData,
+  getProjectsDirPath,
+} from '../../../../lib/artistData'
+import { slugify } from '../../../../lib/slugs'
 
 const ARTIST_NAMES = [
   'Astraea & The Neon Sun',
@@ -81,15 +88,37 @@ function getRandomDate(startYear = 2021, endYear = 2026) {
 
 export async function POST(request) {
   try {
-    const dataResult = loadArtistData()
-    const currentData = dataResult?.data ?? {}
+    const configResult = loadConfigData()
+    const currentData = configResult?.data ?? {}
 
-    const devAccess = Boolean(currentData?.devAccess !== false)
-    if (!devAccess) {
+    const adminAccess = Boolean(currentData?.adminAccess !== false)
+    if (!adminAccess) {
       return NextResponse.json(
-        { success: false, error: 'Dev access is disabled in artist-data.json' },
-        { status: 403 }
+        { success: false, error: 'Admin access is disabled in config.json' },
+        { status: 403 },
       )
+    }
+
+    const adminPassword = String(currentData?.adminPassword ?? '')
+    if (adminPassword) {
+      let reqPassword = request.headers.get('x-admin-password') || ''
+      if (!reqPassword) {
+        try {
+          const body = await request.clone().json()
+          reqPassword = String(body?.password || '')
+        } catch {}
+      }
+
+      if (!reqPassword || reqPassword !== adminPassword) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Unauthorized: Invalid admin password. Dummy data generation requires admin authentication.',
+          },
+          { status: 401 },
+        )
+      }
     }
 
     const artistName = getRandomItem(ARTIST_NAMES)
@@ -147,18 +176,18 @@ export async function POST(request) {
       const pTrackTitles = getRandomItems(TRACK_TITLES, trackCount)
       const tracks = pTrackTitles.map((tName, tIdx) => {
         const tSlug = tName.toLowerCase().replace(/[^a-z0-9]/g, '')
-        
+
         const allTrackLinks = {
-          amazon: `https://music.amazon.com/albums/${handleSlug}?track=${tIdx+1}`,
+          amazon: `https://music.amazon.com/albums/${handleSlug}?track=${tIdx + 1}`,
           apple: `https://music.apple.com/song/${tSlug}`,
           bandcamp: `https://${handleSlug}.bandcamp.com/track/${tSlug}`,
-          deezer: `https://www.deezer.com/track/${tIdx+1000}`,
+          deezer: `https://www.deezer.com/track/${tIdx + 1000}`,
           itunes: `https://itunes.apple.com/song/${tSlug}`,
           pandora: `https://www.pandora.com/tr/${tSlug}`,
           soundcloud: `https://soundcloud.com/${handleSlug}/${tSlug}`,
           spotify: `https://open.spotify.com/track/${tSlug}`,
-          tidal: `https://tidal.com/track/${tIdx+1000}`,
-          youtube: `https://youtube.com/watch?v=dummy${tIdx+1}`,
+          tidal: `https://tidal.com/track/${tIdx + 1000}`,
+          youtube: `https://youtube.com/watch?v=dummy${tIdx + 1}`,
         }
 
         // For each track, randomly select 2-5 platform links (approx 35% chance per platform)
@@ -184,51 +213,47 @@ export async function POST(request) {
       }
     })
 
-    const filePath = path.join(process.cwd(), 'data', 'artist-data.json')
-    let fullJsonData = {}
-    if (fs.existsSync(filePath)) {
-      try {
-        fullJsonData = JSON.parse(fs.readFileSync(filePath, 'utf8'))
-      } catch (e) {
-        fullJsonData = currentData
-      }
-    } else {
-      fullJsonData = currentData
-    }
-
-    fullJsonData.adminAccess = true
-    fullJsonData.adminPassword = currentData.adminPassword ?? ''
-    fullJsonData.devAccess = true
-    fullJsonData.artist = {
-      name: artistName,
-      bio: artistBio,
-      links: {
-        platforms,
-        socials,
+    const updatedConfig = {
+      ...currentData,
+      adminAccess: true,
+      adminPassword: currentData.adminPassword ?? '',
+      artist: {
+        name: artistName,
+        bio: artistBio,
+        links: {
+          platforms,
+          socials,
+        },
       },
     }
-    fullJsonData.projects = projects
 
-    const saveResult = saveArtistData(fullJsonData)
-    if (!saveResult.success) {
+    const saveConfigResult = saveConfigData(updatedConfig)
+    if (!saveConfigResult.success) {
       return NextResponse.json(
-        { success: false, error: `Failed to write dummy data: ${saveResult.error}` },
-        { status: 500 }
+        { success: false, error: `Failed to write dummy config: ${saveConfigResult.error}` },
+        { status: 500 },
       )
+    }
+
+    // Write dummy projects
+    for (let i = 0; i < projects.length; i++) {
+      const proj = projects[i]
+      const pSlug = slugify(proj.name) || `dummy-project-${i + 1}`
+      saveProjectData(pSlug, proj)
     }
 
     const reloaded = loadArtistData()
 
     return NextResponse.json({
       success: true,
-      message: `Successfully randomized artist-data.json with dummy data for "${artistName}"!`,
-      data: reloaded?.data ?? fullJsonData,
+      message: `Successfully randomized discography data for "${artistName}"!`,
+      data: reloaded?.data ?? { ...updatedConfig, projects },
     })
   } catch (err) {
     console.error('Error generating randomized dummy data:', err)
     return NextResponse.json(
       { success: false, error: `Server error generating dummy data: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

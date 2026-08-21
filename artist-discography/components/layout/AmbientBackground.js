@@ -31,7 +31,9 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
   // Use low-res source for vibrant palette extraction so it samples in milliseconds
   const { colors, isMonochrome } = useVibrantColors(lowResSrc || ambientImage)
 
-  const [lowResLoaded, setLowResLoaded] = useState(() => isHighResCached(lowResSrc) || isHighResCached(highResSrc))
+  const [lowResLoaded, setLowResLoaded] = useState(
+    () => isHighResCached(lowResSrc) || isHighResCached(highResSrc),
+  )
   const [highResLoaded, setHighResLoaded] = useState(() => isHighResCached(highResSrc))
 
   useEffect(() => {
@@ -194,7 +196,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
               '@keyframes floatOrb1': {
                 '0%': {
                   transform: 'translate(0px, 0px) scale(0.9)',
-                  opacity: 0.70,
+                  opacity: 0.7,
                   bgcolor: 'var(--c1)',
                 },
                 '25%': {
@@ -204,7 +206,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
                 },
                 '50%': {
                   transform: 'translate(30px, 80px) scale(0.70)',
-                  opacity: 0.80,
+                  opacity: 0.8,
                   bgcolor: 'var(--c3)',
                 },
                 '75%': {
@@ -214,7 +216,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
                 },
                 '100%': {
                   transform: 'translate(0px, 0px) scale(0.9)',
-                  opacity: 0.70,
+                  opacity: 0.7,
                   bgcolor: 'var(--c1)',
                 },
               },
@@ -237,7 +239,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
               '@keyframes floatOrb2': {
                 '0%': {
                   transform: 'translate(0px, 0px) scale(1.15)',
-                  opacity: 0.40,
+                  opacity: 0.4,
                   bgcolor: 'var(--c2)',
                 },
                 '30%': {
@@ -247,12 +249,12 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
                 },
                 '65%': {
                   transform: 'translate(70px, -60px) scale(1.40)',
-                  opacity: 0.30,
+                  opacity: 0.3,
                   bgcolor: 'var(--c5)',
                 },
                 '100%': {
                   transform: 'translate(0px, 0px) scale(1.15)',
-                  opacity: 0.40,
+                  opacity: 0.4,
                   bgcolor: 'var(--c2)',
                 },
               },
@@ -285,7 +287,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
                 },
                 '75%': {
                   transform: 'translate(-95px, -45px) scale(1.25)',
-                  opacity: 0.70,
+                  opacity: 0.7,
                   bgcolor: 'var(--c1)',
                 },
                 '100%': {
@@ -313,7 +315,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
               '@keyframes floatOrb4': {
                 '0%': {
                   transform: 'translate(0px, 0px) scale(0.70)',
-                  opacity: 0.30,
+                  opacity: 0.3,
                   bgcolor: 'var(--c4)',
                 },
                 '35%': {
@@ -323,12 +325,12 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
                 },
                 '70%': {
                   transform: 'translate(95px, 50px) scale(0.85)',
-                  opacity: 0.40,
+                  opacity: 0.4,
                   bgcolor: 'var(--c2)',
                 },
                 '100%': {
                   transform: 'translate(0px, 0px) scale(0.70)',
-                  opacity: 0.30,
+                  opacity: 0.3,
                   bgcolor: 'var(--c4)',
                 },
               },
@@ -351,7 +353,7 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
               '@keyframes floatOrb5': {
                 '0%': {
                   transform: 'translate(0px, 0px) scale(1.10)',
-                  opacity: 0.60,
+                  opacity: 0.6,
                   bgcolor: 'var(--c5)',
                 },
                 '45%': {
@@ -361,12 +363,12 @@ export default function AmbientBackground({ ambientImage, darkMode }) {
                 },
                 '80%': {
                   transform: 'translate(-75px, 60px) scale(1.35)',
-                  opacity: 0.70,
+                  opacity: 0.7,
                   bgcolor: 'var(--c4)',
                 },
                 '100%': {
                   transform: 'translate(0px, 0px) scale(1.10)',
-                  opacity: 0.60,
+                  opacity: 0.6,
                   bgcolor: 'var(--c5)',
                 },
               },

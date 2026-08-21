@@ -9,12 +9,7 @@ import {
   Button,
 } from '@mui/material'
 
-export default function DeleteTrackDialog({
-  open,
-  onClose,
-  trackName,
-  onConfirmDelete,
-}) {
+export default function DeleteTrackDialog({ open, onClose, trackName, onConfirmDelete }) {
   return (
     <Dialog
       open={open}
@@ -43,8 +38,9 @@ export default function DeleteTrackDialog({
         Delete Track?
       </DialogTitle>
       <DialogContent sx={{ textAlign: 'center' }}>
-        <Typography variant="body1">
-          Are you sure you want to delete track <strong>&quot;{trackName}&quot;</strong>? This action cannot be undone.
+        <Typography variant='body1'>
+          Are you sure you want to delete track <strong>&quot;{trackName}&quot;</strong>? This
+          action cannot be undone.
         </Typography>
       </DialogContent>
       <DialogActions
@@ -55,16 +51,12 @@ export default function DeleteTrackDialog({
           gap: 1.5,
         }}
       >
-        <Button
-          variant="outlined"
-          onClick={onClose}
-          sx={{ borderRadius: 2 }}
-        >
+        <Button variant='outlined' onClick={onClose} sx={{ borderRadius: 2 }}>
           Cancel
         </Button>
         <Button
-          variant="contained"
-          color="error"
+          variant='contained'
+          color='error'
           onClick={onConfirmDelete}
           sx={{ borderRadius: 2 }}
         >

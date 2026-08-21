@@ -9,12 +9,7 @@ import {
   Button,
 } from '@mui/material'
 
-export default function DeleteProjectDialog({
-  open,
-  onClose,
-  projectName,
-  onConfirmDelete,
-}) {
+export default function DeleteProjectDialog({ open, onClose, projectName, onConfirmDelete }) {
   return (
     <Dialog
       open={open}
@@ -43,8 +38,9 @@ export default function DeleteProjectDialog({
         Delete Project?
       </DialogTitle>
       <DialogContent sx={{ textAlign: 'center' }}>
-        <Typography variant="body1">
-          Are you sure you want to delete <strong>{projectName || 'this project'}</strong> from your discography? This action cannot be undone.
+        <Typography variant='body1'>
+          Are you sure you want to delete <strong>{projectName || 'this project'}</strong> from your
+          discography? This action cannot be undone.
         </Typography>
       </DialogContent>
       <DialogActions
@@ -55,16 +51,12 @@ export default function DeleteProjectDialog({
           gap: 1.5,
         }}
       >
-        <Button
-          variant="outlined"
-          onClick={onClose}
-          sx={{ borderRadius: 2 }}
-        >
+        <Button variant='outlined' onClick={onClose} sx={{ borderRadius: 2 }}>
           Cancel
         </Button>
         <Button
-          variant="contained"
-          color="error"
+          variant='contained'
+          color='error'
           onClick={onConfirmDelete}
           sx={{ borderRadius: 2 }}
         >

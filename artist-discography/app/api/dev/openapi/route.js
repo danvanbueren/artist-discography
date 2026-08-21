@@ -16,7 +16,7 @@ export async function GET(request) {
   } catch (err) {
     return NextResponse.json(
       { error: `Failed to generate OpenAPI spec: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

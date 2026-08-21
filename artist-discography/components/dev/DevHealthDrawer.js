@@ -22,7 +22,7 @@ export default function DevHealthDrawer({ health, open, onClose }) {
 
   return (
     <Drawer
-      anchor="right"
+      anchor='right'
       open={Boolean(open)}
       onClose={onClose}
       slotProps={{
@@ -36,11 +36,11 @@ export default function DevHealthDrawer({ health, open, onClose }) {
       }}
     >
       <Stack spacing={2}>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+        <Stack direction='row' sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant='h6' sx={{ fontWeight: 700 }}>
             Dev Data Health Report
           </Typography>
-          <IconButton onClick={onClose} size="small" aria-label="Close Health Report">
+          <IconButton onClick={onClose} size='small' aria-label='Close Health Report'>
             <CloseRoundedIcon />
           </IconButton>
         </Stack>
@@ -49,20 +49,26 @@ export default function DevHealthDrawer({ health, open, onClose }) {
         <Alert severity={health.isHealthy ? 'success' : 'info'} icon={<InfoOutlinedIcon />}>
           <AlertTitle>JSON File Status</AlertTitle>
           {health.createdNewFile
-            ? 'New scaffold created at data/artist-data.json'
+            ? 'New scaffold created at data/config.json'
             : health.isHealthy
-            ? 'Data file is completely healthy.'
-            : 'Structural adjustments detected.'}
+              ? 'Data file is completely healthy.'
+              : 'Structural adjustments detected.'}
         </Alert>
 
         {issues.length > 0 && (
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+            <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1 }}>
               Issues / Repairs Log ({issues.length}):
             </Typography>
-            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+            <Box component='ul' sx={{ pl: 2, m: 0 }}>
               {issues.map((issue, idx) => (
-                <Typography key={idx} component="li" variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                <Typography
+                  key={idx}
+                  component='li'
+                  variant='body2'
+                  color='text.secondary'
+                  sx={{ mb: 0.5 }}
+                >
                   {issue}
                 </Typography>
               ))}

@@ -14,14 +14,35 @@ const MEDIA_MIME_TYPES = {
   '.avif': 'image/avif',
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'Range, Content-Type, Accept-Encoding, Cache-Control, If-None-Match',
+  'Access-Control-Expose-Headers': 'Content-Length, ETag, Last-Modified, X-Media-Cache',
+}
+
 export const dynamic = 'force-dynamic'
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      ...CORS_HEADERS,
+      'Access-Control-Max-Age': '86400',
+    },
+  })
+}
 
 export async function GET(request, { params }) {
   try {
     const resolvedParams = await params
     const pathSegments = resolvedParams?.path ?? []
     if (!pathSegments || pathSegments.length === 0) {
-      return new NextResponse('Media path not specified', { status: 400 })
+      return new NextResponse('Media path not specified', {
+        status: 400,
+        headers: CORS_HEADERS,
+      })
     }
 
     const dataDir = path.join(process.cwd(), 'data')
@@ -33,23 +54,42 @@ export async function GET(request, { params }) {
     const fallbackDataPath = path.resolve(path.join(dataDir, requestedPath))
 
     let targetFilePath = null
-    if (fallbackDataPath.startsWith(dataDir) && fs.existsSync(fallbackDataPath) && fs.statSync(/*turbopackIgnore: true*/ fallbackDataPath).isFile()) {
+    if (
+      fallbackDataPath.startsWith(dataDir) &&
+      fs.existsSync(fallbackDataPath) &&
+      fs.statSync(/*turbopackIgnore: true*/ fallbackDataPath).isFile()
+    ) {
       targetFilePath = fallbackDataPath
-    } else if (fullProjectsPath.startsWith(dataDir) && fs.existsSync(fullProjectsPath) && fs.statSync(/*turbopackIgnore: true*/ fullProjectsPath).isFile()) {
+    } else if (
+      fullProjectsPath.startsWith(dataDir) &&
+      fs.existsSync(fullProjectsPath) &&
+      fs.statSync(/*turbopackIgnore: true*/ fullProjectsPath).isFile()
+    ) {
       targetFilePath = fullProjectsPath
-    } else if (fullCoversPath.startsWith(dataDir) && fs.existsSync(fullCoversPath) && fs.statSync(/*turbopackIgnore: true*/ fullCoversPath).isFile()) {
+    } else if (
+      fullCoversPath.startsWith(dataDir) &&
+      fs.existsSync(fullCoversPath) &&
+      fs.statSync(/*turbopackIgnore: true*/ fullCoversPath).isFile()
+    ) {
       targetFilePath = fullCoversPath
     }
 
     if (!targetFilePath) {
-      return new NextResponse('Media file not found', { status: 404 })
+      return new NextResponse('Media file not found', {
+        status: 404,
+        headers: CORS_HEADERS,
+      })
     }
 
     const stat = fs.statSync(/*turbopackIgnore: true*/ targetFilePath)
     const { searchParams } = new URL(request.url)
     const width = searchParams.get('w')
     const quality = searchParams.get('q')
-    const format = searchParams.get('fmt') || (searchParams.has('w') || searchParams.has('q') || searchParams.has('blur') ? 'webp' : 'original')
+    const format =
+      searchParams.get('fmt') ||
+      (searchParams.has('w') || searchParams.has('q') || searchParams.has('blur')
+        ? 'webp'
+        : 'original')
     const blur = searchParams.get('blur')
 
     // Compute strong ETag based on source stat and transformation parameters
@@ -62,6 +102,7 @@ export async function GET(request, { params }) {
       return new NextResponse(null, {
         status: 304,
         headers: {
+          ...CORS_HEADERS,
           ETag: etag,
           'Cache-Control': cacheControl,
           'Last-Modified': new Date(stat.mtimeMs).toUTCString(),
@@ -84,6 +125,7 @@ export async function GET(request, { params }) {
       return new NextResponse(optimized.buffer, {
         status: 200,
         headers: {
+          ...CORS_HEADERS,
           'Content-Type': optimized.mimeType,
           'Content-Length': optimized.buffer.length.toString(),
           ETag: etag,
@@ -101,6 +143,7 @@ export async function GET(request, { params }) {
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
+        ...CORS_HEADERS,
         'Content-Type': mimeType,
         'Content-Length': stat.size.toString(),
         ETag: etag,
@@ -110,6 +153,9 @@ export async function GET(request, { params }) {
     })
   } catch (err) {
     console.error('Error reading media file:', err)
-    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 })
+    return new NextResponse('Internal Server Error', {
+      status: 500,
+      headers: CORS_HEADERS,
+    })
   }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, memo } from 'react'
+import { useState, useCallback, useEffect, memo } from 'react'
 import {
   Box,
   Paper,
@@ -76,12 +76,18 @@ function generateCurlCommand(route, state = {}, adminPassword = '') {
   }
 }
 
-function DevApiExplorerInner() {
+function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState('ALL')
   const [expandedId, setExpandedId] = useState(false)
-  const [adminPassword, setAdminPassword] = useState('admin')
+  const [adminPassword, setAdminPassword] = useState(() => initialAdminPassword || 'admin')
   const [requestState, setRequestState] = useState({})
+
+  useEffect(() => {
+    if (initialAdminPassword) {
+      setAdminPassword(initialAdminPassword)
+    }
+  }, [initialAdminPassword])
 
   const handleAccordionChange = (id) => (_, isExpanded) => {
     setExpandedId(isExpanded ? id : false)
@@ -154,7 +160,7 @@ function DevApiExplorerInner() {
       setTimeout(() => {
         updateEndpointState(id, (prev) => ({ ...prev, copiedCurl: false }))
       }, 2000)
-    } catch (e) { }
+    } catch (e) {}
   }
 
   const handleExecuteRequest = async (route, id) => {
@@ -302,21 +308,22 @@ function DevApiExplorerInner() {
       >
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-            <CodeIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+            <CodeIcon color='primary' />
+            <Typography variant='h6' sx={{ fontWeight: 800 }}>
               Interactive API Explorer &amp; Console
             </Typography>
           </Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Interactive endpoint testing, parameter builder, live request execution, and OpenAPI specification
+          <Typography variant='caption' sx={{ color: 'text.secondary' }}>
+            Interactive endpoint testing, parameter builder, live request execution, and OpenAPI
+            specification
           </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
           <Button
-            variant="contained"
-            color="primary"
-            size="small"
+            variant='contained'
+            color='primary'
+            size='small'
             startIcon={<DownloadIcon />}
             onClick={handleDownloadOpenApi}
             sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
@@ -324,12 +331,12 @@ function DevApiExplorerInner() {
             Download OpenAPI Spec
           </Button>
           <Button
-            variant="outlined"
-            size="small"
+            variant='outlined'
+            size='small'
             startIcon={<LaunchIcon />}
-            href="/api/dev/openapi"
-            target="_blank"
-            rel="noopener noreferrer"
+            href='/api/dev/openapi'
+            target='_blank'
+            rel='noopener noreferrer'
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
             Raw JSON Spec
@@ -351,8 +358,8 @@ function DevApiExplorerInner() {
           <Grid size={{ xs: 12, md: 5 }}>
             <TextField
               fullWidth
-              size="small"
-              placeholder="Search endpoints by path, summary, or method..."
+              size='small'
+              placeholder='Search endpoints by path, summary, or method...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               slotProps={{
@@ -361,8 +368,8 @@ function DevApiExplorerInner() {
                 },
                 input: {
                   startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
+                    <InputAdornment position='start'>
+                      <SearchIcon fontSize='small' />
                     </InputAdornment>
                   ),
                 },
@@ -373,11 +380,11 @@ function DevApiExplorerInner() {
           <Grid size={{ xs: 12, md: 4 }}>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Chip
-                label="All Routes"
+                label='All Routes'
                 clickable
                 color={selectedTag === 'ALL' ? 'primary' : 'default'}
                 variant={selectedTag === 'ALL' ? 'filled' : 'outlined'}
-                size="small"
+                size='small'
                 onClick={() => setSelectedTag('ALL')}
                 sx={{ fontWeight: 600 }}
               />
@@ -388,7 +395,7 @@ function DevApiExplorerInner() {
                   clickable
                   color={selectedTag === tag?.name ? 'primary' : 'default'}
                   variant={selectedTag === tag?.name ? 'filled' : 'outlined'}
-                  size="small"
+                  size='small'
                   onClick={() => setSelectedTag(tag?.name || 'ALL')}
                   sx={{ fontWeight: 600 }}
                 />
@@ -399,16 +406,16 @@ function DevApiExplorerInner() {
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField
               fullWidth
-              size="small"
-              label="Global Admin Password Header"
-              type="password"
+              size='small'
+              label='Global Admin Password Header'
+              type='password'
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               slotProps={{
                 input: {
                   startAdornment: (
-                    <InputAdornment position="start">
-                      <LockIcon fontSize="small" color="action" />
+                    <InputAdornment position='start'>
+                      <LockIcon fontSize='small' color='action' />
                     </InputAdornment>
                   ),
                 },
@@ -420,7 +427,7 @@ function DevApiExplorerInner() {
 
       {/* Endpoints Accordion List */}
       {filteredRoutes.length === 0 ? (
-        <Alert severity="info" sx={{ borderRadius: 2 }}>
+        <Alert severity='info' sx={{ borderRadius: 2 }}>
           No API endpoints found matching search query &quot;{searchQuery}&quot;.
         </Alert>
       ) : (

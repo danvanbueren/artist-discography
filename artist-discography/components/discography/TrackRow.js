@@ -158,26 +158,27 @@ export default function TrackRow({
         py: 1.5,
         px: { xs: 1.5, sm: 2 },
         borderRadius: 2,
-        cursor: (isTouch && track?.hasAudio) || onSelectTrackRow || onSelectTrack ? 'pointer' : 'default',
+        cursor:
+          (isTouch && track?.hasAudio) || onSelectTrackRow || onSelectTrack ? 'pointer' : 'default',
         bgcolor: isHighlighted
           ? 'rgba(144, 202, 249, 0.14)'
           : isPlayingThisTrack
-          ? 'rgba(144, 202, 249, 0.08)'
-          : hovered
-          ? 'action.hover'
-          : 'transparent',
+            ? 'rgba(144, 202, 249, 0.08)'
+            : hovered
+              ? 'action.hover'
+              : 'transparent',
         borderLeft: isHighlighted ? '3px solid' : '3px solid transparent',
         borderColor: isHighlighted ? 'primary.main' : 'transparent',
         transition: 'background-color 0.2s ease, border-color 0.2s ease',
       }}
     >
       {/* Col 1: Track Number / Play Indicator & Queue Button */}
-      <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center' }}>
+      <Stack direction='row' spacing={0.25} sx={{ alignItems: 'center' }}>
         <Box sx={{ width: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {track?.hasAudio && isActivelyPlaying ? (
             <IconButton
-              size="small"
-              color="primary"
+              size='small'
+              color='primary'
               onClick={(e) => {
                 e.stopPropagation()
                 if (isTouch) {
@@ -201,8 +202,8 @@ export default function TrackRow({
             </IconButton>
           ) : track?.hasAudio && (hovered || isPlayingThisTrack || isTouch) ? (
             <IconButton
-              size="small"
-              color={isPlayingThisTrack ? "primary" : "default"}
+              size='small'
+              color={isPlayingThisTrack ? 'primary' : 'default'}
               onClick={(e) => {
                 e.stopPropagation()
                 if (isTouch) {
@@ -226,7 +227,7 @@ export default function TrackRow({
             </IconButton>
           ) : (
             <Typography
-              variant="body2"
+              variant='body2'
               sx={{
                 fontWeight: isHighlighted ? 700 : 500,
                 color: isHighlighted ? 'primary.main' : 'text.secondary',
@@ -242,7 +243,7 @@ export default function TrackRow({
         {/* Add to Queue Button (Only rendered if track has audio AND audio player is active) */}
         {track?.hasAudio && isPlayerActive && (
           <IconButton
-            size="small"
+            size='small'
             onClick={(e) => {
               e.stopPropagation()
               if (onAddToQueue) onAddToQueue(track, project)
@@ -272,21 +273,22 @@ export default function TrackRow({
         sx={{
           minWidth: 0,
           px: 1,
-          cursor: (onSelectTrackTitle || onSelectTrack) ? 'pointer' : 'default',
+          cursor: onSelectTrackTitle || onSelectTrack ? 'pointer' : 'default',
           width: 'fit-content',
           maxWidth: '100%',
           borderRadius: 1,
-          '&:hover': (onSelectTrackTitle || onSelectTrack)
-            ? {
-                opacity: 0.9,
-              }
-            : {},
+          '&:hover':
+            onSelectTrackTitle || onSelectTrack
+              ? {
+                  opacity: 0.9,
+                }
+              : {},
         }}
       >
         <SubduedText
           value={name}
-          placeholder="Untitled Track"
-          variant="body1"
+          placeholder='Untitled Track'
+          variant='body1'
           sx={{
             fontWeight: isHighlighted ? 700 : 600,
             fontSize: { xs: '0.95rem', sm: '1rem' },
@@ -299,8 +301,8 @@ export default function TrackRow({
 
         <SubduedText
           value={artist}
-          placeholder="Artist"
-          variant="caption"
+          placeholder='Artist'
+          variant='caption'
           sx={{
             fontSize: '0.825rem',
             color: 'text.secondary',
@@ -312,14 +314,14 @@ export default function TrackRow({
       </Stack>
 
       {/* Col 3: Actions & Streaming Link */}
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+      <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center' }}>
         <IconButton
           component={resolvedLink ? 'a' : 'button'}
           href={resolvedLink?.url || undefined}
           target={resolvedLink ? '_blank' : undefined}
           rel={resolvedLink ? 'noopener noreferrer' : undefined}
           disabled={!resolvedLink}
-          size="small"
+          size='small'
           onClick={(e) => e.stopPropagation()}
           sx={{
             p: 0.85,
@@ -329,7 +331,8 @@ export default function TrackRow({
             borderColor: resolvedLink ? 'rgba(255,255,255,0.12)' : 'transparent',
             bgcolor: 'transparent',
             opacity: resolvedLink ? (hovered ? 1 : 0.8) : 0.3,
-            transition: 'transform 0.18s ease, opacity 0.18s ease, background-color 0.18s ease, border-color 0.18s ease',
+            transition:
+              'transform 0.18s ease, opacity 0.18s ease, background-color 0.18s ease, border-color 0.18s ease',
             '&:hover': resolvedLink
               ? {
                   transform: 'scale(1.08)',
@@ -340,15 +343,15 @@ export default function TrackRow({
               : {},
           }}
         >
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+          <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center' }}>
             {resolvedLink?.icon && (
               <Box
-                component="img"
+                component='img'
                 src={resolvedLink.icon}
                 alt={resolvedLink.key}
                 draggable={false}
-                loading="eager"
-                decoding="async"
+                loading='eager'
+                decoding='async'
                 sx={{ width: 18, height: 18, objectFit: 'contain', borderRadius: 1 }}
               />
             )}
@@ -358,7 +361,7 @@ export default function TrackRow({
 
         {/* Share Track Link Button */}
         <IconButton
-          size="small"
+          size='small'
           onClick={(e) => {
             e.stopPropagation()
             const pSlug = slugify(project?.name || '')
@@ -383,7 +386,11 @@ export default function TrackRow({
             },
           }}
         >
-          {copied ? <CheckRoundedIcon sx={{ fontSize: 20 }} /> : <ShareRoundedIcon sx={{ fontSize: 19 }} />}
+          {copied ? (
+            <CheckRoundedIcon sx={{ fontSize: 20 }} />
+          ) : (
+            <ShareRoundedIcon sx={{ fontSize: 19 }} />
+          )}
         </IconButton>
       </Stack>
     </Box>

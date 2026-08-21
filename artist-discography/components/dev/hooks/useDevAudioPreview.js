@@ -4,13 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 
 export function useDevAudioPreview() {
   const [playingAudioUrl, setPlayingAudioUrl] = useState(null)
-  const [audioObj, setAudioObj] = useState(null)
-
-  const playingAudioUrlRef = useRef(playingAudioUrl)
-  playingAudioUrlRef.current = playingAudioUrl
-
-  const audioObjRef = useRef(audioObj)
-  audioObjRef.current = audioObj
+  const audioObjRef = useRef(null)
 
   const cleanupAudio = useCallback((audio) => {
     if (!audio) return
@@ -21,42 +15,74 @@ export function useDevAudioPreview() {
     } catch {}
   }, [])
 
+  const stopAudio = useCallback(() => {
+    if (audioObjRef.current) {
+      cleanupAudio(audioObjRef.current)
+      audioObjRef.current = null
+    }
+    setPlayingAudioUrl(null)
+  }, [cleanupAudio])
+
+  const handleSeekRelative = useCallback((offsetSeconds) => {
+    const audio = audioObjRef.current
+    if (!audio || typeof audio.currentTime !== 'number') return
+    try {
+      const maxTime = audio.duration && !Number.isNaN(audio.duration) ? audio.duration : Infinity
+      const nextTime = Math.max(0, Math.min(maxTime, audio.currentTime + offsetSeconds))
+      audio.currentTime = nextTime
+    } catch {}
+  }, [])
+
   // Clean up audio playback on unmount
   useEffect(() => {
     return () => {
       if (audioObjRef.current) {
         cleanupAudio(audioObjRef.current)
+        audioObjRef.current = null
       }
     }
   }, [cleanupAudio])
 
-  const handleToggleAudio = useCallback((url) => {
-    if (!url) return
+  const handleToggleAudio = useCallback(
+    (url) => {
+      if (!url) return
 
-    if (playingAudioUrlRef.current === url) {
-      if (audioObjRef.current) {
-        cleanupAudio(audioObjRef.current)
+      if (playingAudioUrl === url) {
+        stopAudio()
+      } else {
+        if (audioObjRef.current) {
+          cleanupAudio(audioObjRef.current)
+          audioObjRef.current = null
+        }
+        const newAudio = new Audio()
+        newAudio.preload = 'none'
+        newAudio.src = url
+        newAudio.play().catch(() => {
+          cleanupAudio(newAudio)
+          audioObjRef.current = null
+          setPlayingAudioUrl(null)
+        })
+        newAudio.onended = () => {
+          cleanupAudio(newAudio)
+          audioObjRef.current = null
+          setPlayingAudioUrl(null)
+        }
+        newAudio.onerror = () => {
+          cleanupAudio(newAudio)
+          audioObjRef.current = null
+          setPlayingAudioUrl(null)
+        }
+        audioObjRef.current = newAudio
+        setPlayingAudioUrl(url)
       }
-      setPlayingAudioUrl(null)
-      setAudioObj(null)
-    } else {
-      if (audioObjRef.current) {
-        cleanupAudio(audioObjRef.current)
-      }
-      const newAudio = new Audio(url)
-      newAudio.play().catch(() => { })
-      newAudio.onended = () => {
-        cleanupAudio(newAudio)
-        setPlayingAudioUrl(null)
-        setAudioObj(null)
-      }
-      setAudioObj(newAudio)
-      setPlayingAudioUrl(url)
-    }
-  }, [cleanupAudio])
+    },
+    [cleanupAudio, stopAudio, playingAudioUrl],
+  )
 
   return {
     playingAudioUrl,
     handleToggleAudio,
+    handleSeekRelative,
+    stopAudio,
   }
 }

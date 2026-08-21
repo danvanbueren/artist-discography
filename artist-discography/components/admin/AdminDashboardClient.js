@@ -1,11 +1,16 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import {
   Box,
   Container,
   Paper,
   Grid,
+  Stack,
+  Alert,
+  Divider,
+  CircularProgress,
+  Typography,
 } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
@@ -16,6 +21,8 @@ import { useAutoSave } from './hooks/useAutoSave'
 import { useArtistProfile } from './hooks/useArtistProfile'
 import { useProjectsManager } from './hooks/useProjectsManager'
 import { useMediaJobs } from './hooks/useMediaJobs'
+import { useDevAudioPreview } from '../dev/hooks/useDevAudioPreview'
+import { useDevDummySeeder } from '../dev/hooks/useDevDummySeeder'
 
 import AdminAccessDisabled from './auth/AdminAccessDisabled'
 import AdminLoginView from './auth/AdminLoginView'
@@ -24,6 +31,10 @@ import ArtistProfileTab from './profile/ArtistProfileTab'
 import ProjectSidebarList from './projects/ProjectSidebarList'
 import ProjectCreateForm from './projects/ProjectCreateForm'
 import ProjectEditForm from './projects/ProjectEditForm'
+import DevDiscographyAuditView from '../dev/DevDiscographyAuditView'
+import DevApiExplorer from '../dev/DevApiExplorer'
+import DevOverviewTab from '../dev/overview/DevOverviewTab'
+import RawJsonInspectorTab from '../dev/raw/RawJsonInspectorTab'
 import DeleteProjectDialog from './dialogs/DeleteProjectDialog'
 import DeleteTrackDialog from './dialogs/DeleteTrackDialog'
 import CopyTrackDialog from './dialogs/CopyTrackDialog'
@@ -34,7 +45,7 @@ export default function AdminDashboardClient({
   defaultArtistName = 'Artist',
   initialData = {},
 }) {
-  // Tabs: 0 = Artist Profile, 1 = Manage Projects
+  // Tabs: 0 = Settings, 1 = Projects, 2 = Audit, 3 = Utilities, 4 = API
   const [activeTab, setActiveTab] = useState(() => {
     const existingName = initialData?.artist?.name
     return Boolean(existingName && existingName.trim()) ? 1 : 0
@@ -57,7 +68,8 @@ export default function AdminDashboardClient({
     initialData,
     defaultArtistName,
     autoSave.setErrorMessage,
-    autoSave.setStatusMessage
+    autoSave.setStatusMessage,
+    auth.updateSessionPassword,
   )
 
   // 6. Projects & releases manager hook
@@ -72,17 +84,103 @@ export default function AdminDashboardClient({
     setStatusMessage: autoSave.setStatusMessage,
   })
 
+  // 7. Dev Audio Preview Hook
+  const audioPreview = useDevAudioPreview()
+
+  // 8. Dev Dummy Seeder Hook
+  const seeder = useDevDummySeeder((newData) => {
+    if (newData?.projects) {
+      projects.setProjectsList(newData.projects)
+    }
+    if (newData?.artist) {
+      profile.setArtistData(newData.artist)
+      profile.setArtistNameInput(newData.artist.name || defaultArtistName)
+      profile.setArtistBioInput(newData.artist.bio || '')
+      profile.setArtistPlatforms(newData.artist.links?.platforms || {})
+      profile.setArtistSocials(newData.artist.links?.socials || {})
+    }
+  }, auth.password)
+
+  // 9. Computed Metrics & Stats for Health Overview
+  const totalTracksCount = useMemo(() => {
+    return (projects.projectsList || []).reduce((acc, p) => acc + (p?.tracks?.length || 0), 0)
+  }, [projects.projectsList])
+
+  const tracksWithAudioCount = useMemo(() => {
+    return (projects.projectsList || []).reduce((acc, p) => {
+      return acc + (p?.tracks?.filter((t) => Boolean(t.hasAudio || t.audioUrl))?.length || 0)
+    }, 0)
+  }, [projects.projectsList])
+
+  const projectsWithCoverCount = useMemo(() => {
+    return (projects.projectsList || []).filter((p) => Boolean(p.hasCover || p.cover)).length
+  }, [projects.projectsList])
+
+  const totalPlatformLinksCount = useMemo(() => {
+    const platforms = profile.artistPlatforms || {}
+    const socials = profile.artistSocials || {}
+    const countP = Object.values(platforms).filter(
+      (v) => typeof v === 'string' && v.trim() !== '',
+    ).length
+    const countS = Object.values(socials).filter(
+      (v) => typeof v === 'string' && v.trim() !== '',
+    ).length
+    return countP + countS
+  }, [profile.artistPlatforms, profile.artistSocials])
+
+  const coverCoveragePct =
+    projects.projectsList.length > 0
+      ? Math.round((projectsWithCoverCount / projects.projectsList.length) * 100)
+      : 0
+
+  const audioCoveragePct =
+    totalTracksCount > 0 ? Math.round((tracksWithAudioCount / totalTracksCount) * 100) : 0
+
+  const currentJsonSnapshot = useMemo(
+    () => ({
+      adminAccess: profile.adminAccessInput,
+      adminPassword: profile.adminPasswordInput,
+      privateAccessCode: profile.privateAccessCodeInput,
+      siteUrl: profile.siteUrlInput,
+      artist: {
+        name: profile.artistNameInput,
+        bio: profile.artistBioInput,
+        links: {
+          platforms: profile.artistPlatforms,
+          socials: profile.artistSocials,
+        },
+      },
+      projects: projects.projectsList,
+    }),
+    [
+      profile.adminAccessInput,
+      profile.adminPasswordInput,
+      profile.privateAccessCodeInput,
+      profile.siteUrlInput,
+      profile.artistNameInput,
+      profile.artistBioInput,
+      profile.artistPlatforms,
+      profile.artistSocials,
+      projects.projectsList,
+    ],
+  )
+
   // Keep bridge ref in sync with projects.editName
-  editNameBridgeRef.current = projects.editName
+  useEffect(() => {
+    editNameBridgeRef.current = projects.editName
+  }, [projects.editName])
 
   // Auto-save save callbacks binding authentication password
   const handleSaveArtist = useCallback(() => {
     return profile.executeSaveArtist(auth.password)
   }, [profile, auth.password])
 
-  const handleUploadLogo = useCallback((file) => {
-    return profile.uploadLogoFile(file, auth.password)
-  }, [profile, auth.password])
+  const handleUploadLogo = useCallback(
+    (file) => {
+      return profile.uploadLogoFile(file, auth.password)
+    },
+    [profile, auth.password],
+  )
 
   const handleResetLogo = useCallback(() => {
     return profile.resetLogo(auth.password)
@@ -92,27 +190,140 @@ export default function AdminDashboardClient({
     return projects.executeCreateProject(auth.password)
   }, [projects, auth.password])
 
-  const handleSaveUpdateProject = useCallback((overrideTracks = null) => {
-    return projects.executeUpdateProject(auth.password, overrideTracks)
-  }, [projects, auth.password])
+  const handleSaveUpdateProject = useCallback(
+    (overrideTracks = null) => {
+      return projects.executeUpdateProject(auth.password, overrideTracks)
+    },
+    [projects, auth.password],
+  )
 
   // Track modification trigger helpers for create and edit forms
-  const handleTriggerCreateSave = useCallback((fieldKey) => {
-    autoSave.markFieldDirty(fieldKey, handleSaveCreateProject)
-  }, [autoSave, handleSaveCreateProject])
+  const handleTriggerCreateSave = useCallback(
+    (fieldKey) => {
+      autoSave.markFieldDirty(fieldKey, handleSaveCreateProject)
+    },
+    [autoSave.markFieldDirty, handleSaveCreateProject],
+  )
 
-  const handleTriggerEditSave = useCallback((fieldKey, overrideTracks = null, delayMs = 1000) => {
-    autoSave.markFieldDirty(fieldKey, () => handleSaveUpdateProject(overrideTracks), delayMs)
-  }, [autoSave, handleSaveUpdateProject])
+  const handleTriggerEditSave = useCallback(
+    (fieldKey, overrideTracks = null, delayMs = 1000) => {
+      autoSave.markFieldDirty(fieldKey, () => handleSaveUpdateProject(overrideTracks), delayMs)
+    },
+    [autoSave.markFieldDirty, handleSaveUpdateProject],
+  )
+
+  // Stable track handlers for ProjectCreateForm
+  const handleUpdateCreateTrackName = useCallback(
+    (idx, val) => {
+      projects.handleUpdateCreateTrackName(idx, val, handleTriggerCreateSave)
+    },
+    [projects.handleUpdateCreateTrackName, handleTriggerCreateSave],
+  )
+
+  const handleUpdateCreateTrackArtist = useCallback(
+    (idx, val) => {
+      projects.handleUpdateCreateTrackArtist(idx, val, handleTriggerCreateSave)
+    },
+    [projects.handleUpdateCreateTrackArtist, handleTriggerCreateSave],
+  )
+
+  const handleUpdateCreateTrackLink = useCallback(
+    (idx, key, val) => {
+      projects.handleUpdateCreateTrackLink(idx, key, val, handleTriggerCreateSave)
+    },
+    [projects.handleUpdateCreateTrackLink, handleTriggerCreateSave],
+  )
+
+  const handleCreateTrackAudioUpload = useCallback(
+    (idx, file) => {
+      projects.handleCreateTrackAudioUpload(idx, file, handleTriggerCreateSave)
+    },
+    [projects.handleCreateTrackAudioUpload, handleTriggerCreateSave],
+  )
+
+  // Stable track handlers for ProjectEditForm
+  const handleUpdateEditTrackName = useCallback(
+    (idx, val) => {
+      projects.handleUpdateEditTrackName(idx, val, handleTriggerEditSave)
+    },
+    [projects.handleUpdateEditTrackName, handleTriggerEditSave],
+  )
+
+  const handleUpdateEditTrackArtist = useCallback(
+    (idx, val) => {
+      projects.handleUpdateEditTrackArtist(idx, val, handleTriggerEditSave)
+    },
+    [projects.handleUpdateEditTrackArtist, handleTriggerEditSave],
+  )
+
+  const handleUpdateEditTrackLink = useCallback(
+    (idx, key, val) => {
+      projects.handleUpdateEditTrackLink(idx, key, val, handleTriggerEditSave)
+    },
+    [projects.handleUpdateEditTrackLink, handleTriggerEditSave],
+  )
+
+  const handleEditTrackAudioUpload = useCallback(
+    (idx, file) => {
+      projects.handleEditTrackAudioUpload(idx, file, (k) => handleTriggerEditSave(k, null, 100))
+    },
+    [projects.handleEditTrackAudioUpload, handleTriggerEditSave],
+  )
+
+  const handleMoveEditTrackUp = useCallback(
+    (idx) => {
+      projects.handleMoveEditTrackUp(idx, (k, n) => handleTriggerEditSave(k, n, 100))
+    },
+    [projects.handleMoveEditTrackUp, handleTriggerEditSave],
+  )
+
+  const handleMoveEditTrackDown = useCallback(
+    (idx) => {
+      projects.handleMoveEditTrackDown(idx, (k, n) => handleTriggerEditSave(k, n, 100))
+    },
+    [projects.handleMoveEditTrackDown, handleTriggerEditSave],
+  )
+
+  // Teardown preview audio immediately whenever navigating away from the Audit tab
+  useEffect(() => {
+    if (activeTab !== 2 && audioPreview.playingAudioUrl) {
+      audioPreview.stopAudio()
+    }
+  }, [activeTab, audioPreview])
 
   // ----------------------------------------------------
-  // Early Returns: Access Disabled / Unauthenticated
+  // Early Returns: Access Disabled / Checking Auth / Unauthenticated
   // ----------------------------------------------------
   if (!adminAccess) {
     return (
       <ThemeProvider theme={adminTheme}>
         <CssBaseline />
         <AdminAccessDisabled />
+      </ThemeProvider>
+    )
+  }
+
+  if (auth.isCheckingAuth && initialData?.adminPassword !== '') {
+    return (
+      <ThemeProvider theme={adminTheme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: '100vh',
+            width: '100%',
+            bgcolor: 'background.default',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+          }}
+        >
+          <CircularProgress size={36} color='primary' />
+          <Typography variant='body2' sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            Verifying session…
+          </Typography>
+        </Box>
       </ThemeProvider>
     )
   }
@@ -153,7 +364,7 @@ export default function AdminDashboardClient({
         }}
       >
         <Container
-          maxWidth="xl"
+          maxWidth='xl'
           sx={{
             py: { xs: 2, md: 2.5 },
             height: '100%',
@@ -200,15 +411,15 @@ export default function AdminDashboardClient({
           >
             <Box
               sx={{
-                p: 2.5,
+                p: activeTab === 1 ? 2.5 : { xs: 2, sm: 3 },
                 flexGrow: 1,
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: 0,
-                overflow: 'hidden',
+                overflowY: activeTab === 1 ? 'hidden' : 'auto',
               }}
             >
-              {/* TAB 0: ARTIST PROFILE */}
+              {/* TAB 0: PROFILE & SETTINGS */}
               {activeTab === 0 && (
                 <ArtistProfileTab
                   artistNameInput={profile.artistNameInput}
@@ -223,9 +434,18 @@ export default function AdminDashboardClient({
                   artistSocials={profile.artistSocials}
                   setArtistSocials={profile.setArtistSocials}
                   artistSocialsRef={profile.artistSocialsRef}
+                  adminAccessInput={profile.adminAccessInput}
+                  setAdminAccessInput={profile.setAdminAccessInput}
+                  adminAccessInputRef={profile.adminAccessInputRef}
+                  adminPasswordInput={profile.adminPasswordInput}
+                  setAdminPasswordInput={profile.setAdminPasswordInput}
+                  adminPasswordInputRef={profile.adminPasswordInputRef}
                   privateAccessCodeInput={profile.privateAccessCodeInput}
                   setPrivateAccessCodeInput={profile.setPrivateAccessCodeInput}
                   privateAccessCodeInputRef={profile.privateAccessCodeInputRef}
+                  siteUrlInput={profile.siteUrlInput}
+                  setSiteUrlInput={profile.setSiteUrlInput}
+                  siteUrlInputRef={profile.siteUrlInputRef}
                   dirtyFields={autoSave.dirtyFields}
                   savedFields={autoSave.savedFields}
                   markFieldDirty={autoSave.markFieldDirty}
@@ -329,6 +549,7 @@ export default function AdminDashboardClient({
                           artistNameInput={profile.artistNameInput}
                           defaultArtistName={defaultArtistName}
                           isNewNameDuplicate={projects.isNewNameDuplicate}
+                          newNameValidationError={projects.newNameValidationError}
                           newDupTrackIndexes={projects.newDupTrackIndexes}
                           dirtyFields={autoSave.dirtyFields}
                           savedFields={autoSave.savedFields}
@@ -336,17 +557,19 @@ export default function AdminDashboardClient({
                           markFieldDirty={autoSave.markFieldDirty}
                           executeCreateProject={handleSaveCreateProject}
                           mediaJobs={mediaJobs}
-                          handleUpdateCreateTrackName={(idx, val) => projects.handleUpdateCreateTrackName(idx, val, handleTriggerCreateSave)}
-                          handleUpdateCreateTrackArtist={(idx, val) => projects.handleUpdateCreateTrackArtist(idx, val, handleTriggerCreateSave)}
-                          handleUpdateCreateTrackLink={(idx, key, val) => projects.handleUpdateCreateTrackLink(idx, key, val, handleTriggerCreateSave)}
-                          handleCreateTrackAudioUpload={(idx, file) => projects.handleCreateTrackAudioUpload(idx, file, handleTriggerCreateSave)}
+                          handleUpdateCreateTrackName={handleUpdateCreateTrackName}
+                          handleUpdateCreateTrackArtist={handleUpdateCreateTrackArtist}
+                          handleUpdateCreateTrackLink={handleUpdateCreateTrackLink}
+                          handleCreateTrackAudioUpload={handleCreateTrackAudioUpload}
                           handleCreateTrackAudioRemove={projects.handleCreateTrackAudioRemove}
                           handleMoveCreateTrackUp={projects.handleMoveCreateTrackUp}
                           handleMoveCreateTrackDown={projects.handleMoveCreateTrackDown}
                           handleDeleteCreateTrack={projects.handleDeleteCreateTrack}
                         />
-                      ) : projects.selectedProjIndex >= 0 && projects.selectedProjIndex < projects.projectsList.length ? (
+                      ) : projects.selectedProjIndex >= 0 &&
+                        projects.selectedProjIndex < projects.projectsList.length ? (
                         <ProjectEditForm
+                          isPending={projects.isPendingProjectSwitch}
                           editName={projects.editName}
                           setEditName={projects.setEditName}
                           editNameRef={projects.editNameRef}
@@ -377,6 +600,7 @@ export default function AdminDashboardClient({
                           artistNameInput={profile.artistNameInput}
                           defaultArtistName={defaultArtistName}
                           isEditNameDuplicate={projects.isEditNameDuplicate}
+                          editNameValidationError={projects.editNameValidationError}
                           editDupTrackIndexes={projects.editDupTrackIndexes}
                           dirtyFields={autoSave.dirtyFields}
                           savedFields={autoSave.savedFields}
@@ -385,13 +609,13 @@ export default function AdminDashboardClient({
                           executeUpdateProject={handleSaveUpdateProject}
                           setDeleteConfirmOpen={projects.setDeleteConfirmOpen}
                           mediaJobs={mediaJobs}
-                          handleUpdateEditTrackName={(idx, val) => projects.handleUpdateEditTrackName(idx, val, handleTriggerEditSave)}
-                          handleUpdateEditTrackArtist={(idx, val) => projects.handleUpdateEditTrackArtist(idx, val, handleTriggerEditSave)}
-                          handleUpdateEditTrackLink={(idx, key, val) => projects.handleUpdateEditTrackLink(idx, key, val, handleTriggerEditSave)}
-                          handleEditTrackAudioUpload={(idx, file) => projects.handleEditTrackAudioUpload(idx, file, (k) => handleTriggerEditSave(k, null, 100))}
+                          handleUpdateEditTrackName={handleUpdateEditTrackName}
+                          handleUpdateEditTrackArtist={handleUpdateEditTrackArtist}
+                          handleUpdateEditTrackLink={handleUpdateEditTrackLink}
+                          handleEditTrackAudioUpload={handleEditTrackAudioUpload}
                           handleEditTrackAudioRemove={projects.handleEditTrackAudioRemove}
-                          handleMoveEditTrackUp={(idx) => projects.handleMoveEditTrackUp(idx, (k, n) => handleTriggerEditSave(k, n, 100))}
-                          handleMoveEditTrackDown={(idx) => projects.handleMoveEditTrackDown(idx, (k, n) => handleTriggerEditSave(k, n, 100))}
+                          handleMoveEditTrackUp={handleMoveEditTrackUp}
+                          handleMoveEditTrackDown={handleMoveEditTrackDown}
                           handleDeleteEditTrack={projects.handleDeleteEditTrack}
                           handleCopyEditTrack={projects.handleCopyEditTrack}
                         />
@@ -400,6 +624,60 @@ export default function AdminDashboardClient({
                   </Grid>
                 </Grid>
               )}
+
+              {/* TAB 2: AUDIT */}
+              <Box sx={{ display: activeTab === 2 ? 'block' : 'none' }}>
+                <DevDiscographyAuditView
+                  projects={projects.projectsList}
+                  artistName={profile.artistNameInput}
+                  health={initialData?.health || {}}
+                  mounted={true}
+                  playingAudioUrl={audioPreview.playingAudioUrl}
+                  handleToggleAudio={audioPreview.handleToggleAudio}
+                  handleSeekRelative={audioPreview.handleSeekRelative}
+                />
+              </Box>
+
+              {/* TAB 3: UTILITIES */}
+              {activeTab === 3 && (
+                <Stack spacing={3}>
+                  {seeder.seedMessage && (
+                    <Alert
+                      severity='success'
+                      onClose={() => seeder.setSeedMessage('')}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      {seeder.seedMessage}
+                    </Alert>
+                  )}
+                  {seeder.seedError && (
+                    <Alert
+                      severity='error'
+                      onClose={() => seeder.setSeedError('')}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      {seeder.seedError}
+                    </Alert>
+                  )}
+                  <DevOverviewTab
+                    isArtistNameEmpty={!profile.artistNameInput || !profile.artistNameInput.trim()}
+                    health={initialData?.health || {}}
+                    projects={projects.projectsList}
+                    totalTracksCount={totalTracksCount}
+                    coverCoveragePct={coverCoveragePct}
+                    audioCoveragePct={audioCoveragePct}
+                    totalPlatformLinksCount={totalPlatformLinksCount}
+                    adminAccess={profile.adminAccessInput}
+                    isGeneratingDummy={seeder.isGeneratingDummy}
+                    handleGenerateDummyData={seeder.handleGenerateDummyData}
+                  />
+                  <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                  <RawJsonInspectorTab dataState={currentJsonSnapshot} />
+                </Stack>
+              )}
+
+              {/* TAB 4: API */}
+              {activeTab === 4 && <DevApiExplorer adminPassword={auth.password} />}
             </Box>
           </Paper>
 
@@ -416,7 +694,9 @@ export default function AdminDashboardClient({
             open={Boolean(projects.trackToDelete)}
             onClose={() => projects.setTrackToDelete(null)}
             trackName={projects.trackToDelete?.trackName}
-            onConfirmDelete={() => projects.confirmDeleteTrack((k, n) => handleTriggerEditSave(k, n, 100))}
+            onConfirmDelete={() =>
+              projects.confirmDeleteTrack((k, n) => handleTriggerEditSave(k, n, 100))
+            }
           />
 
           {/* Copy Track Dialog */}

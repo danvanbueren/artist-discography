@@ -1,12 +1,38 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+
+const emptySubscribe = () => () => {}
+
+function getClientStoredSession(isPasswordless) {
+  if (isPasswordless) return { isAuthenticated: true, password: '' }
+  if (typeof window === 'undefined') return { isAuthenticated: false, password: '' }
+  try {
+    const storedAuth = sessionStorage.getItem('admin_authenticated') === 'true'
+    const storedPass = sessionStorage.getItem('admin_password')
+    if (storedAuth && storedPass !== null) {
+      return { isAuthenticated: true, password: storedPass }
+    }
+  } catch {}
+  return { isAuthenticated: false, password: '' }
+}
 
 export function useAdminAuth(initialData = {}) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => initialData?.adminPassword === '')
-  const [password, setPassword] = useState('')
+  const isPasswordless = initialData?.adminPassword === ''
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  )
+
+  const [sessionAuth, setSessionAuth] = useState(null)
   const [authError, setAuthError] = useState('')
   const [isAuthLoading, setIsAuthLoading] = useState(false)
+
+  const activeSession = sessionAuth ?? getClientStoredSession(isPasswordless)
+  const isAuthenticated = isPasswordless || activeSession.isAuthenticated
+  const password = activeSession.password
+  const isCheckingAuth = !isMounted && !isPasswordless
 
   // Auto-dismiss transient auth error
   useEffect(() => {
@@ -17,24 +43,25 @@ export function useAdminAuth(initialData = {}) {
     return () => clearTimeout(timer)
   }, [authError])
 
-  // Check stored auth session or auto-authenticate if password is empty
-  useEffect(() => {
-    try {
-      if (initialData?.adminPassword === '') {
-        setIsAuthenticated(true)
-        setPassword('')
-        sessionStorage.setItem('admin_authenticated', 'true')
-        sessionStorage.setItem('admin_password', '')
-      } else {
-        const storedAuth = sessionStorage.getItem('admin_authenticated')
-        const storedPass = sessionStorage.getItem('admin_password')
-        if (storedAuth === 'true' && storedPass !== null) {
-          setIsAuthenticated(true)
-          setPassword(storedPass)
-        }
-      }
-    } catch (err) { }
-  }, [initialData])
+  const setPassword = useCallback(
+    (newPass) => {
+      setSessionAuth((prev) => ({
+        ...(prev ?? getClientStoredSession(isPasswordless)),
+        password: newPass,
+      }))
+    },
+    [isPasswordless],
+  )
+
+  const setIsAuthenticated = useCallback(
+    (authStatus) => {
+      setSessionAuth((prev) => ({
+        ...(prev ?? getClientStoredSession(isPasswordless)),
+        isAuthenticated: authStatus,
+      }))
+    },
+    [isPasswordless],
+  )
 
   // Authentication submit
   const handleLogin = async (e) => {
@@ -53,11 +80,11 @@ export function useAdminAuth(initialData = {}) {
       const data = await res.json().catch(() => ({}))
 
       if (res.ok && data.authenticated) {
-        setIsAuthenticated(true)
+        setSessionAuth({ isAuthenticated: true, password })
         try {
           sessionStorage.setItem('admin_authenticated', 'true')
           sessionStorage.setItem('admin_password', password)
-        } catch (e) { }
+        } catch (e) {}
       } else {
         setAuthError(data.error || 'Authentication failed')
       }
@@ -69,20 +96,34 @@ export function useAdminAuth(initialData = {}) {
   }
 
   const handleLogout = () => {
-    if (initialData?.adminPassword === '') return
-    setIsAuthenticated(false)
-    setPassword('')
+    if (isPasswordless) return
+    setSessionAuth({ isAuthenticated: false, password: '' })
     try {
       sessionStorage.removeItem('admin_authenticated')
       sessionStorage.removeItem('admin_password')
-    } catch (e) { }
+    } catch (e) {}
   }
+
+  const updateSessionPassword = useCallback(
+    (newPass) => {
+      setSessionAuth((prev) => ({
+        ...(prev ?? getClientStoredSession(isPasswordless)),
+        password: newPass,
+      }))
+      try {
+        sessionStorage.setItem('admin_password', newPass)
+      } catch (e) {}
+    },
+    [isPasswordless],
+  )
 
   return {
     isAuthenticated,
     setIsAuthenticated,
+    isCheckingAuth,
     password,
     setPassword,
+    updateSessionPassword,
     authError,
     setAuthError,
     isAuthLoading,

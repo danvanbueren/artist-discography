@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { loadArtistData } from '../../../../lib/artistData'
+import { loadConfigData } from '../../../../lib/artistData'
 
 export async function POST(request) {
   try {
     const body = await request.json()
     const { password } = body ?? {}
 
-    const dataResult = loadArtistData()
+    const dataResult = loadConfigData()
     const data = dataResult?.data ?? {}
 
     const adminAccess = Boolean(data?.adminAccess)
@@ -14,15 +14,15 @@ export async function POST(request) {
 
     if (!adminAccess) {
       return NextResponse.json(
-        { authenticated: false, error: 'Admin access is disabled in artist-data.json' },
-        { status: 403 }
+        { authenticated: false, error: 'Admin access is disabled in config.json' },
+        { status: 403 },
       )
     }
 
     if (password !== adminPassword) {
       return NextResponse.json(
         { authenticated: false, error: 'Incorrect password' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -30,7 +30,7 @@ export async function POST(request) {
   } catch (err) {
     return NextResponse.json(
       { authenticated: false, error: `Authentication failed: ${err.message}` },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

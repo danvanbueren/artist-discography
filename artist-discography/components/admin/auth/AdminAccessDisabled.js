@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  Box,
-  Container,
-  Paper,
-  Typography,
-  Alert,
-  Button,
-} from '@mui/material'
+import { Box, Container, Paper, Typography, Alert, Button } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import HomeIcon from '@mui/icons-material/Home'
 
@@ -26,7 +19,7 @@ export default function AdminAccessDisabled() {
         boxSizing: 'border-box',
       }}
     >
-      <Container maxWidth="md" sx={{ py: 8 }}>
+      <Container maxWidth='md' sx={{ py: 8 }}>
         <Paper
           elevation={4}
           sx={{
@@ -39,16 +32,17 @@ export default function AdminAccessDisabled() {
           }}
         >
           <LockIcon sx={{ fontSize: 56, color: 'error.main', mb: 2 }} />
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
+          <Typography variant='h4' component='h1' sx={{ fontWeight: 700, mb: 2 }}>
             Admin Access Disabled
           </Typography>
-          <Alert severity="warning" sx={{ mb: 4, textAlign: 'left' }}>
-            Access to the admin portal is currently disabled. To enable access, set <code>&quot;adminAccess&quot;: true</code> in <code>data/artist-data.json</code>.
+          <Alert severity='warning' sx={{ mb: 4, textAlign: 'left' }}>
+            Access to the admin portal is currently disabled. To enable access, set{' '}
+            <code>&quot;adminAccess&quot;: true</code> in <code>data/config.json</code>.
           </Alert>
           <Button
-            variant="contained"
+            variant='contained'
             startIcon={<HomeIcon />}
-            href="/"
+            href='/'
             sx={{ borderRadius: 2, px: 3, py: 1 }}
           >
             Return to Discography

@@ -35,7 +35,7 @@ import AudioQualityPill from './AudioQualityPill'
 const FullScreenSlideTransition = forwardRef(function FullScreenSlideTransition(props, ref) {
   return (
     <Slide
-      direction="up"
+      direction='up'
       ref={ref}
       {...props}
       timeout={{ enter: 460, exit: 225 }}
@@ -88,6 +88,7 @@ export default function FullScreenPlayerModal({
   isCasting = false,
   isCastAvailable = true,
   castError = false,
+  castType = 'remote',
   onTogglePip,
   onPromptCast,
   VolumeIconComponent,
@@ -149,9 +150,12 @@ export default function FullScreenPlayerModal({
     }
   }
 
-  const ambientCover = coverArt && typeof coverArt === 'string' && (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
-    ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=48&q=20&blur=8&fmt=webp`
-    : coverArt
+  const ambientCover =
+    coverArt &&
+    typeof coverArt === 'string' &&
+    (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
+      ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=48&q=20&blur=8&fmt=webp`
+      : coverArt
 
   return (
     <Dialog
@@ -257,7 +261,7 @@ export default function FullScreenPlayerModal({
               if (onClose) onClose()
               if (onClosePlayer) onClosePlayer()
             }}
-            size="small"
+            size='small'
             sx={{
               color: 'text.secondary',
               p: { xs: 0.75, sm: 1 },
@@ -280,14 +284,18 @@ export default function FullScreenPlayerModal({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              maxWidth: { xs: 'calc(100% - 130px)', sm: 'calc(100% - 190px)', md: 'calc(100% - 250px)' },
+              maxWidth: {
+                xs: 'calc(100% - 130px)',
+                sm: 'calc(100% - 190px)',
+                md: 'calc(100% - 250px)',
+              },
               zIndex: 1,
               pointerEvents: 'auto',
             }}
           >
             <Stack
-              component="button"
-              type="button"
+              component='button'
+              type='button'
               onClick={() => {
                 if (onClose) onClose()
                 if (onNavigateToCurrentTrack) onNavigateToCurrentTrack()
@@ -328,8 +336,8 @@ export default function FullScreenPlayerModal({
               }}
             >
               <Typography
-                className="top-project-title"
-                variant="subtitle2"
+                className='top-project-title'
+                variant='subtitle2'
                 sx={{
                   fontWeight: 700,
                   color: 'text.primary',
@@ -346,8 +354,8 @@ export default function FullScreenPlayerModal({
               </Typography>
 
               <Typography
-                className="top-project-artist"
-                variant="caption"
+                className='top-project-artist'
+                variant='caption'
                 sx={{
                   color: 'text.secondary',
                   fontWeight: 500,
@@ -367,7 +375,7 @@ export default function FullScreenPlayerModal({
 
           {/* Right: Cast, PiP & Down chevron collapse/minimize modal buttons */}
           <Stack
-            direction="row"
+            direction='row'
             spacing={{ xs: 0.5, sm: 1 }}
             sx={{
               alignItems: 'center',
@@ -376,27 +384,25 @@ export default function FullScreenPlayerModal({
               zIndex: 2,
             }}
           >
-            {/* Cast / Remote Playback */}
+            {/* Cast / Remote Playback / AirPlay */}
             {onPromptCast && (
               <Tooltip
                 title={
                   castError
                     ? 'Casting Unavailable / Failed'
                     : isCasting
-                    ? 'Connected to Cast Device'
-                    : 'Cast to Device'
+                      ? 'Connected to Cast Device'
+                      : castType === 'airplay'
+                        ? 'AirPlay to Speaker / TV'
+                        : 'Cast to Device'
                 }
                 arrow
               >
                 <IconButton
                   onClick={onPromptCast}
-                  size="small"
+                  size='small'
                   sx={{
-                    color: castError
-                      ? 'error.main'
-                      : isCasting
-                      ? 'primary.main'
-                      : 'text.secondary',
+                    color: castError ? 'error.main' : isCasting ? 'primary.main' : 'text.secondary',
                     p: { xs: 0.75, sm: 1 },
                     animation: castError ? 'castShakeError 0.45s ease-in-out' : 'none',
                     '@keyframes castShakeError': {
@@ -408,14 +414,10 @@ export default function FullScreenPlayerModal({
                     filter: castError ? 'drop-shadow(0 0 6px rgba(244, 67, 54, 0.75))' : 'none',
                     transition: 'color 0.2s ease, filter 0.2s ease',
                     '&:hover': {
-                      color: castError
-                        ? 'error.dark'
-                        : isCasting
-                        ? 'primary.main'
-                        : 'text.primary',
+                      color: castError ? 'error.dark' : isCasting ? 'primary.main' : 'text.primary',
                     },
                   }}
-                  aria-label="Cast audio"
+                  aria-label={castType === 'airplay' ? 'AirPlay audio' : 'Cast audio'}
                 >
                   {castError ? (
                     <WarningAmberRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
@@ -430,10 +432,13 @@ export default function FullScreenPlayerModal({
 
             {/* Picture in Picture (Desktop viewports only) */}
             {onTogglePip && !isTouch && (
-              <Tooltip title={isPipActive ? 'Exit Picture in Picture' : 'Picture in Picture Mini-Player'} arrow>
+              <Tooltip
+                title={isPipActive ? 'Exit Picture in Picture' : 'Picture in Picture Mini-Player'}
+                arrow
+              >
                 <IconButton
                   onClick={onTogglePip}
-                  size="small"
+                  size='small'
                   sx={{
                     display: { xs: 'none', md: 'inline-flex' },
                     color: isPipActive ? 'primary.main' : 'text.secondary',
@@ -442,7 +447,7 @@ export default function FullScreenPlayerModal({
                       color: isPipActive ? 'primary.main' : 'text.primary',
                     },
                   }}
-                  aria-label="Picture in Picture"
+                  aria-label='Picture in Picture'
                 >
                   <PictureInPictureAltRoundedIcon sx={{ fontSize: { xs: 20, sm: 24 } }} />
                 </IconButton>
@@ -452,7 +457,7 @@ export default function FullScreenPlayerModal({
             {/* Down chevron collapse/minimize modal button */}
             <IconButton
               onClick={onClose}
-              size="small"
+              size='small'
               sx={{
                 color: 'text.primary',
                 p: { xs: 0.75, sm: 1 },
@@ -552,7 +557,7 @@ export default function FullScreenPlayerModal({
           >
             <Box sx={{ minWidth: 0, flexGrow: 1 }}>
               <Typography
-                variant="h5"
+                variant='h5'
                 sx={{
                   fontWeight: 800,
                   color: 'text.primary',
@@ -568,7 +573,7 @@ export default function FullScreenPlayerModal({
               </Typography>
 
               <Stack
-                direction="row"
+                direction='row'
                 spacing={1.25}
                 sx={{
                   alignItems: 'center',
@@ -576,7 +581,7 @@ export default function FullScreenPlayerModal({
                 }}
               >
                 <Typography
-                  variant="subtitle1"
+                  variant='subtitle1'
                   sx={{
                     color: 'text.secondary',
                     overflow: 'hidden',
@@ -592,7 +597,7 @@ export default function FullScreenPlayerModal({
 
                 <AudioQualityPill
                   label={audioQualityLabel}
-                  size="large"
+                  size='large'
                   isStuttering={isStuttering}
                   onClick={onOpenQualityModal}
                 />
@@ -601,7 +606,7 @@ export default function FullScreenPlayerModal({
 
             {/* Right Action Icons (Share & Queue) */}
             <Stack
-              direction="row"
+              direction='row'
               spacing={{ xs: 1.5, sm: 2 }}
               sx={{
                 alignItems: 'center',
@@ -611,7 +616,7 @@ export default function FullScreenPlayerModal({
               {/* Share track */}
               <IconButton
                 onClick={onShareTrack}
-                size="medium"
+                size='medium'
                 sx={{
                   color: copiedShare ? 'success.main' : 'text.secondary',
                   p: { xs: 1.25, sm: 1.5 },
@@ -629,7 +634,7 @@ export default function FullScreenPlayerModal({
 
               {/* Queue button */}
               <IconButton
-                size="medium"
+                size='medium'
                 onClick={onOpenQueue}
                 sx={{
                   color: 'text.secondary',
@@ -641,7 +646,7 @@ export default function FullScreenPlayerModal({
               >
                 <Badge
                   badgeContent={manualQueue.length > 0 ? manualQueue.length : null}
-                  color="primary"
+                  color='primary'
                   sx={{
                     '& .MuiBadge-badge': {
                       fontSize: '0.75rem',
@@ -659,7 +664,7 @@ export default function FullScreenPlayerModal({
               {/* Contained Volume when mouse detected */}
               {!isTouch && (
                 <Stack
-                  direction="row"
+                  direction='row'
                   spacing={0.75}
                   sx={{
                     alignItems: 'center',
@@ -667,7 +672,7 @@ export default function FullScreenPlayerModal({
                   }}
                 >
                   <IconButton
-                    size="small"
+                    size='small'
                     onClick={onToggleMute}
                     sx={{
                       color: isMuted ? 'error.main' : 'text.secondary',
@@ -692,7 +697,7 @@ export default function FullScreenPlayerModal({
                     }}
                   >
                     <Slider
-                      size="small"
+                      size='small'
                       value={effectiveVolume}
                       min={0}
                       max={100}
@@ -730,7 +735,7 @@ export default function FullScreenPlayerModal({
             {/* Shuffle */}
             <IconButton
               onClick={onToggleShuffle}
-              size="medium"
+              size='medium'
               sx={{
                 color: isShuffle ? 'primary.main' : 'text.secondary',
                 p: { xs: 1.25, sm: 1.5 },
@@ -748,7 +753,7 @@ export default function FullScreenPlayerModal({
             {/* Skip Prev */}
             <IconButton
               onClick={handleSkipBackClick}
-              size="medium"
+              size='medium'
               sx={{
                 color: 'text.primary',
                 p: { xs: 1.25, sm: 1.5 },
@@ -761,7 +766,7 @@ export default function FullScreenPlayerModal({
 
             {/* Play / Pause */}
             <IconButton
-              color="primary"
+              color='primary'
               onClick={onDirectTogglePlay}
               sx={{
                 bgcolor: 'primary.main',
@@ -785,7 +790,7 @@ export default function FullScreenPlayerModal({
             {/* Skip Next */}
             <IconButton
               onClick={handleSkipForwardClick}
-              size="medium"
+              size='medium'
               sx={{
                 color: 'text.primary',
                 p: { xs: 1.25, sm: 1.5 },
@@ -799,7 +804,7 @@ export default function FullScreenPlayerModal({
             {/* Repeat */}
             <IconButton
               onClick={onCycleRepeat}
-              size="medium"
+              size='medium'
               sx={{
                 color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
                 p: { xs: 1.25, sm: 1.5 },
@@ -821,7 +826,7 @@ export default function FullScreenPlayerModal({
 
           {/* Scrubber Slider & Timers */}
           <Stack
-            direction="row"
+            direction='row'
             spacing={{ xs: 1.5, sm: 2 }}
             sx={{
               alignItems: 'center',
@@ -831,7 +836,7 @@ export default function FullScreenPlayerModal({
             }}
           >
             <Typography
-              variant="caption"
+              variant='caption'
               sx={{
                 color: 'text.secondary',
                 fontFamily: 'monospace',
@@ -872,7 +877,7 @@ export default function FullScreenPlayerModal({
             />
 
             <Typography
-              variant="caption"
+              variant='caption'
               sx={{
                 color: 'text.secondary',
                 fontFamily: 'monospace',
@@ -910,7 +915,7 @@ export default function FullScreenPlayerModal({
             }}
           >
             <Typography
-              variant="h5"
+              variant='h5'
               sx={{
                 fontWeight: 800,
                 color: 'text.primary',
@@ -926,7 +931,7 @@ export default function FullScreenPlayerModal({
             </Typography>
 
             <Stack
-              direction="row"
+              direction='row'
               spacing={1}
               sx={{
                 alignItems: 'center',
@@ -934,7 +939,7 @@ export default function FullScreenPlayerModal({
               }}
             >
               <Typography
-                variant="subtitle1"
+                variant='subtitle1'
                 sx={{
                   color: 'text.secondary',
                   overflow: 'hidden',
@@ -950,7 +955,7 @@ export default function FullScreenPlayerModal({
 
               <AudioQualityPill
                 label={audioQualityLabel}
-                size="large"
+                size='large'
                 isStuttering={isStuttering}
                 onClick={onOpenQualityModal}
               />
@@ -973,7 +978,7 @@ export default function FullScreenPlayerModal({
           >
             {/* Playback Controls Row */}
             <Stack
-              direction="row"
+              direction='row'
               spacing={{ lg: 2.5, xl: 3 }}
               sx={{
                 alignItems: 'center',
@@ -985,7 +990,7 @@ export default function FullScreenPlayerModal({
               {/* Shuffle */}
               <IconButton
                 onClick={onToggleShuffle}
-                size="small"
+                size='small'
                 sx={{
                   color: isShuffle ? 'primary.main' : 'text.secondary',
                   p: 0.8,
@@ -1003,7 +1008,7 @@ export default function FullScreenPlayerModal({
               {/* Skip Prev */}
               <IconButton
                 onClick={handleSkipBackClick}
-                size="small"
+                size='small'
                 sx={{
                   color: 'text.primary',
                   p: 0.8,
@@ -1016,7 +1021,7 @@ export default function FullScreenPlayerModal({
 
               {/* Play / Pause */}
               <IconButton
-                color="primary"
+                color='primary'
                 onClick={onDirectTogglePlay}
                 sx={{
                   bgcolor: 'primary.main',
@@ -1040,7 +1045,7 @@ export default function FullScreenPlayerModal({
               {/* Skip Next */}
               <IconButton
                 onClick={handleSkipForwardClick}
-                size="small"
+                size='small'
                 sx={{
                   color: 'text.primary',
                   p: 0.8,
@@ -1054,7 +1059,7 @@ export default function FullScreenPlayerModal({
               {/* Repeat */}
               <IconButton
                 onClick={onCycleRepeat}
-                size="small"
+                size='small'
                 sx={{
                   color: repeatMode !== 'off' ? 'primary.main' : 'text.secondary',
                   p: 0.8,
@@ -1076,7 +1081,7 @@ export default function FullScreenPlayerModal({
 
             {/* Scrubber Slider & Timers */}
             <Stack
-              direction="row"
+              direction='row'
               spacing={1.25}
               sx={{
                 alignItems: 'center',
@@ -1084,7 +1089,7 @@ export default function FullScreenPlayerModal({
               }}
             >
               <Typography
-                variant="caption"
+                variant='caption'
                 sx={{
                   color: 'text.secondary',
                   fontFamily: 'monospace',
@@ -1125,7 +1130,7 @@ export default function FullScreenPlayerModal({
               />
 
               <Typography
-                variant="caption"
+                variant='caption'
                 sx={{
                   color: 'text.secondary',
                   fontFamily: 'monospace',
@@ -1141,7 +1146,7 @@ export default function FullScreenPlayerModal({
 
           {/* Right Column: Share, Queue, Volume */}
           <Stack
-            direction="row"
+            direction='row'
             spacing={1}
             sx={{
               alignItems: 'center',
@@ -1152,7 +1157,7 @@ export default function FullScreenPlayerModal({
             {/* Share track button */}
             <IconButton
               onClick={onShareTrack}
-              size="small"
+              size='small'
               sx={{
                 color: copiedShare ? 'success.main' : 'text.secondary',
                 p: 1,
@@ -1170,7 +1175,7 @@ export default function FullScreenPlayerModal({
 
             {/* Queue button */}
             <IconButton
-              size="small"
+              size='small'
               onClick={onOpenQueue}
               sx={{
                 color: 'text.secondary',
@@ -1182,7 +1187,7 @@ export default function FullScreenPlayerModal({
             >
               <Badge
                 badgeContent={manualQueue.length > 0 ? manualQueue.length : null}
-                color="primary"
+                color='primary'
               >
                 <QueueMusicRoundedIcon sx={{ fontSize: 22 }} />
               </Badge>
@@ -1191,7 +1196,7 @@ export default function FullScreenPlayerModal({
             {/* Contained Volume when mouse detected */}
             {!isTouch && (
               <Stack
-                direction="row"
+                direction='row'
                 spacing={0.75}
                 sx={{
                   alignItems: 'center',
@@ -1199,7 +1204,7 @@ export default function FullScreenPlayerModal({
                 }}
               >
                 <IconButton
-                  size="small"
+                  size='small'
                   onClick={onToggleMute}
                   sx={{
                     color: isMuted ? 'error.main' : 'text.secondary',
@@ -1224,7 +1229,7 @@ export default function FullScreenPlayerModal({
                   }}
                 >
                   <Slider
-                    size="small"
+                    size='small'
                     value={effectiveVolume}
                     min={0}
                     max={100}

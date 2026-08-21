@@ -23,11 +23,7 @@ export default function TrackList({
   if (!tracks || tracks.length === 0) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <SubduedText
-          value=""
-          placeholder="No tracks listed for this project."
-          variant="body2"
-        />
+        <SubduedText value='' placeholder='No tracks listed for this project.' variant='body2' />
       </Box>
     )
   }

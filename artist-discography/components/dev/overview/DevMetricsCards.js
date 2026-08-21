@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  Grid,
-  Paper,
-  Box,
-  Typography,
-  LinearProgress,
-  Chip,
-} from '@mui/material'
+import { Grid, Paper, Box, Typography, LinearProgress, Chip } from '@mui/material'
 import AlbumIcon from '@mui/icons-material/Album'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
 import LinkIcon from '@mui/icons-material/Link'
@@ -20,7 +13,6 @@ export default function DevMetricsCards({
   audioCoveragePct = 0,
   totalPlatformLinksCount = 0,
   adminAccess = false,
-  devAccess = false,
 }) {
   return (
     <Grid container spacing={2.5}>
@@ -39,22 +31,24 @@ export default function DevMetricsCards({
             justifyContent: 'space-between',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+          >
+            <Typography variant='subtitle2' sx={{ color: 'text.secondary', fontWeight: 600 }}>
               Total Projects
             </Typography>
-            <AlbumIcon color="primary" />
+            <AlbumIcon color='primary' />
           </Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
+          <Typography variant='h4' sx={{ fontWeight: 800, my: 0.5 }}>
             {projects.length}
           </Typography>
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
             <LinearProgress
-              variant="determinate"
+              variant='determinate'
               value={coverCoveragePct}
               sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
             />
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
               {coverCoveragePct}% covers
             </Typography>
           </Box>
@@ -76,23 +70,25 @@ export default function DevMetricsCards({
             justifyContent: 'space-between',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+          >
+            <Typography variant='subtitle2' sx={{ color: 'text.secondary', fontWeight: 600 }}>
               Total Tracks
             </Typography>
-            <MusicNoteIcon color="secondary" />
+            <MusicNoteIcon color='secondary' />
           </Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
+          <Typography variant='h4' sx={{ fontWeight: 800, my: 0.5 }}>
             {totalTracksCount}
           </Typography>
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
             <LinearProgress
-              variant="determinate"
-              color="secondary"
+              variant='determinate'
+              color='secondary'
               value={audioCoveragePct}
               sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
             />
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
               {audioCoveragePct}% audio
             </Typography>
           </Box>
@@ -114,16 +110,18 @@ export default function DevMetricsCards({
             justifyContent: 'space-between',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+          >
+            <Typography variant='subtitle2' sx={{ color: 'text.secondary', fontWeight: 600 }}>
               Streaming Links
             </Typography>
-            <LinkIcon color="info" />
+            <LinkIcon color='info' />
           </Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, my: 0.5 }}>
+          <Typography variant='h4' sx={{ fontWeight: 800, my: 0.5 }}>
             {totalPlatformLinksCount}
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+          <Typography variant='caption' sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
             Active platform URLs configured
           </Typography>
         </Paper>
@@ -144,8 +142,10 @@ export default function DevMetricsCards({
             justifyContent: 'space-between',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+          >
+            <Typography variant='subtitle2' sx={{ color: 'text.secondary', fontWeight: 600 }}>
               System Access
             </Typography>
             <SecurityIcon color={adminAccess ? 'warning' : 'success'} />
@@ -154,18 +154,12 @@ export default function DevMetricsCards({
             <Chip
               label={`Admin: ${adminAccess ? 'OPEN' : 'LOCKED'}`}
               color={adminAccess ? 'error' : 'default'}
-              size="small"
-              sx={{ fontWeight: 700 }}
-            />
-            <Chip
-              label={`Dev: ${Boolean(devAccess) ? 'OPEN' : 'LOCKED'}`}
-              color={Boolean(devAccess) ? 'warning' : 'default'}
-              size="small"
+              size='small'
               sx={{ fontWeight: 700 }}
             />
           </Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-            Access status in artist-data.json
+          <Typography variant='caption' sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+            Access status in config.json
           </Typography>
         </Paper>
       </Grid>

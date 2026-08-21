@@ -35,7 +35,10 @@ export function getSavedAudioQuality() {
   if (typeof window === 'undefined') return null
   try {
     const saved = getCookie('audio_quality_tier') || localStorage.getItem('audio_quality_tier')
-    if (saved && (saved === '128k' || saved === '192k' || saved === '320k' || saved === 'lossless')) {
+    if (
+      saved &&
+      (saved === '128k' || saved === '192k' || saved === '320k' || saved === 'lossless')
+    ) {
       return saved === '192k' ? '320k' : saved
     }
   } catch {}

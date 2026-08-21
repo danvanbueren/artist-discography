@@ -33,10 +33,10 @@ Comprehensive setup, deployment, and troubleshooting guide for self-hosting **Ar
    └── Container 2: `artist-discography` (Next.js 16 Standalone + FFmpeg + Sharp)
              │
              ▼ (Bind-Mount Volume)
-      [ Host `./artist-discography/data` ]
-      ├── `artist-data.json` (Artist metadata, track links, system flags)
-      ├── `projects/` (Covers, audio masters)
-      └── `cache/` (Optimized WebP images & transcoded audio variants)
+       [ Host `./artist-discography/data` ]
+       ├── `config.json` (Artist metadata, track links, system flags)
+       ├── `projects/` (Per-project project.json, covers, audio masters)
+       └── `cache/` (Optimized WebP images & transcoded audio variants)
 ```
 
 ### Key Security Benefits:
@@ -154,7 +154,7 @@ docker compose logs -f
 In `docker-compose.yml`, the host directory `./artist-discography/data` is mounted to `/app/data` inside the container:
 - Files on your host machine are owned by your login account (UID `1000`).
 - The application inside the Docker container runs securely under the unprivileged `nextjs` service user (UID `1001`).
-- If the host folder permissions are restricted, the container cannot write to `/app/data/cache/images`, `/app/data/cache/audio`, or update `artist-data.json`.
+- If the host folder permissions are restricted, the container cannot write to `/app/data/cache/images`, `/app/data/cache/audio`, or update `config.json` and `project.json` files.
 
 ### The Fix
 Run this command from the repository root on your server:
@@ -176,20 +176,20 @@ docker compose restart app
 
 ## 6. Production Hardening & Admin Protection
 
-Check [`artist-discography/data/artist-data.json`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/data/artist-data.json) before public launch:
+Check [`artist-discography/data/config.json`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/data/config.json) before public launch:
 
 ```json
 {
   "adminAccess": true,
   "adminPassword": "YourStrongSecretPassphraseHere",
-  "devAccess": false,
+  "privateAccessCode": "YourSecretAccessCodeHere",
   "artist": { ... }
 }
 ```
 
-1. **`devAccess: false`**: Disables the developer test suite and OpenAPI explorer route (`/_sys/_dev`).
-2. **`adminPassword`**: Change from `"admin123"` to a strong passphrase.
-3. **`adminAccess: false`**: Set to `false` if you manage discography data exclusively via disk files.
+1. **`adminPassword`**: Change from `"admin123"` to a strong passphrase. All administration and developer tools are protected behind this credential.
+2. **`adminAccess: false`**: Set to `false` if you manage discography data exclusively via disk files.
+3. **`privateAccessCode`**: Set a unique code for unlocking private/uncleared tracks.
 
 ---
 
