@@ -12,8 +12,15 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
   onExecuteRequest,
   onCopyCurl,
 }) {
-  const pathParamsList = Array.isArray(route?.pathParams) ? route.pathParams : []
+  const pathParamsList = Array.isArray(route?.pathParams)
+    ? route.pathParams
+    : Array.isArray(route?.urlParams)
+      ? route.urlParams
+      : []
+  const queryParamsList = Array.isArray(route?.queryParams) ? route.queryParams : []
   const defaultParamsList = Array.isArray(route?.defaultParams) ? route.defaultParams : []
+  const hasRequestBody =
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(route?.method) && route?.requestFormat !== 'none'
 
   return (
     <>
@@ -25,10 +32,10 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
           </Typography>
           <Grid container spacing={2}>
             {pathParamsList.map((p) => {
-              if (!p || !p.name) return null
-              const paramName = p.name
+              const paramName = p?.name || p?.key
+              if (!paramName) return null
               const paramDesc = p.description || ''
-              const paramExample = p.example || ''
+              const paramExample = p.example || p.value || ''
               const currentVal = state?.pathParams?.[paramName] ?? paramExample
 
               return (
@@ -53,8 +60,44 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
         </Box>
       )}
 
+      {/* Query Parameters Section */}
+      {queryParamsList.length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
+            Query Parameters
+          </Typography>
+          <Grid container spacing={2}>
+            {queryParamsList.map((qp) => {
+              const qpName = qp?.name || qp?.key
+              if (!qpName) return null
+              const qpDesc = qp.description || ''
+              const qpExample = qp.example ?? qp.value ?? ''
+              const currentVal = state?.queryParams?.[qpName] ?? qpExample
+
+              return (
+                <Grid key={qpName} size={{ xs: 12, sm: 6 }}>
+                  <TextField
+                    fullWidth
+                    size='small'
+                    label={`?${qpName} (${qpDesc})`}
+                    value={currentVal}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      onUpdateState?.((prev) => ({
+                        ...prev,
+                        queryParams: { ...(prev?.queryParams ?? {}), [qpName]: val },
+                      }))
+                    }}
+                  />
+                </Grid>
+              )
+            })}
+          </Grid>
+        </Box>
+      )}
+
       {/* Request Body Builder Section */}
-      {route?.method === 'POST' && (
+      {hasRequestBody && (
         <Box sx={{ mb: 3 }}>
           <Typography variant='subtitle2' sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>
             Request Body ({route.requestFormat === 'json' ? 'JSON' : 'Multipart Form-Data'})
@@ -87,8 +130,8 @@ const ApiRequestPanel = memo(function ApiRequestPanel({
           {route.requestFormat === 'formdata' && (
             <Grid container spacing={2}>
               {defaultParamsList.map((p) => {
-                if (!p || !p.key) return null
-                const pKey = p.key
+                const pKey = p?.key || p?.name
+                if (!pKey) return null
                 const pDesc = p.description || ''
                 const currentFormVal = state?.formDataParams?.[pKey] ?? ''
 

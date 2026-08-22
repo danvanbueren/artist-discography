@@ -138,14 +138,16 @@ export function useDiscographyPlayback({
         setIsPlaying(true)
         setManualQueue([])
 
-        // Populate autoplay queue with subsequent tracks
+        // Populate autoplay queue with subsequent playable tracks
         const clickedIndex = displayedDiscographyTracks.findIndex(
           (item) => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase(),
         )
 
         let remaining = []
         if (clickedIndex !== -1) {
-          remaining = displayedDiscographyTracks.slice(clickedIndex + 1)
+          remaining = displayedDiscographyTracks
+            .slice(clickedIndex + 1)
+            .filter((item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl))
         }
 
         if (isShuffle) {
@@ -172,62 +174,86 @@ export function useDiscographyPlayback({
   }, [])
 
   const handleSkipNext = useCallback(() => {
+    // 1. Check manual queue for next playable item
     if (manualQueue.length > 0) {
-      const nextItem = manualQueue[0]
-      const updatedQueue = manualQueue.slice(1)
-      setManualQueue(updatedQueue)
+      const validIndex = manualQueue.findIndex(
+        (item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl),
+      )
+      if (validIndex !== -1) {
+        const nextItem = manualQueue[validIndex]
+        const updatedQueue = manualQueue.slice(validIndex + 1)
+        setManualQueue(updatedQueue)
 
-      const nextTrack = nextItem.track || nextItem
-      const parentProj = nextItem.project || selectedProject
-      const projName =
-        typeof parentProj === 'string' ? parentProj : parentProj?.name || nextTrack.project || ''
-      const projCover =
-        nextTrack.cover ||
-        (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
-        nextTrack.projectCover ||
-        ''
+        const nextTrack = nextItem.track || nextItem
+        const parentProj = nextItem.project || selectedProject
+        const projName =
+          typeof parentProj === 'string' ? parentProj : parentProj?.name || nextTrack.project || ''
+        const projCover =
+          nextTrack.cover ||
+          (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
+          nextTrack.projectCover ||
+          ''
 
-      setPlayingTrack({
-        ...nextTrack,
-        project: projName,
-        projectCover: projCover,
-        artist:
-          nextTrack.artist ||
-          (typeof parentProj === 'object' ? parentProj?.artist : '') ||
-          artist.name ||
-          '',
-      })
-      setIsPlaying(true)
-    } else if (autoplayTracks.length > 0) {
-      const nextItem = autoplayTracks[0]
-      const updatedAutoplay = autoplayTracks.slice(1)
-      setAutoplayTracks(updatedAutoplay)
+        setPlayingTrack({
+          ...nextTrack,
+          project: projName,
+          projectCover: projCover,
+          artist:
+            nextTrack.artist ||
+            (typeof parentProj === 'object' ? parentProj?.artist : '') ||
+            artist.name ||
+            '',
+        })
+        setIsPlaying(true)
+        return
+      }
+      setManualQueue([])
+    }
 
-      const nextTrack = nextItem.track || nextItem
-      const parentProj = nextItem.project || selectedProject
-      const projName =
-        typeof parentProj === 'string' ? parentProj : parentProj?.name || nextTrack.project || ''
-      const projCover =
-        nextTrack.cover ||
-        (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
-        nextTrack.projectCover ||
-        ''
+    // 2. Check autoplay tracks for next playable item
+    if (autoplayTracks.length > 0) {
+      const validIndex = autoplayTracks.findIndex(
+        (item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl),
+      )
+      if (validIndex !== -1) {
+        const nextItem = autoplayTracks[validIndex]
+        const updatedAutoplay = autoplayTracks.slice(validIndex + 1)
+        setAutoplayTracks(updatedAutoplay)
 
-      setPlayingTrack({
-        ...nextTrack,
-        project: projName,
-        projectCover: projCover,
-        artist:
-          nextTrack.artist ||
-          (typeof parentProj === 'object' ? parentProj?.artist : '') ||
-          artist.name ||
-          '',
-      })
-      setIsPlaying(true)
-    } else if (repeatMode === 'all') {
-      if (displayedDiscographyTracks.length > 0) {
-        const firstItem = displayedDiscographyTracks[0]
-        const firstTrack = firstItem.track
+        const nextTrack = nextItem.track || nextItem
+        const parentProj = nextItem.project || selectedProject
+        const projName =
+          typeof parentProj === 'string' ? parentProj : parentProj?.name || nextTrack.project || ''
+        const projCover =
+          nextTrack.cover ||
+          (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
+          nextTrack.projectCover ||
+          ''
+
+        setPlayingTrack({
+          ...nextTrack,
+          project: projName,
+          projectCover: projCover,
+          artist:
+            nextTrack.artist ||
+            (typeof parentProj === 'object' ? parentProj?.artist : '') ||
+            artist.name ||
+            '',
+        })
+        setIsPlaying(true)
+        return
+      }
+      setAutoplayTracks([])
+    }
+
+    // 3. Loop if repeat all is active
+    if (repeatMode === 'all') {
+      const playableTracks = displayedDiscographyTracks.filter(
+        (item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl),
+      )
+      if (playableTracks.length > 0) {
+        const firstItem = playableTracks[0]
+        const firstTrack = firstItem.track || firstItem
         const parentProj = firstItem.project
         setPlayingTrack({
           ...firstTrack,
@@ -236,11 +262,12 @@ export function useDiscographyPlayback({
           artist: firstTrack.artist || parentProj?.artist || artist.name || '',
         })
         setIsPlaying(true)
-        setAutoplayTracks(displayedDiscographyTracks.slice(1))
+        setAutoplayTracks(playableTracks.slice(1))
+        return
       }
-    } else {
-      setIsPlaying(false)
     }
+
+    setIsPlaying(false)
   }, [
     manualQueue,
     autoplayTracks,
@@ -359,6 +386,15 @@ export function useDiscographyPlayback({
     (item, index, isQueueType) => {
       if (!item) return
       const track = item.track || item
+      if (!track?.hasAudio || !track?.audioUrl) {
+        if (showToast) showToast(`No audio available for "${track?.name || 'this track'}"`)
+        if (isQueueType) {
+          setManualQueue((prev) => prev.filter((_, i) => i !== index))
+        } else {
+          setAutoplayTracks((prev) => prev.filter((_, i) => i !== index))
+        }
+        return
+      }
       const parentProj = item.project || selectedProject
       const projName =
         typeof parentProj === 'string' ? parentProj : parentProj?.name || track.project || ''
@@ -386,7 +422,7 @@ export function useDiscographyPlayback({
         setAutoplayTracks((prev) => prev.slice(index + 1))
       }
     },
-    [selectedProject, artist.name],
+    [selectedProject, artist.name, showToast],
   )
 
   const handleClosePlayer = useCallback(() => {

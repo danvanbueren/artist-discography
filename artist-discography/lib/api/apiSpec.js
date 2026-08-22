@@ -1,23 +1,34 @@
 import { ADMIN_ROUTES_SPEC } from './specs/adminRoutesSpec'
+import { AUTH_ROUTES_SPEC } from './specs/authRoutesSpec'
 import { MEDIA_ROUTES_SPEC } from './specs/mediaRoutesSpec'
 import { UTILITY_ROUTES_SPEC } from './specs/utilityRoutesSpec'
 
 export const API_TAGS = [
   {
     name: 'Admin Portal',
-    description: 'Endpoints for managing artist profile, projects, track copying, and file uploads',
+    description:
+      'Endpoints for managing artist profile, projects, track copying, logo assets, and background media jobs',
   },
   {
-    name: 'Dev Utilities',
-    description: 'Development tools, data seeding, and API specification exports',
+    name: 'Private Access & Auth',
+    description: 'Endpoints for verifying and unlocking gated discography releases',
   },
   {
     name: 'Media & Streaming',
-    description: 'Public endpoints for streaming audio tracks, album artwork, and logo assets',
+    description: 'Public endpoints for streaming audio tracks, album artwork, and branding marks',
+  },
+  {
+    name: 'Dev Utilities',
+    description: 'Developer tools and real-time OpenAPI specification exports',
   },
 ]
 
-export const API_ROUTES_SPEC = [...ADMIN_ROUTES_SPEC, ...MEDIA_ROUTES_SPEC, ...UTILITY_ROUTES_SPEC]
+export const API_ROUTES_SPEC = [
+  ...ADMIN_ROUTES_SPEC,
+  ...AUTH_ROUTES_SPEC,
+  ...MEDIA_ROUTES_SPEC,
+  ...UTILITY_ROUTES_SPEC,
+]
 
 /**
  * Generates an OpenAPI 3.0.3 compliant JSON specification from route definitions.
@@ -30,13 +41,19 @@ export function generateOpenApiSpec(baseUrl = 'http://localhost:3000') {
 
   API_ROUTES_SPEC.forEach((route) => {
     let openApiPath = route.path
-    if (route.urlParams) {
-      route.urlParams.forEach((param) => {
-        if (!openApiPath.includes(`{${param.key}}`)) {
-          openApiPath = `${openApiPath}/{${param.key}}`
-        }
-      })
-    }
+
+    const pathParams = Array.isArray(route.pathParams)
+      ? route.pathParams
+      : Array.isArray(route.urlParams)
+        ? route.urlParams
+        : []
+
+    pathParams.forEach((param) => {
+      const pName = param.name || param.key
+      if (pName && !openApiPath.includes(`{${pName}}`)) {
+        openApiPath = `${openApiPath}/{${pName}}`
+      }
+    })
 
     if (!pathsObj[openApiPath]) {
       pathsObj[openApiPath] = {}
@@ -48,6 +65,7 @@ export function generateOpenApiSpec(baseUrl = 'http://localhost:3000') {
       description: route.description,
       tags: [route.tag],
       operationId: route.id,
+      parameters: [],
       responses: {},
     }
 
@@ -55,25 +73,46 @@ export function generateOpenApiSpec(baseUrl = 'http://localhost:3000') {
       operation.security = [{ AdminAuth: [] }]
     }
 
-    if (route.urlParams && route.urlParams.length > 0) {
-      operation.parameters = route.urlParams.map((p) => ({
-        name: p.key,
-        in: 'path',
-        required: true,
-        description: p.description,
-        schema: {
-          type: 'string',
-          example: p.value,
-        },
-      }))
+    if (pathParams.length > 0) {
+      pathParams.forEach((p) => {
+        const pName = p.name || p.key
+        operation.parameters.push({
+          name: pName,
+          in: 'path',
+          required: true,
+          description: p.description || '',
+          schema: {
+            type: 'string',
+            example: p.example || p.value || '',
+          },
+        })
+      })
     }
 
-    if (route.method === 'POST' || route.method === 'PUT') {
-      if (route.requestFormat === 'json') {
+    if (Array.isArray(route.queryParams) && route.queryParams.length > 0) {
+      route.queryParams.forEach((qp) => {
+        const qpName = qp.name || qp.key
+        operation.parameters.push({
+          name: qpName,
+          in: 'query',
+          required: Boolean(qp.required),
+          description: qp.description || '',
+          schema: {
+            type: 'string',
+            example: qp.example || qp.value || '',
+          },
+        })
+      })
+    }
+
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(route.method.toUpperCase())) {
+      if (route.requestFormat === 'json' && route.defaultBody) {
         let parsedExample = {}
         try {
           parsedExample = JSON.parse(route.defaultBody || '{}')
-        } catch (e) {}
+        } catch {
+          parsedExample = {}
+        }
 
         operation.requestBody = {
           required: true,
@@ -84,17 +123,24 @@ export function generateOpenApiSpec(baseUrl = 'http://localhost:3000') {
             },
           },
         }
-      } else if (route.requestFormat === 'formdata') {
+      } else if (route.requestFormat === 'formdata' && Array.isArray(route.defaultParams)) {
         const properties = {}
-        if (route.defaultParams) {
-          route.defaultParams.forEach((p) => {
-            if (p.type === 'file') {
-              properties[p.key] = { type: 'string', format: 'binary', description: p.description }
-            } else {
-              properties[p.key] = { type: 'string', example: p.value, description: p.description }
+        route.defaultParams.forEach((p) => {
+          const pKey = p.key || p.name
+          if (p.type === 'file') {
+            properties[pKey] = {
+              type: 'string',
+              format: 'binary',
+              description: p.description || '',
             }
-          })
-        }
+          } else {
+            properties[pKey] = {
+              type: 'string',
+              example: p.value || p.example || '',
+              description: p.description || '',
+            }
+          }
+        })
 
         operation.requestBody = {
           required: true,
@@ -110,20 +156,22 @@ export function generateOpenApiSpec(baseUrl = 'http://localhost:3000') {
       }
     }
 
-    route.responses.forEach((resp) => {
-      operation.responses[String(resp.status)] = {
-        description: resp.description,
-        ...(resp.example
-          ? {
-              content: {
-                'application/json': {
-                  example: resp.example,
+    if (Array.isArray(route.responses)) {
+      route.responses.forEach((resp) => {
+        operation.responses[String(resp.status)] = {
+          description: resp.description,
+          ...(resp.example
+            ? {
+                content: {
+                  'application/json': {
+                    example: resp.example,
+                  },
                 },
-              },
-            }
-          : {}),
-      }
-    })
+              }
+            : {}),
+        }
+      })
+    }
 
     pathsObj[openApiPath][methodKey] = operation
   })

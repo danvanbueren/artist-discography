@@ -85,15 +85,32 @@ export const ProjectSidebarItem = memo(function ProjectSidebarItem({
         )}
       </ListItemIcon>
       <ListItemText
+        sx={{ minWidth: 0 }}
         slotProps={{
           primary: { component: 'div' },
           secondary: { component: 'div' },
         }}
         primary={
           <Box
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1,
+              minWidth: 0,
+            }}
           >
-            <Typography variant='body1' sx={{ fontWeight: isSelected ? 700 : 500 }}>
+            <Typography
+              variant='body1'
+              sx={{
+                fontWeight: isSelected ? 700 : 500,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+                flexGrow: 1,
+              }}
+            >
               {p.name || 'Untitled Project'}
             </Typography>
             {isComplete ? (
@@ -101,14 +118,14 @@ export const ProjectSidebarItem = memo(function ProjectSidebarItem({
                 label='Complete'
                 color='success'
                 size='small'
-                sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, flexShrink: 0 }}
               />
             ) : (
               <Chip
                 label='Incomplete'
                 color='warning'
                 size='small'
-                sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, flexShrink: 0 }}
               />
             )}
           </Box>

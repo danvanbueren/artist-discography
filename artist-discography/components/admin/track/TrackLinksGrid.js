@@ -17,6 +17,7 @@ export const TrackLinksGrid = memo(function TrackLinksGrid({
   defaultArtist,
   projectName = '',
   currentProjectIndex = -1,
+  isPending = false,
   currentTracks = [],
   allProjects = [],
   onUpdateLink,
@@ -28,6 +29,7 @@ export const TrackLinksGrid = memo(function TrackLinksGrid({
 
   return (
     <Accordion
+      defaultExpanded
       variant='outlined'
       sx={{
         mt: 1.5,
@@ -60,6 +62,7 @@ export const TrackLinksGrid = memo(function TrackLinksGrid({
               defaultArtist={defaultArtist}
               projectName={projectName}
               currentProjectIndex={currentProjectIndex}
+              isPending={isPending}
               currentTracks={currentTracks}
               currentTrackLinks={links}
               allProjects={allProjects}

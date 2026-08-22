@@ -4,78 +4,95 @@ This document provides a complete reference for all server-side Next.js route ha
 
 ---
 
-## 🔐 1. Authentication Endpoints
+## 🔐 1. Authentication & Private Access Endpoints (`/api/auth/*` & `/api/admin/auth`)
 
 ### `POST /api/admin/auth`
-Validates the master administrator password and sets an HTTP-only authenticated session cookie.
+Validates the master administrator password.
 - **Request Body**:
   ```json
-  { "password": "yourAdminPassword" }
+  { "password": "admin" }
   ```
-- **Response `200 OK`**:
-  ```json
-  { "success": true, "message": "Authenticated successfully" }
-  ```
-- **Response `401 Unauthorized`**:
-  ```json
-  { "error": "Invalid administrator password" }
-  ```
+- **Response `200 OK`**: `{ "authenticated": true }`
+- **Response `401 Unauthorized`**: `{ "authenticated": false, "error": "Incorrect password" }`
+
+### `GET /api/auth/private-access`
+Checks if the client session has active private gated access clearance.
+- **Response `200 OK`**: `{ "success": true, "authenticated": true }`
 
 ### `POST /api/auth/private-access`
-Validates the private access code for VIP visitors to unlock private releases and gated uncleared audio streams.
+Validates the private access code and sets a 30-day authenticated cookie (`private_access_auth`).
 - **Request Body**:
   ```json
-  { "accessCode": "yourAccessCode" }
+  { "accessCode": "access123" }
   ```
-- **Response `200 OK`**:
-  ```json
-  { "success": true, "message": "Access granted" }
-  ```
+- **Response `200 OK`**: `{ "success": true, "authenticated": true, "message": "Private access unlocked successfully!" }`
+
+### `DELETE /api/auth/private-access`
+Clears the private access authorization cookie, relocking private catalog releases.
+- **Response `200 OK`**: `{ "success": true, "authenticated": false, "message": "Private access locked successfully" }`
 
 ---
 
 ## 🛠️ 2. Administration Endpoints (`/api/admin/*`)
 
-All `/api/admin/*` endpoints require an authenticated admin session cookie.
+Privileged data mutation endpoints require the `x-admin-password` HTTP header or `password` in the request body/form-data.
 
-### `GET /api/admin/artist`
-Returns global artist profile, streaming links, social links, and server flags from `data/config.json`.
-
-### `PUT /api/admin/artist`
-Updates global artist profile and configuration. Uses the Atomic Swap protocol and creates a rolling backup.
-
-### `GET /api/admin/project`
-Returns an array of all project metadata objects from `data/projects/`.
-
-### `POST /api/admin/project`
-Creates a new release directory under `data/projects/<slug>/` and writes initial `project.json`.
-
-### `PUT /api/admin/project`
-Updates an existing release's metadata, release date, flags, or tracklist. Triggers automated backup.
-
-### `DELETE /api/admin/project`
-Deletes a project directory and its media files, triggering cache pruning in `cacheCleaner.js`.
-- **Query Parameter**: `?slug=<project-slug>`
-
-### `POST /api/admin/upload`
-Multipart form upload handler for cover artwork (`art.<ext>`) and track master audio files. Automatically stages files and registers background media transcoding jobs.
-
-### `POST /api/admin/copy-track`
-Duplicates a track (metadata, streaming links, and audio file) from a source project to a destination project without re-uploading.
-- **Request Body**:
+### `POST /api/admin/artist`
+Updates artist metadata, platform/social streaming links, site URL, gated access code, and security settings in `data/config.json`.
+- **Request Body (JSON)**:
   ```json
   {
-    "sourceProject": "starlight-odyssey",
+    "password": "admin",
+    "name": "Artist",
+    "bio": "Composer and sound designer.",
+    "siteUrl": "http://localhost:3000",
+    "privateAccessCode": "access123",
+    "adminAccess": true,
+    "adminPassword": "admin",
+    "platforms": { "spotify": "https://open.spotify.com/...", "apple": "..." },
+    "socials": { "instagram": "https://instagram.com/...", "x": "..." }
+  }
+  ```
+
+### `GET /api/admin/logo`
+Returns metadata and status for the active branding logo (dimensions, format, custom vs default).
+
+### `POST /api/admin/logo`
+Uploads and optimizes a custom artist branding logo or vector SVG, automatically generating dynamic favicon and web manifest icon suites.
+- **Request Format**: `multipart/form-data`
+- **Fields**: `password` (required), `action` ("upload" or "delete"), `logoFile` (binary image).
+
+### `DELETE /api/admin/logo`
+Removes the custom branding logo and purges cached assets, reverting to the default placeholder logo.
+
+### `POST /api/admin/upload`
+Creates a new release directory under `data/projects/<slug>/`, writing initial `project.json` and staging cover artwork and audio files.
+- **Request Format**: `multipart/form-data`
+- **Fields**: `password`, `name`, `type`, `artist`, `date`, `visibility`, `copyright`, `tracks`, `coverFile`.
+
+### `POST /api/admin/project`
+Performs in-place updates, metadata synchronization, or atomic removal for a release in `data/projects/<slug>/project.json`.
+- **Request Format**: `multipart/form-data`
+- **Fields**: `password`, `action` ("update" or "delete"), `projectIndex`, `name`, `type`, `artist`, `date`, `visibility`, `copyright`, `tracks`, `coverFile`.
+
+### `POST /api/admin/copy-track`
+Duplicates a track (metadata, streaming links, audio master, and artwork) from a source project to a destination project.
+- **Request Body (JSON)**:
+  ```json
+  {
+    "password": "admin",
+    "sourceProjectIndex": 0,
     "sourceTrackIndex": 0,
-    "targetProject": "remixes-vol-1"
+    "targetProjectIndex": 1
   }
   ```
 
 ### `GET /api/admin/media-jobs`
-Server-Sent Events (SSE) stream broadcasting live progress percentages and completion states for background FFmpeg transcoding and Sharp image generation jobs.
+Returns the list of active and completed background audio/image transcoding tasks.
+- **Query Parameter**: `?stream=1` (for live Server-Sent Events stream).
 
-### `POST /api/admin/logo`
-Uploads, replaces, or resets the custom branding logo (`data/logo.png`), re-analyzing perceived luminance and triggering cache busting.
+### `POST /api/admin/media-jobs`
+Triggers full catalog pre-transcoding and media warming (`action: "warm-all"`) or clears finished jobs (`action: "clear-completed"`).
 
 ---
 
@@ -83,48 +100,38 @@ Uploads, replaces, or resets the custom branding logo (`data/logo.png`), re-anal
 
 ### `GET /api/audio/[...path]`
 High-performance byte-range audio streaming endpoint.
-- **Route Format**: `/api/audio/<project-slug>/<track-filename>`
-- **Optional Query Parameter**: `?tier=lossless|high|compressed`
+- **Route Format**: `/api/audio/projects/<project-slug>/<track-filename>`
+- **Query Parameters**:
+  - `b`: Bitrate tier (`320k`, `192k`, `128k`).
+  - `t`: Cache-busting timestamp.
+  - `token`: Private access token for casting.
 - **Headers Handled**: `Range`, `If-Range`, `If-None-Match`.
-- **Responses**:
-  - `206 Partial Content`: Byte-range chunk with `Content-Range` and `Accept-Ranges: bytes`.
-  - `304 Not Modified`: When client ETag matches server asset modtime.
-  - `403 Forbidden`: When requesting private/uncleared audio without authorization.
-  - `OPTIONS` / `HEAD`: HTTP 204 with complete CORS headers for external casting devices.
+- **Responses**: `200 OK`, `206 Partial Content`, `403 Forbidden`, `404 Not Found`.
 
 ### `GET /api/media/[...path]`
-Dynamic Sharp image optimization endpoint.
-- **Route Format**: `/api/media/<project-slug>/<image-filename>`
-- **Query Parameters**:
-  - `w`: Target width in pixels (e.g. `?w=320`).
-  - `q`: Quality (e.g. `?q=85`).
-  - `format`: Format override (`webp`, `avif`, `jpeg`, `png`).
-  - `v`: Cache-busting timestamp (e.g. `?v=1716000000`).
+Dynamic Sharp image optimization endpoint with WebP/AVIF transcoding and immutable caching.
+- **Route Format**: `/api/media/projects/<project-slug>/<image-filename>`
+- **Query Parameters**: `w` (width), `q` (quality), `fmt` (format), `blur` (blur radius).
 
 ### `GET /api/logo`
-Optimized artist logo streaming endpoint with dynamic width/quality options and cache validation.
+Optimized artist logo streaming endpoint with dynamic width/format conversion.
 
 ### `GET /api/icon`
-Dynamic favicon suite endpoint serving luminance-adjusted, high-contrast favicons (`16px`, `32px`, `180px`, `192px`, `512px`).
-
-### `GET /manifest.webmanifest`
-Dynamic Progressive Web App (PWA) manifest pointing to luminance-adjusted dynamic favicons.
+Dynamic favicon suite endpoint serving luminance-adjusted, high-contrast favicons (`16px`, `32px`, `48px`, `192px`, `512px`).
 
 ---
 
 ## 🧪 4. Developer & Inspection Endpoints (`/api/dev/*`)
 
 ### `GET /api/dev/openapi`
-Returns the complete OpenAPI 3.1 schema specification (`lib/apiSpec.js`) describing all system routes.
-
-### `POST /api/dev/seed-dummy`
-Generates randomized mock releases, albums, tracks, and platform links for testing UI responsiveness and large discography scaling without modifying production masters.
+Returns the complete, real-time OpenAPI 3.1 schema specification (`lib/api/apiSpec.js`) describing all system routes.
 
 ---
 
 ## 🔍 Interactive OpenAPI 3.1 Live Explorer
 
 The Admin Portal includes a live API sandbox (`Tab 4 — OpenAPI 3.1 Live Tester`):
-- Browse interactive accordions for every endpoint.
+- Browse interactive accordions for all routes across Admin, Auth, Media, and Dev Utilities.
+- Auto-populated required fields with live validation.
 - Generate and copy live `cURL` commands.
 - Execute real requests directly from the browser and inspect formatted JSON responses, headers, and status codes in real time.

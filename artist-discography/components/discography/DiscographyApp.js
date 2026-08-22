@@ -155,6 +155,8 @@ export default function MainDiscographyApp({
     currentView,
     selectedProject,
     highlightedTrackSlug,
+    pendingScrollProjectSlug,
+    clearPendingScrollProjectSlug,
     handleSelectProject,
     handleSelectTrackRow,
     handleSelectTrackTitle,
@@ -174,6 +176,19 @@ export default function MainDiscographyApp({
     filteredProjects,
     displayedDiscographyTracks,
   } = useDiscographyFilterSort({ projects })
+
+  const handleNavigateHomeWithScroll = useCallback(
+    (targetProject = null) => {
+      if (activeTypes && activeTypes.length > 0) {
+        handleResetTypes()
+      }
+      if (searchQuery) {
+        setSearchQuery('')
+      }
+      handleNavigateHome(targetProject)
+    },
+    [activeTypes, handleResetTypes, searchQuery, setSearchQuery, handleNavigateHome],
+  )
 
   // 5. Toast Notifications
   const [toastMessage, setToastMessage] = useState('')
@@ -490,6 +505,49 @@ export default function MainDiscographyApp({
     }
   }, [mounted, applyMask, filteredProjects, selectedProject, currentView, playingTrack])
 
+  // Auto-scroll to target project when navigating back to all projects from single project view
+  useEffect(() => {
+    if (!mounted || !pendingScrollProjectSlug || currentView !== 'ALL_PROJECTS') return
+
+    let isCancelled = false
+    const targetSlug = pendingScrollProjectSlug
+
+    const performScroll = () => {
+      if (isCancelled) return
+      const targetEl = document.getElementById(`project-${targetSlug}`)
+      if (targetEl) {
+        if (typeof targetEl.scrollIntoView === 'function') {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else if (mainScrollRef.current) {
+          const container = mainScrollRef.current
+          const targetRect = targetEl.getBoundingClientRect()
+          const containerRect = container.getBoundingClientRect()
+          const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
+          const navHeight = isMobile ? 80 : 100
+          const targetScrollTop =
+            container.scrollTop + (targetRect.top - containerRect.top) - navHeight
+          container.scrollTo({
+            top: Math.max(0, targetScrollTop),
+            behavior: 'smooth',
+          })
+        }
+        clearPendingScrollProjectSlug()
+      }
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      requestAnimationFrame(performScroll)
+    })
+
+    const timeoutId = setTimeout(performScroll, 120)
+
+    return () => {
+      isCancelled = true
+      cancelAnimationFrame(frameId)
+      clearTimeout(timeoutId)
+    }
+  }, [mounted, pendingScrollProjectSlug, currentView, clearPendingScrollProjectSlug])
+
   if (!mounted) {
     return (
       <Box
@@ -660,7 +718,7 @@ export default function MainDiscographyApp({
                 onOpenQualityModal={() => setQualityModalOpen(true)}
                 isPrivateAuthenticated={isPrivateAccessAuthenticated}
                 onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
-                onNavigateHome={handleNavigateHome}
+                onNavigateHome={handleNavigateHomeWithScroll}
                 onPlayTrack={handlePlayTrack}
                 onAddToQueue={handleAddToQueue}
                 onShowToast={showToast}

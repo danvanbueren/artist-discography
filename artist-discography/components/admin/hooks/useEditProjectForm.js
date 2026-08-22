@@ -7,6 +7,7 @@ import {
   getDuplicateTrackSlugIndexes,
   resolveOverrideArtist,
 } from '../adminUtils'
+import { slugify } from '@/lib/data/slugs'
 
 /**
  * Formats track array for edit form with consistent stable IDs.
@@ -135,68 +136,69 @@ export function useEditProjectForm({
   )
 
   const handleUpdateEditTrack = useCallback(
-    (idx, field, value) => {
+    (idx, field, value, onDone) => {
       setEditTracks((prev) => {
         const updated = [...prev]
         if (!updated[idx]) return prev
         updated[idx] = { ...updated[idx], [field]: value }
         return updated
       })
-      markFieldDirty?.(`edit_project_track_${idx}_${field}`)
+      if (typeof onDone === 'function') {
+        onDone()
+      }
     },
-    [markFieldDirty],
+    [],
   )
 
-  const handleAddEditTrack = useCallback(() => {
+  const handleAddEditTrack = useCallback((onDone) => {
     setEditTracks((prev) => [...prev, createEmptyTrack()])
-    markFieldDirty?.('edit_project_add_track')
-  }, [markFieldDirty])
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
-  const handleRemoveEditTrack = useCallback(
-    (idx) => {
-      setEditTracks((prev) => {
-        if (prev.length <= 1) return prev
-        return prev.filter((_, i) => i !== idx)
-      })
-      markFieldDirty?.('edit_project_remove_track')
-    },
-    [markFieldDirty],
-  )
+  const handleRemoveEditTrack = useCallback((idx, onDone) => {
+    setEditTracks((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((_, i) => i !== idx)
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
-  const handleMoveEditTrack = useCallback(
-    (fromIndex, toIndex) => {
-      setEditTracks((prev) => {
-        if (toIndex < 0 || toIndex >= prev.length) return prev
-        const updated = [...prev]
-        const [moved] = updated.splice(fromIndex, 1)
-        updated.splice(toIndex, 0, moved)
-        return updated
-      })
-      markFieldDirty?.('edit_project_reorder_tracks')
-    },
-    [markFieldDirty],
-  )
+  const handleMoveEditTrack = useCallback((fromIndex, toIndex, onDone) => {
+    setEditTracks((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev
+      const updated = [...prev]
+      const [moved] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, moved)
+      if (typeof onDone === 'function') {
+        onDone(updated)
+      }
+      return updated
+    })
+  }, [])
 
-  const handleEditTrackAudioChange = useCallback(
-    (idx, file) => {
-      setEditTracks((prev) => {
-        const updated = [...prev]
-        if (!updated[idx]) return prev
-        updated[idx] = {
-          ...updated[idx],
-          audioFile: file,
-          audioFileName: file ? file.name : '',
-          hasAudio: Boolean(file || updated[idx].audio),
-        }
-        return updated
-      })
-      markFieldDirty?.(`edit_project_track_${idx}_audio`)
-    },
-    [markFieldDirty],
-  )
+  const handleEditTrackAudioChange = useCallback((idx, file, onDone) => {
+    setEditTracks((prev) => {
+      const updated = [...prev]
+      if (!updated[idx]) return prev
+      updated[idx] = {
+        ...updated[idx],
+        audioFile: file,
+        audioFileName: file ? file.name : '',
+        hasAudio: Boolean(file || updated[idx].audio),
+      }
+      return updated
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const handleEditTrackLinkChange = useCallback(
-    (trackIdx, platformKey, val) => {
+    (trackIdx, platformKey, val, onDone) => {
       setEditTracks((prev) => {
         const updated = [...prev]
         if (!updated[trackIdx]) return prev
@@ -210,19 +212,21 @@ export function useEditProjectForm({
         }
         return updated
       })
-      markFieldDirty?.(`edit_project_track_${trackIdx}_link_${platformKey}`)
+      if (typeof onDone === 'function') {
+        onDone()
+      }
     },
-    [markFieldDirty],
+    [],
   )
 
   const executeEditProject = useCallback(
-    async (password, projectsList = [], selectedProjIndex = 0) => {
+    async (password, projectsList = [], selectedProjIndex = 0, overrideTracks = null) => {
       const currentName = editNameRef.current
       const currentType = editTypeRef.current
       const currentArtist = editArtistRef.current
       const currentDate = editDateRef.current
       const currentCoverFile = editCoverFileRef.current
-      const currentTracks = editTracksRef.current
+      const currentTracks = overrideTracks || editTracksRef.current
       const origProject = projectsList[selectedProjIndex]
 
       if (!origProject || !currentName?.trim()) return false
@@ -244,7 +248,10 @@ export function useEditProjectForm({
       try {
         const formData = new FormData()
         formData.append('password', password)
+        formData.append('action', 'update')
         formData.append('originalName', origProject.name)
+        formData.append('originalSlug', slugify(origProject.name))
+        formData.append('projectIndex', String(selectedProjIndex))
         formData.append('name', currentName.trim())
         formData.append('type', currentType)
         formData.append('artist', currentArtist?.trim() || defaultArtistName)
@@ -272,17 +279,17 @@ export function useEditProjectForm({
         formData.append('tracks', JSON.stringify(cleanTracks))
 
         const res = await fetch('/api/admin/project', {
-          method: 'PUT',
+          method: 'POST',
           body: formData,
         })
-        const json = await res.json()
+        const json = await res.json().catch(() => ({}))
 
         if (!res.ok) {
           throw new Error(json.error || 'Failed to update project')
         }
 
         setStatusMessage?.(`Successfully updated "${currentName}"`)
-        return json.project || true
+        return json.updatedProject || true
       } catch (err) {
         setErrorMessage?.(err.message || 'Error updating project')
         return false

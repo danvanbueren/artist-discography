@@ -11,6 +11,7 @@ import {
   Alert,
   Stack,
   InputAdornment,
+  IconButton,
   Grid,
 } from '@mui/material'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -18,60 +19,86 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import SearchIcon from '@mui/icons-material/Search'
 import LockIcon from '@mui/icons-material/Lock'
 import CodeIcon from '@mui/icons-material/Code'
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import { API_TAGS, API_ROUTES_SPEC } from '@/lib/api/apiSpec'
 import ApiExplorerErrorBoundary from './ApiExplorerErrorBoundary'
 import ApiEndpointAccordion from './ApiEndpointAccordion'
 
-function buildTargetUrl(route, pathParams = {}) {
+function buildTargetUrl(route, pathParams = {}, queryParams = {}) {
   try {
     let url = route?.path ?? ''
-    if (Array.isArray(route?.pathParams)) {
-      route.pathParams.forEach((p) => {
-        if (p?.name) {
-          const val = pathParams?.[p.name] ?? p.example ?? `{${p.name}}`
-          url = url.replace(`{${p.name}}`, encodeURIComponent(String(val)))
+    const effectivePathParams = Array.isArray(route?.pathParams)
+      ? route.pathParams
+      : Array.isArray(route?.urlParams)
+        ? route.urlParams
+        : []
+
+    effectivePathParams.forEach((p) => {
+      const pName = p?.name || p?.key
+      if (pName) {
+        const val = pathParams?.[pName] ?? p.example ?? p.value ?? `{${pName}}`
+        url = url.replace(`{${pName}}`, encodeURIComponent(String(val)))
+      }
+    })
+
+    const effectiveQueryParams = Array.isArray(route?.queryParams) ? route.queryParams : []
+    const searchParams = new URLSearchParams()
+    effectiveQueryParams.forEach((qp) => {
+      const qpName = qp?.name || qp?.key
+      if (qpName) {
+        const val = queryParams?.[qpName] ?? qp.example ?? qp.value ?? ''
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          searchParams.append(qpName, String(val).trim())
         }
-      })
+      }
+    })
+
+    const queryString = searchParams.toString()
+    if (queryString) {
+      url += (url.includes('?') ? '&' : '?') + queryString
     }
+
     return url
-  } catch (err) {
+  } catch {
     return route?.path ?? ''
   }
 }
 
 function generateCurlCommand(route, state = {}, adminPassword = '') {
   try {
-    const targetUrl = buildTargetUrl(route, state?.pathParams ?? {})
+    const targetUrl = buildTargetUrl(
+      route,
+      state?.pathParams ?? {},
+      state?.queryParams ?? {},
+    )
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const fullUrl = `${origin}${targetUrl}`
-    const parts = [`curl -X ${route?.method ?? 'GET'} "${fullUrl}"`]
+    const method = (route?.method ?? 'GET').toUpperCase()
+    const parts = [`curl -X ${method} "${fullUrl}"`]
 
     if (route?.requiresAdminAuth) {
       parts.push(`-H "x-admin-password: ${adminPassword || 'YOUR_PASSWORD'}"`)
     }
 
-    if (route?.method === 'POST') {
-      if (route?.requestFormat === 'json') {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      if (route?.requestFormat === 'json' && state?.body) {
         parts.push('-H "Content-Type: application/json"')
-        if (state?.body) {
-          try {
-            const minified = JSON.stringify(JSON.parse(state.body))
-            parts.push(`-d '${minified}'`)
-          } catch (e) {
-            parts.push(`-d '${state.body}'`)
-          }
+        try {
+          const minified = JSON.stringify(JSON.parse(state.body))
+          parts.push(`-d '${minified}'`)
+        } catch {
+          parts.push(`-d '${state.body}'`)
         }
-      } else if (route?.requestFormat === 'formdata') {
-        if (state?.formDataParams) {
-          Object.entries(state.formDataParams).forEach(([k, v]) => {
-            parts.push(`-F "${k}=${v}"`)
-          })
-        }
+      } else if (route?.requestFormat === 'formdata' && state?.formDataParams) {
+        Object.entries(state.formDataParams).forEach(([k, v]) => {
+          parts.push(`-F "${k}=${v}"`)
+        })
       }
     }
 
     return parts.join(' \\\n  ')
-  } catch (err) {
+  } catch {
     return `curl -X ${route?.method ?? 'GET'} "${route?.path ?? ''}"`
   }
 }
@@ -81,6 +108,7 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
   const [selectedTag, setSelectedTag] = useState('ALL')
   const [expandedId, setExpandedId] = useState(false)
   const [adminPassword, setAdminPassword] = useState(() => initialAdminPassword || 'admin')
+  const [showAdminPassword, setShowAdminPassword] = useState(false)
   const [requestState, setRequestState] = useState({})
 
   useEffect(() => {
@@ -98,26 +126,43 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
       if (requestState?.[id]) return requestState[id]
 
       const initialBody = route?.defaultBody ?? ''
-      const initialParams = {}
-      if (Array.isArray(route?.pathParams)) {
-        route.pathParams.forEach((p) => {
-          if (p?.name) {
-            initialParams[p.name] = p.example ?? ''
+      const initialPathParams = {}
+      const effectivePathParams = Array.isArray(route?.pathParams)
+        ? route.pathParams
+        : Array.isArray(route?.urlParams)
+          ? route.urlParams
+          : []
+      effectivePathParams.forEach((p) => {
+        const pName = p?.name || p?.key
+        if (pName) {
+          initialPathParams[pName] = p.example ?? p.value ?? ''
+        }
+      })
+
+      const initialQueryParams = {}
+      if (Array.isArray(route?.queryParams)) {
+        route.queryParams.forEach((qp) => {
+          const qpName = qp?.name || qp?.key
+          if (qpName) {
+            initialQueryParams[qpName] = qp.example ?? qp.value ?? ''
           }
         })
       }
+
       const initialFormData = {}
       if (Array.isArray(route?.defaultParams)) {
         route.defaultParams.forEach((p) => {
-          if (p?.key) {
-            initialFormData[p.key] = p.value ?? ''
+          const pKey = p?.key || p?.name
+          if (pKey) {
+            initialFormData[pKey] = p.value ?? p.example ?? ''
           }
         })
       }
 
       return {
         body: initialBody,
-        pathParams: initialParams,
+        pathParams: initialPathParams,
+        queryParams: initialQueryParams,
         formDataParams: initialFormData,
         isLoading: false,
         response: null,
@@ -128,6 +173,7 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
       return {
         body: '',
         pathParams: {},
+        queryParams: {},
         formDataParams: {},
         isLoading: false,
         response: null,
@@ -160,13 +206,17 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
       setTimeout(() => {
         updateEndpointState(id, (prev) => ({ ...prev, copiedCurl: false }))
       }, 2000)
-    } catch (e) {}
+    } catch {}
   }
 
   const handleExecuteRequest = async (route, id) => {
     try {
       const currentState = getEndpointState(id, route)
-      const targetUrl = buildTargetUrl(route, currentState?.pathParams ?? {})
+      const targetUrl = buildTargetUrl(
+        route,
+        currentState?.pathParams ?? {},
+        currentState?.queryParams ?? {},
+      )
 
       updateEndpointState(id, (prev) => ({
         ...prev,
@@ -176,9 +226,10 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
       }))
 
       const startTime = performance.now()
+      const method = (route?.method ?? 'GET').toUpperCase()
       const headers = {}
-      let fetchOptions = {
-        method: route?.method ?? 'GET',
+      const fetchOptions = {
+        method,
         headers,
       }
 
@@ -186,15 +237,19 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
         headers['x-admin-password'] = adminPassword
       }
 
-      if (route?.method === 'POST') {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
         if (route?.requestFormat === 'json') {
           headers['Content-Type'] = 'application/json'
-          fetchOptions.body = currentState?.body ?? '{}'
+          if (currentState?.body) {
+            fetchOptions.body = currentState.body
+          }
         } else if (route?.requestFormat === 'formdata') {
           const fd = new FormData()
           if (currentState?.formDataParams) {
             Object.entries(currentState.formDataParams).forEach(([k, v]) => {
-              fd.append(k, String(v))
+              if (v !== null && v !== undefined) {
+                fd.append(k, String(v))
+              }
             })
           }
           fetchOptions.body = fd
@@ -408,7 +463,7 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
               fullWidth
               size='small'
               label='Global Admin Password Header'
-              type='password'
+              type={showAdminPassword ? 'text' : 'password'}
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               slotProps={{
@@ -416,6 +471,23 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
                   startAdornment: (
                     <InputAdornment position='start'>
                       <LockIcon fontSize='small' color='action' />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position='end'>
+                      <IconButton
+                        size='small'
+                        onClick={() => setShowAdminPassword((prev) => !prev)}
+                        edge='end'
+                        sx={{ color: 'text.secondary' }}
+                        aria-label={showAdminPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showAdminPassword ? (
+                          <VisibilityOffRoundedIcon fontSize='small' />
+                        ) : (
+                          <VisibilityRoundedIcon fontSize='small' />
+                        )}
+                      </IconButton>
                     </InputAdornment>
                   ),
                 },

@@ -12,7 +12,6 @@ import { useArtistProfile } from './hooks/useArtistProfile'
 import { useProjectsManager } from './hooks/useProjectsManager'
 import { useMediaJobs } from './hooks/useMediaJobs'
 import { useDevAudioPreview } from './tools/hooks/useDevAudioPreview'
-import { useDevDummySeeder } from './tools/hooks/useDevDummySeeder'
 
 import AdminAccessDisabled from './auth/AdminAccessDisabled'
 import AdminLoginView from './auth/AdminLoginView'
@@ -75,21 +74,7 @@ export default function AdminDashboard({
   // 7. Dev Audio Preview Hook
   const audioPreview = useDevAudioPreview()
 
-  // 8. Dev Dummy Seeder Hook
-  const seeder = useDevDummySeeder((newData) => {
-    if (newData?.projects) {
-      projects.setProjectsList(newData.projects)
-    }
-    if (newData?.artist) {
-      profile.setArtistData(newData.artist)
-      profile.setArtistNameInput(newData.artist.name || defaultArtistName)
-      profile.setArtistBioInput(newData.artist.bio || '')
-      profile.setArtistPlatforms(newData.artist.links?.platforms || {})
-      profile.setArtistSocials(newData.artist.links?.socials || {})
-    }
-  }, auth.password)
-
-  // 9. Computed Metrics & Stats for Health Overview
+  // 8. Computed Metrics & Stats for Health Overview
   const totalTracksCount = useMemo(() => {
     return (projects.projectsList || []).reduce((acc, p) => acc + (p?.tracks?.length || 0), 0)
   }, [projects.projectsList])
@@ -313,7 +298,6 @@ export default function AdminDashboard({
               handleSaveCreateProject={handleSaveCreateProject}
               handleSaveUpdateProject={handleSaveUpdateProject}
               audioPreview={audioPreview}
-              seeder={seeder}
               totalTracksCount={totalTracksCount}
               tracksWithAudioCount={tracksWithAudioCount}
               projectsWithCoverCount={projectsWithCoverCount}
@@ -321,6 +305,7 @@ export default function AdminDashboard({
               coverCoveragePct={coverCoveragePct}
               audioCoveragePct={audioCoveragePct}
               currentJsonSnapshot={currentJsonSnapshot}
+              health={initialData?.health}
             />
           </Paper>
         </Container>

@@ -6,7 +6,6 @@ import AdminProjectsTab from '../tabs/AdminProjectsTab'
 import CatalogAuditTab from '../tools/audit/CatalogAuditTab'
 import SystemOverviewTab from '../tools/overview/SystemOverviewTab'
 import ApiExplorerTab from '../tools/apiExplorer/ApiExplorerTab'
-import RawJsonInspectorTab from '../tools/raw/RawJsonInspectorTab'
 
 /**
  * Tab switcher content panel for Admin Dashboard.
@@ -24,7 +23,6 @@ export default function AdminDashboardTabs({
   handleSaveCreateProject,
   handleSaveUpdateProject,
   audioPreview,
-  seeder,
   totalTracksCount,
   tracksWithAudioCount,
   projectsWithCoverCount,
@@ -32,6 +30,7 @@ export default function AdminDashboardTabs({
   coverCoveragePct,
   audioCoveragePct,
   currentJsonSnapshot,
+  health = {},
 }) {
   return (
     <Box
@@ -102,39 +101,29 @@ export default function AdminDashboardTabs({
       {activeTab === 2 && (
         <CatalogAuditTab
           projects={projects.projectsList}
+          totalTracksCount={totalTracksCount}
+          tracksWithAudioCount={tracksWithAudioCount}
+          projectsWithCoverCount={projectsWithCoverCount}
+          audioCoveragePct={audioCoveragePct}
+          coverCoveragePct={coverCoveragePct}
           artistPlatforms={profile.artistPlatforms}
           artistSocials={profile.artistSocials}
           artistName={profile.artistNameInput || defaultArtistName}
           artistLogoInfo={profile.logoInfo}
-          onSelectProject={(idx) => {
-            projects.handleSelectProject(idx)
-          }}
-          onAddTrackToProject={(projIdx) => {
-            projects.handleSelectProject(projIdx)
-          }}
+          health={health}
+          playingAudioUrl={audioPreview.playingAudioUrl}
+          handleToggleAudio={audioPreview.handleToggleAudio}
+          handleSeekRelative={audioPreview.handleSeekRelative}
         />
       )}
 
-      {/* TAB 3: SYSTEM OVERVIEW & TOOLS */}
+      {/* TAB 3: SYSTEM OVERVIEW & UTILITIES */}
       {activeTab === 3 && (
-        <SystemOverviewTab
-          projectsList={projects.projectsList}
-          totalTracksCount={totalTracksCount}
-          tracksWithAudioCount={tracksWithAudioCount}
-          projectsWithCoverCount={projectsWithCoverCount}
-          totalPlatformLinksCount={totalPlatformLinksCount}
-          coverCoveragePct={coverCoveragePct}
-          audioCoveragePct={audioCoveragePct}
-          audioPreview={audioPreview}
-          seeder={seeder}
-        />
+        <SystemOverviewTab currentJsonSnapshot={currentJsonSnapshot} />
       )}
 
       {/* TAB 4: API EXPLORER */}
       {activeTab === 4 && <ApiExplorerTab />}
-
-      {/* TAB 5: RAW JSON INSPECTOR */}
-      {activeTab === 5 && <RawJsonInspectorTab jsonData={currentJsonSnapshot} />}
     </Box>
   )
 }

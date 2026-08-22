@@ -9,7 +9,7 @@ For full project documentation, technology stack, and comprehensive operator con
 - **`app/`**: Next.js App Router root layout, dynamic SPA route `[[...slug]]/page.js`, theme configuration (`theme.js`), and server API routes:
   - `app/api/admin/`: CRUD routes for `artist`, `auth`, `copy-track`, `logo`, `media-jobs`, `project`, and `upload`.
   - `app/api/auth/`: Private gated access verification (`private-access`).
-  - `app/api/dev/`: Developer utilities (`openapi`, `seed-dummy`).
+  - `app/api/dev/`: Developer utilities (`openapi`).
   - `app/api/audio/`: HTTP 206 partial content audio streaming endpoint.
   - `app/api/media/`: Responsive image and cover artwork server endpoint.
   - `app/api/logo` & `app/api/icon`: Dynamic logo asset and favicon suite streaming endpoints.

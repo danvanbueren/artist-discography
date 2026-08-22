@@ -15,19 +15,25 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
-  Stack,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import AlbumIcon from '@mui/icons-material/Album'
-import SyncIcon from '@mui/icons-material/Sync'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
+import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded'
+import UnfoldLessRoundedIcon from '@mui/icons-material/UnfoldLessRounded'
 import { ProjectSidebarItem } from '../sidebar/ProjectSidebarItem'
+import { getMediaThumbnailUrl } from '../adminUtils'
+import { formatProjectDate } from '@/lib/data/dateUtils'
 
 /**
  * ProjectSidebarList
  * Left navigation sidebar displaying sorted and filterable projects catalog,
  * complete/incomplete checklist badges, and the Create New button.
+ * On small screens, collapses to a compact single-project view that expands on click
+ * and auto-minimizes upon selecting a project.
  */
 export default function ProjectSidebarList({
   projectsList = [],
@@ -41,8 +47,34 @@ export default function ProjectSidebarList({
   tracks = [],
   coverPreview,
 }) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [mobileExpanded, setMobileExpanded] = useState(false)
   const [sidebarSortBy, setSidebarSortBy] = useState('date')
   const [sidebarSortAsc, setSidebarSortAsc] = useState(false)
+
+  const selectedProject =
+    !isCreatingNew && selectedProjIndex !== null && selectedProjIndex >= 0
+      ? projectsList[selectedProjIndex]
+      : null
+
+  const activeTitle = isCreatingNew
+    ? name || 'New Project Draft'
+    : selectedProject?.name || 'Untitled Project'
+
+  const activeCover = isCreatingNew
+    ? coverPreview
+    : selectedProject?.cover
+      ? getMediaThumbnailUrl(selectedProject.cover, 80)
+      : null
+
+  const activeSubtitle = isCreatingNew
+    ? `${type || 'Single'} • ${tracks.length} track${tracks.length === 1 ? '' : 's'}`
+    : selectedProject
+      ? `${selectedProject.type || 'Single'} • ${formatProjectDate(selectedProject.date)} • ${
+          selectedProject.tracks?.length || 0
+        } track${(selectedProject.tracks?.length || 0) === 1 ? '' : 's'}`
+      : 'No project selected'
 
   const sortedProjectsWithIndex = useMemo(() => {
     const indexed = projectsList.map((project, originalIndex) => ({
@@ -85,6 +117,147 @@ export default function ProjectSidebarList({
     })
   }, [projectsList, sidebarSortBy, sidebarSortAsc])
 
+  // ----------------------------------------------------
+  // Small Screen Minimized Bar
+  // ----------------------------------------------------
+  if (isMobile && !mobileExpanded) {
+    return (
+      <Paper
+        variant='outlined'
+        sx={{
+          p: 1.5,
+          borderRadius: 2.5,
+          backgroundColor: 'rgba(28, 28, 38, 0.75)',
+          borderColor: 'rgba(255, 255, 255, 0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          mb: 1,
+        }}
+      >
+        {/* Active Project Info */}
+        <Box
+          onClick={() => setMobileExpanded(true)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            minWidth: 0,
+            flexGrow: 1,
+            cursor: 'pointer',
+          }}
+        >
+          <Box
+            sx={{
+              width: 42,
+              height: 42,
+              aspectRatio: '1 / 1',
+              borderRadius: 1.5,
+              overflow: 'hidden',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {activeCover ? (
+              <Box
+                component='img'
+                src={activeCover}
+                alt={activeTitle}
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <AlbumIcon sx={{ fontSize: 24, color: 'primary.main' }} />
+            )}
+          </Box>
+
+          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              <Typography
+                variant='body2'
+                sx={{
+                  fontWeight: 700,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                }}
+              >
+                {activeTitle}
+              </Typography>
+              <Chip
+                label={isCreatingNew ? 'Draft' : 'Selected'}
+                color='primary'
+                size='small'
+                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, flexShrink: 0 }}
+              />
+            </Box>
+            <Typography
+              variant='caption'
+              sx={{
+                color: 'text.secondary',
+                display: 'block',
+                mt: 0.25,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {activeSubtitle}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+          <Button
+            variant='outlined'
+            size='small'
+            endIcon={<UnfoldMoreRoundedIcon />}
+            onClick={() => setMobileExpanded(true)}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              px: 1.25,
+              py: 0.5,
+            }}
+          >
+            Switch
+          </Button>
+          <Button
+            variant={isCreatingNew ? 'contained' : 'outlined'}
+            color='primary'
+            size='small'
+            startIcon={<AddIcon />}
+            onClick={() => {
+              handleStartCreateNewProject()
+              setMobileExpanded(false)
+            }}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              px: 1.25,
+              py: 0.5,
+            }}
+          >
+            New
+          </Button>
+        </Box>
+      </Paper>
+    )
+  }
+
+  // ----------------------------------------------------
+  // Full / Expanded Project Sidebar List
+  // ----------------------------------------------------
   return (
     <Paper
       variant='outlined'
@@ -93,9 +266,12 @@ export default function ProjectSidebarList({
         borderRadius: 2.5,
         backgroundColor: 'rgba(28, 28, 38, 0.6)',
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        height: '100%',
+        height: { xs: 'auto', md: '100%' },
+        maxHeight: { xs: 460, md: 'none' },
+        minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
+        mb: { xs: 2, md: 0 },
       }}
     >
       {/* Header & Create Button */}
@@ -103,16 +279,34 @@ export default function ProjectSidebarList({
         <Typography variant='h6' sx={{ fontWeight: 700 }}>
           Projects ({projectsList.length})
         </Typography>
-        <Button
-          variant={isCreatingNew ? 'contained' : 'outlined'}
-          color='primary'
-          size='small'
-          startIcon={<AddIcon />}
-          onClick={handleStartCreateNewProject}
-          sx={{ borderRadius: 2 }}
-        >
-          New
-        </Button>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isMobile && (
+            <Button
+              variant='text'
+              color='inherit'
+              size='small'
+              startIcon={<UnfoldLessRoundedIcon />}
+              onClick={() => setMobileExpanded(false)}
+              sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.78rem' }}
+            >
+              Minimize
+            </Button>
+          )}
+          <Button
+            variant={isCreatingNew ? 'contained' : 'outlined'}
+            color='primary'
+            size='small'
+            startIcon={<AddIcon />}
+            onClick={() => {
+              handleStartCreateNewProject()
+              if (isMobile) setMobileExpanded(false)
+            }}
+            sx={{ borderRadius: 2 }}
+          >
+            New
+          </Button>
+        </Box>
       </Box>
 
       {/* Sort Controls Bar */}
@@ -172,7 +366,16 @@ export default function ProjectSidebarList({
       </Box>
 
       {/* Projects List Container */}
-      <List sx={{ overflowY: 'auto', flexGrow: 1, p: 0, minHeight: 0 }}>
+      <List
+        sx={{
+          overflowY: 'auto',
+          flexGrow: 1,
+          p: 0,
+          pr: 1.5,
+          minHeight: 0,
+          maxHeight: { xs: 320, sm: 360, md: 'none' },
+        }}
+      >
         {/* If creating new, show staging draft item at top */}
         {isCreatingNew && (
           <ListItemButton
@@ -220,22 +423,39 @@ export default function ProjectSidebarList({
               )}
             </ListItemIcon>
             <ListItemText
+              sx={{ minWidth: 0 }}
               slotProps={{
                 primary: { component: 'div' },
                 secondary: { component: 'div' },
               }}
               primary={
                 <Box
-                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                    minWidth: 0,
+                  }}
                 >
-                  <Typography variant='body1' sx={{ fontWeight: 700 }}>
+                  <Typography
+                    variant='body1'
+                    sx={{
+                      fontWeight: 700,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                      flexGrow: 1,
+                    }}
+                  >
                     {name || 'New Project Draft'}
                   </Typography>
                   <Chip
                     label='Creating'
                     color='primary'
                     size='small'
-                    sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                    sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, flexShrink: 0 }}
                   />
                 </Box>
               }
@@ -258,7 +478,10 @@ export default function ProjectSidebarList({
             project={project}
             index={originalIndex}
             isSelected={!isCreatingNew && selectedProjIndex === originalIndex}
-            onSelectProject={handleSelectProject}
+            onSelectProject={(idx) => {
+              handleSelectProject(idx)
+              if (isMobile) setMobileExpanded(false)
+            }}
           />
         ))}
       </List>

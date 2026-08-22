@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo, useDeferredValue } from 'react'
+import { memo, useMemo } from 'react'
 import { Grid, Box, Button, InputAdornment, Tooltip, IconButton } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AdminTextInput from '../common/AdminTextInput'
@@ -29,17 +29,16 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
   defaultArtist = '',
   projectName = '',
   currentProjectIndex = -1,
+  isPending = false,
   currentTracks = [],
   currentTrackLinks = {},
   allProjects = [],
   onUpdateLink,
 }) {
-  const deferredLinkVal = useDeferredValue(linkVal)
-
   const dupInfo = useMemo(() => {
-    if (!deferredLinkVal || !deferredLinkVal.trim()) return null
+    if (isPending || !linkVal || !linkVal.trim()) return null
     return findDuplicateStreamingLink(
-      deferredLinkVal,
+      linkVal,
       {
         currentProjectIndex,
         currentTrackIndex: index,
@@ -50,7 +49,8 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
       allProjects,
     )
   }, [
-    deferredLinkVal,
+    isPending,
+    linkVal,
     currentProjectIndex,
     index,
     platformKey,
@@ -60,37 +60,41 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
   ])
 
   const isAlbumLink = useMemo(() => {
-    if (!deferredLinkVal || !deferredLinkVal.trim()) return false
-    return isAlbumLevelUrl(deferredLinkVal)
-  }, [deferredLinkVal])
+    if (isPending || !linkVal || !linkVal.trim()) return false
+    return isAlbumLevelUrl(linkVal)
+  }, [isPending, linkVal])
 
   const ytAnalysis = useMemo(() => {
-    if (platformKey !== 'youtube' || !deferredLinkVal || !deferredLinkVal.trim()) {
-      return { hasPlaylist: false, cleanedUrl: deferredLinkVal }
+    if (isPending || platformKey !== 'youtube' || !linkVal || !linkVal.trim()) {
+      return { hasPlaylist: false, cleanedUrl: linkVal }
     }
-    return analyzeYouTubeUrl(deferredLinkVal)
-  }, [platformKey, deferredLinkVal])
+    return analyzeYouTubeUrl(linkVal)
+  }, [isPending, platformKey, linkVal])
 
   const spotifyAnalysis = useMemo(() => {
-    if (platformKey !== 'spotify' || !deferredLinkVal || !deferredLinkVal.trim()) {
-      return { hasTrackingParams: false, cleanedUrl: deferredLinkVal }
+    if (isPending || platformKey !== 'spotify' || !linkVal || !linkVal.trim()) {
+      return { hasTrackingParams: false, cleanedUrl: linkVal }
     }
-    return analyzeSpotifyUrl(deferredLinkVal)
-  }, [platformKey, deferredLinkVal])
+    return analyzeSpotifyUrl(linkVal)
+  }, [isPending, platformKey, linkVal])
 
   const isWarning = Boolean(
-    dupInfo || isAlbumLink || ytAnalysis.hasPlaylist || spotifyAnalysis.hasTrackingParams,
+    !isPending &&
+      (dupInfo || isAlbumLink || ytAnalysis.hasPlaylist || spotifyAnalysis.hasTrackingParams),
   )
 
   let helperMsg = null
-  if (dupInfo) {
-    helperMsg = dupInfo.message
-  } else if (isAlbumLink) {
-    helperMsg = '⚠️ Detected album-level link. A direct track/song link is strongly recommended.'
-  } else if (ytAnalysis.hasPlaylist) {
-    helperMsg = '⚠️ YouTube playlist link detected. Direct video link is preferred.'
-  } else if (spotifyAnalysis.hasTrackingParams) {
-    helperMsg = '⚠️ Spotify tracking parameter (?si=...) detected.'
+  if (!isPending) {
+    if (dupInfo) {
+      helperMsg = dupInfo.message
+    } else if (isAlbumLink) {
+      helperMsg =
+        '⚠️ Detected album-level link. A direct track/song link is strongly recommended.'
+    } else if (ytAnalysis.hasPlaylist) {
+      helperMsg = '⚠️ YouTube playlist link detected. Direct video link is preferred.'
+    } else if (spotifyAnalysis.hasTrackingParams) {
+      helperMsg = '⚠️ Spotify tracking parameter (?si=...) detected.'
+    }
   }
 
   return (

@@ -50,7 +50,8 @@ export default function AllProjectsGridView({
           </Box>
         ) : (
           filteredProjects.map((proj, idx) => {
-            const pSlug = slugify(proj.name || '')
+            const pSlug =
+              slugify(proj.name || '') || (proj.id ? `project-${proj.id}` : `item-${idx + 1}`)
             return (
               <Box
                 key={proj.id || pSlug || idx}

@@ -47,7 +47,11 @@ export async function POST(request) {
     const projectsList = loadAllProjectsData(configData?.artist?.name)
 
     let oldProject = null
-    const requestedSlug = formData.get('originalSlug') || formData.get('projectSlug') || null
+    const originalNameStr = formData.get('originalName')
+    const requestedSlug =
+      formData.get('originalSlug') ||
+      formData.get('projectSlug') ||
+      (originalNameStr ? slugify(String(originalNameStr)) : null)
     if (requestedSlug) {
       oldProject = projectsList.find((p) => slugify(p.name) === String(requestedSlug).trim())
     }
@@ -135,8 +139,12 @@ export async function POST(request) {
       )
     }
 
+    const targetProjectIndex = projectsList.findIndex(
+      (p) => slugify(p.name) === oldSlug || p.name === oldProject.name,
+    )
+
     const isDuplicateProject = projectsList.some((p, i) => {
-      if (i === index) return false
+      if (i === targetProjectIndex || slugify(p.name) === oldSlug) return false
       return slugify(p.name) === newSlug
     })
 
@@ -222,3 +230,5 @@ export async function POST(request) {
     )
   }
 }
+
+export const PUT = POST

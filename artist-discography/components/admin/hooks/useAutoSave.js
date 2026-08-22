@@ -63,6 +63,12 @@ export function useAutoSave(editNameRef = null) {
   // Core sequential save executor
   const executeSaveQueue = useCallback(
     async (saveCallback) => {
+      if (typeof saveCallback !== 'function') {
+        isSavingInFlightRef.current = false
+        setIsAutoSaving(false)
+        return false
+      }
+
       if (isSavingInFlightRef.current) {
         // An HTTP save request is already in flight. Queue the latest saveCallback to run immediately upon completion.
         pendingSaveTaskRef.current = saveCallback
@@ -178,6 +184,10 @@ export function useAutoSave(editNameRef = null) {
         next.delete(fieldKey)
         return next
       })
+
+      if (typeof saveCallback !== 'function') {
+        return
+      }
 
       // If an upload or high-priority action is triggered (delayMs <= 200), don't postpone it with longer delays
       const isUploadField =

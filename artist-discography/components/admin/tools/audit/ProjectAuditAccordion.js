@@ -5,7 +5,6 @@ import {
   Box,
   Typography,
   Chip,
-  IconButton,
   Divider,
   Table,
   TableBody,
@@ -17,11 +16,8 @@ import {
   AccordionSummary,
   AccordionDetails,
   Paper,
-  Tooltip,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import EditIcon from '@mui/icons-material/Edit'
-import AddIcon from '@mui/icons-material/Add'
 import ImageIcon from '@mui/icons-material/Image'
 import { formatProjectDate } from '@/lib/data/dateUtils'
 import { getMediaThumbnailUrl } from '@/components/admin/adminUtils'
@@ -37,8 +33,6 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
   pIdx = 0,
   isExpanded = false,
   onToggleExpand,
-  onSelectProject,
-  onAddTrackToProject,
   density = {},
   viewDensity = 'cozy',
   playingTrackUrl = null,
@@ -72,8 +66,8 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
         sx={{
-          py: density.py,
-          px: { xs: 1.5, sm: 2.5 },
+          py: density.py ?? 1.5,
+          px: { xs: 2, sm: 2.5 },
           '& .MuiAccordionSummary-content': { my: 0.5 },
         }}
       >
@@ -84,7 +78,7 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
             justifyContent: 'space-between',
             width: '100%',
             flexWrap: 'wrap',
-            gap: 1.5,
+            gap: 2,
             pr: 1,
           }}
         >
@@ -92,8 +86,8 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
             <Box
               sx={{
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 aspectRatio: '1 / 1',
                 borderRadius: 2,
                 overflow: 'hidden',
@@ -113,7 +107,7 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
                   sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                <ImageIcon sx={{ color: 'text.disabled', fontSize: 24 }} />
+                <ImageIcon sx={{ color: 'text.disabled', fontSize: 22 }} />
               )}
             </Box>
 
@@ -122,7 +116,7 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
                 variant='subtitle1'
                 sx={{
                   fontWeight: 700,
-                  fontSize: density.titleSize,
+                  fontSize: density.titleSize ?? '1rem',
                   lineHeight: 1.2,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -142,7 +136,7 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
             </Box>
           </Box>
 
-          {/* Checklist Badges & Action Buttons */}
+          {/* Checklist Badges */}
           <Box
             sx={{
               display: 'flex',
@@ -151,7 +145,6 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
               flexWrap: 'wrap',
               ml: { xs: 0, sm: 'auto' },
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <Chip
               label={hasCover ? 'Artwork Ready' : 'Missing Artwork'}
@@ -169,48 +162,27 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
               size='small'
               sx={{ fontWeight: 700, fontSize: '0.72rem' }}
             />
-
-            <Tooltip title='Edit Project in Projects Tab'>
-              <IconButton
-                size='small'
-                onClick={() => onSelectProject?.(pIdx)}
-                sx={{
-                  color: 'primary.main',
-                  backgroundColor: 'rgba(144, 202, 249, 0.1)',
-                  '&:hover': { backgroundColor: 'rgba(144, 202, 249, 0.2)' },
-                }}
-              >
-                <EditIcon fontSize='small' />
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip title='Add Track to this Project'>
-              <IconButton
-                size='small'
-                onClick={() => onAddTrackToProject?.(pIdx)}
-                sx={{
-                  color: 'secondary.main',
-                  backgroundColor: 'rgba(244, 143, 177, 0.1)',
-                  '&:hover': { backgroundColor: 'rgba(244, 143, 177, 0.2)' },
-                }}
-              >
-                <AddIcon fontSize='small' />
-              </IconButton>
-            </Tooltip>
           </Box>
         </Box>
       </AccordionSummary>
 
-      <AccordionDetails sx={{ px: { xs: 1.5, sm: 3 }, pb: 3, pt: 0 }}>
-        <Divider sx={{ my: 1.5, borderColor: 'rgba(255, 255, 255, 0.08)' }} />
+      <AccordionDetails sx={{ px: { xs: 2, sm: 2.5 }, pb: 2.5, pt: 0 }}>
+        <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.08)' }} />
 
         {/* Project-Level External Streaming Links */}
         <Box sx={{ mb: 2.5 }}>
           <Typography
             variant='caption'
-            sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 1 }}
+            sx={{
+              color: 'text.secondary',
+              fontWeight: 700,
+              display: 'block',
+              mb: 1,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
           >
-            PROJECT-LEVEL STREAMING LINKS:
+            Project-Level Streaming Links
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {allProjectAuditKeys.map((pKey) => (
@@ -227,9 +199,16 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
         {/* Tracklisting Table */}
         <Typography
           variant='caption'
-          sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 1 }}
+          sx={{
+            color: 'text.secondary',
+            fontWeight: 700,
+            display: 'block',
+            mb: 1,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
         >
-          TRACKLISTING AUDIT ({tracks.length} TRACKS):
+          Tracklisting Audit ({tracks.length} Tracks)
         </Typography>
 
         <TableContainer
@@ -244,19 +223,25 @@ const ProjectAuditAccordion = memo(function ProjectAuditAccordion({
           <Table size='small'>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, width: '1%' }}>
+                <TableCell
+                  sx={{ color: 'text.secondary', fontWeight: 700, width: '1%', py: 1.25, px: 1.5 }}
+                >
                   #
                 </TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 700 }}>Title</TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, width: '1%' }}>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, py: 1.25, px: 1.5 }}>
+                  Title
+                </TableCell>
+                <TableCell
+                  sx={{ color: 'text.secondary', fontWeight: 700, width: '1%', py: 1.25, px: 1.5 }}
+                >
                   Audio
                 </TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontWeight: 700 }}>
+                <TableCell sx={{ color: 'text.secondary', fontWeight: 700, py: 1.25, px: 1.5 }}>
                   Platform Links
                 </TableCell>
                 <TableCell
                   align='right'
-                  sx={{ color: 'text.secondary', fontWeight: 700, width: 140 }}
+                  sx={{ color: 'text.secondary', fontWeight: 700, width: 140, py: 1.25, px: 1.5 }}
                 >
                   Preview
                 </TableCell>

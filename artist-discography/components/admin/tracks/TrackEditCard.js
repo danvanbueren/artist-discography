@@ -23,6 +23,7 @@ const TrackEditCard = memo(function TrackEditCard({
   allProjects = [],
   currentTracks = [],
   currentProjectIndex = -1,
+  isPending = false,
   isDuplicate,
   isDirtyTitle,
   isSavedTitle,
@@ -179,6 +180,7 @@ const TrackEditCard = memo(function TrackEditCard({
           defaultArtist={defaultArtist}
           projectName={projectName}
           currentProjectIndex={currentProjectIndex}
+          isPending={isPending}
           currentTracks={currentTracks}
           allProjects={allProjects}
           onUpdateLink={onUpdateTrackLink}

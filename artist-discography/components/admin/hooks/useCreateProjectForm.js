@@ -103,68 +103,69 @@ export function useCreateProjectForm({
   }, [artistData?.name, defaultArtistName, artistNameInputRef])
 
   const handleUpdateTrack = useCallback(
-    (idx, field, value) => {
+    (idx, field, value, onDone) => {
       setTracks((prev) => {
         const updated = [...prev]
         if (!updated[idx]) return prev
         updated[idx] = { ...updated[idx], [field]: value }
         return updated
       })
-      markFieldDirty?.(`new_project_track_${idx}_${field}`)
+      if (typeof onDone === 'function') {
+        onDone()
+      }
     },
-    [markFieldDirty],
+    [],
   )
 
-  const handleAddTrack = useCallback(() => {
+  const handleAddTrack = useCallback((onDone) => {
     setTracks((prev) => [...prev, createEmptyTrack()])
-    markFieldDirty?.('new_project_add_track')
-  }, [markFieldDirty])
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
-  const handleRemoveTrack = useCallback(
-    (idx) => {
-      setTracks((prev) => {
-        if (prev.length <= 1) return prev
-        return prev.filter((_, i) => i !== idx)
-      })
-      markFieldDirty?.('new_project_remove_track')
-    },
-    [markFieldDirty],
-  )
+  const handleRemoveTrack = useCallback((idx, onDone) => {
+    setTracks((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((_, i) => i !== idx)
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
-  const handleMoveTrack = useCallback(
-    (fromIndex, toIndex) => {
-      setTracks((prev) => {
-        if (toIndex < 0 || toIndex >= prev.length) return prev
-        const updated = [...prev]
-        const [moved] = updated.splice(fromIndex, 1)
-        updated.splice(toIndex, 0, moved)
-        return updated
-      })
-      markFieldDirty?.('new_project_reorder_tracks')
-    },
-    [markFieldDirty],
-  )
+  const handleMoveTrack = useCallback((fromIndex, toIndex, onDone) => {
+    setTracks((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev
+      const updated = [...prev]
+      const [moved] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, moved)
+      if (typeof onDone === 'function') {
+        onDone(updated)
+      }
+      return updated
+    })
+  }, [])
 
-  const handleTrackAudioChange = useCallback(
-    (idx, file) => {
-      setTracks((prev) => {
-        const updated = [...prev]
-        if (!updated[idx]) return prev
-        updated[idx] = {
-          ...updated[idx],
-          audioFile: file,
-          audioFileName: file ? file.name : '',
-          hasAudio: Boolean(file),
-        }
-        return updated
-      })
-      markFieldDirty?.(`new_project_track_${idx}_audio`)
-    },
-    [markFieldDirty],
-  )
+  const handleTrackAudioChange = useCallback((idx, file, onDone) => {
+    setTracks((prev) => {
+      const updated = [...prev]
+      if (!updated[idx]) return prev
+      updated[idx] = {
+        ...updated[idx],
+        audioFile: file,
+        audioFileName: file ? file.name : '',
+        hasAudio: Boolean(file),
+      }
+      return updated
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const handleTrackLinkChange = useCallback(
-    (trackIdx, platformKey, val) => {
+    (trackIdx, platformKey, val, onDone) => {
       setTracks((prev) => {
         const updated = [...prev]
         if (!updated[trackIdx]) return prev
@@ -178,9 +179,11 @@ export function useCreateProjectForm({
         }
         return updated
       })
-      markFieldDirty?.(`new_project_track_${trackIdx}_link_${platformKey}`)
+      if (typeof onDone === 'function') {
+        onDone()
+      }
     },
-    [markFieldDirty],
+    [],
   )
 
   const executeCreateProject = useCallback(
@@ -235,7 +238,7 @@ export function useCreateProjectForm({
           method: 'POST',
           body: formData,
         })
-        const json = await res.json()
+        const json = await res.json().catch(() => ({}))
 
         if (!res.ok) {
           throw new Error(json.error || 'Failed to create project')

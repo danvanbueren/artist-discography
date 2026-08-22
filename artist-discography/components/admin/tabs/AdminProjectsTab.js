@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useEffect } from 'react'
 import { Grid } from '@mui/material'
 import ProjectSidebarList from '../projects/ProjectSidebarList'
 import ProjectCreateForm from '../projects/ProjectCreateForm'
@@ -17,9 +18,34 @@ export default function AdminProjectsTab({
   handleSaveCreateProject,
   handleSaveUpdateProject,
 }) {
+  const editColumnRef = useRef(null)
+
+  // Reset scroll position to top whenever a new project is selected or created
+  useEffect(() => {
+    if (editColumnRef.current) {
+      editColumnRef.current.scrollTop = 0
+    }
+  }, [projects.selectedProjIndex, projects.isCreatingNew])
+
   return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, md: 4, lg: 3 }}>
+    <Grid
+      container
+      spacing={3}
+      sx={{
+        height: { xs: 'auto', md: '100%' },
+        minHeight: 0,
+        flexGrow: 1,
+      }}
+    >
+      <Grid
+        size={{ xs: 12, md: 5, lg: 4.5, xl: 4 }}
+        sx={{
+          height: { xs: 'auto', md: '100%' },
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <ProjectSidebarList
           projectsList={projects.projectsList}
           selectedProjIndex={projects.selectedProjIndex}
@@ -34,7 +60,16 @@ export default function AdminProjectsTab({
         />
       </Grid>
 
-      <Grid size={{ xs: 12, md: 8, lg: 9 }}>
+      <Grid
+        ref={editColumnRef}
+        size={{ xs: 12, md: 7, lg: 7.5, xl: 8 }}
+        sx={{
+          height: { xs: 'auto', md: '100%' },
+          minHeight: 0,
+          overflowY: { xs: 'visible', md: 'auto' },
+          pr: { xs: 0, md: 1 },
+        }}
+      >
         {projects.isCreatingNew ? (
           <ProjectCreateForm
             name={projects.name}

@@ -2,6 +2,7 @@
 
 import { Box, Typography, Chip, Button, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded'
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded'
 import ViewComfyIcon from '@mui/icons-material/ViewComfy'
 import ViewStreamIcon from '@mui/icons-material/ViewStream'
 import ViewHeadlineIcon from '@mui/icons-material/ViewHeadline'
@@ -11,13 +12,17 @@ import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
 export default function AuditHeaderControls({
   projectsCount = 0,
   health = {},
-  mounted = false,
+  mounted = true,
   onExpandAll,
   onCollapseAll,
   viewDensity = 'cozy',
   onDensityChange,
   density = {},
+  onOpenHealthModal,
 }) {
+  const issues = Array.isArray(health?.issues) ? health.issues : []
+  const isHealthy = Boolean((health?.isHealthy ?? true) && issues.length === 0)
+
   return (
     <Box
       sx={{
@@ -26,7 +31,7 @@ export default function AuditHeaderControls({
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: 2,
-        p: density.cardPadding,
+        p: density.cardPadding ?? 2,
         backgroundColor: 'rgba(26, 26, 38, 0.75)',
         borderRadius: 2.5,
         border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -36,13 +41,33 @@ export default function AuditHeaderControls({
         <Typography variant='h6' sx={{ fontWeight: 800 }}>
           Projects &amp; Tracks Media Audit ({projectsCount} Releases)
         </Typography>
+
         <Chip
-          icon={mounted && health?.isHealthy ? <CheckCircleOutlineRoundedIcon /> : undefined}
-          label={health?.isHealthy ? 'JSON File: Valid' : 'Health Warnings'}
-          color={health?.isHealthy ? 'success' : 'warning'}
+          clickable
+          onClick={onOpenHealthModal}
+          icon={
+            mounted ? (
+              isHealthy ? (
+                <CheckCircleOutlineRoundedIcon />
+              ) : (
+                <WarningAmberRoundedIcon />
+              )
+            ) : undefined
+          }
+          label={isHealthy ? 'JSON File: Valid' : `Health Warnings (${issues.length})`}
+          color={isHealthy ? 'success' : 'warning'}
           variant='outlined'
           size='small'
-          sx={{ fontWeight: 700 }}
+          sx={{
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            '&:hover': {
+              backgroundColor: isHealthy ? 'rgba(76, 175, 80, 0.12)' : 'rgba(255, 152, 0, 0.12)',
+              borderColor: isHealthy ? 'success.main' : 'warning.main',
+              transform: 'scale(1.03)',
+            },
+          }}
         />
       </Box>
 

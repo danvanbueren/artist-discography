@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useDeferredValue } from 'react'
+import { useMemo } from 'react'
 import { getProjectNameValidationError, getDuplicateTrackSlugIndexes } from '../adminUtils'
 import { EMPTY_SET } from '../adminConstants'
 
@@ -10,6 +10,7 @@ import { EMPTY_SET } from '../adminConstants'
 export function useProjectValidation({
   isCreatingNew,
   isPendingProjectSwitch,
+  isSwitchingProject = false,
   projectsList = [],
   selectedProjIndex = 0,
   name = '',
@@ -17,14 +18,19 @@ export function useProjectValidation({
   editName = '',
   editTracks = [],
 }) {
-  const deferredEditTracks = useDeferredValue(editTracks)
-  const deferredName = useDeferredValue(name)
-  const deferredTracks = useDeferredValue(tracks)
+  const isSwitching = isPendingProjectSwitch || isSwitchingProject
 
   const editNameValidationError = useMemo(() => {
-    if (isCreatingNew || isPendingProjectSwitch) return null
+    if (
+      isCreatingNew ||
+      isSwitching ||
+      selectedProjIndex < 0 ||
+      selectedProjIndex >= projectsList.length
+    ) {
+      return null
+    }
     return getProjectNameValidationError(editName, projectsList, selectedProjIndex)
-  }, [isCreatingNew, isPendingProjectSwitch, editName, projectsList, selectedProjIndex])
+  }, [isCreatingNew, isSwitching, editName, projectsList, selectedProjIndex])
 
   const isEditNameDuplicate = useMemo(
     () => Boolean(editNameValidationError),
@@ -32,13 +38,13 @@ export function useProjectValidation({
   )
 
   const editDupTrackIndexes = useMemo(() => {
-    if (isCreatingNew || isPendingProjectSwitch) return EMPTY_SET
-    return getDuplicateTrackSlugIndexes(deferredEditTracks)
-  }, [isCreatingNew, isPendingProjectSwitch, deferredEditTracks])
+    if (isCreatingNew || isSwitching) return EMPTY_SET
+    return getDuplicateTrackSlugIndexes(editTracks)
+  }, [isCreatingNew, isSwitching, editTracks])
 
   const newNameValidationError = useMemo(
-    () => (isCreatingNew ? getProjectNameValidationError(deferredName, projectsList, -1) : null),
-    [isCreatingNew, deferredName, projectsList],
+    () => (isCreatingNew ? getProjectNameValidationError(name, projectsList, -1) : null),
+    [isCreatingNew, name, projectsList],
   )
 
   const isNewNameDuplicate = useMemo(
@@ -47,8 +53,8 @@ export function useProjectValidation({
   )
 
   const newDupTrackIndexes = useMemo(
-    () => (isCreatingNew ? getDuplicateTrackSlugIndexes(deferredTracks) : EMPTY_SET),
-    [isCreatingNew, deferredTracks],
+    () => (isCreatingNew ? getDuplicateTrackSlugIndexes(tracks) : EMPTY_SET),
+    [isCreatingNew, tracks],
   )
 
   return {

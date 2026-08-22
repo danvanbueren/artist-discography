@@ -80,7 +80,7 @@ export default function SingleProjectView({
       >
         <CompactArtistHeader
           artist={artist}
-          onNavigateHome={onNavigateHome}
+          onNavigateHome={onNavigateHome ? () => onNavigateHome(selectedProject) : undefined}
           darkMode={darkMode}
           onToggleTheme={onToggleTheme}
           selectedPlatform={selectedPlatform}

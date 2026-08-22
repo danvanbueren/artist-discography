@@ -26,6 +26,7 @@ export default async function AdminPage() {
   try {
     const dataResult = loadArtistData()
     data = dataResult?.data ?? {}
+    data.health = dataResult?.health ?? { isHealthy: true, issues: [] }
     adminAccess = data?.adminAccess !== false
     artistName = data?.artist?.name?.trim() || 'Artist'
     data.logoInfo = getLogoDetails()

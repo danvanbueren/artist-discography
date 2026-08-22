@@ -18,19 +18,20 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import AlbumIcon from '@mui/icons-material/Album'
 import LayersIcon from '@mui/icons-material/Layers'
 
-export default function RawJsonInspectorTab({ dataState }) {
+export default function RawJsonInspectorTab({ dataState, jsonData }) {
+  const activeDataState = dataState || jsonData || {}
   const [copiedJson, setCopiedJson] = useState(false)
   const [viewMode, setViewMode] = useState('config') // 'config' | 'project' | 'unified'
   const [selectedProjectIndex, setSelectedProjectIndex] = useState(0)
 
   const projects = useMemo(() => {
-    return Array.isArray(dataState?.projects) ? dataState.projects : []
-  }, [dataState])
+    return Array.isArray(activeDataState?.projects) ? activeDataState.projects : []
+  }, [activeDataState])
 
   const configJson = useMemo(() => {
-    const { projects: _p, ...configFields } = dataState || {}
+    const { projects: _p, ...configFields } = activeDataState || {}
     return configFields
-  }, [dataState])
+  }, [activeDataState])
 
   const currentProjectJson = useMemo(() => {
     if (projects.length === 0) return {}
@@ -66,8 +67,8 @@ export default function RawJsonInspectorTab({ dataState }) {
   const displayedContent = useMemo(() => {
     if (viewMode === 'config') return configJson
     if (viewMode === 'project') return currentProjectJson
-    return dataState
-  }, [viewMode, configJson, currentProjectJson, dataState])
+    return activeDataState
+  }, [viewMode, configJson, currentProjectJson, activeDataState])
 
   const currentFilePath = useMemo(() => {
     if (viewMode === 'config') return 'data/config.json'

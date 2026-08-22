@@ -86,18 +86,20 @@ export function useDiscographyFilterSort({ projects = [] }) {
     return result
   }, [projects, activeTypes, searchQuery, sortOrder])
 
-  // Flattened tracks from the filtered projects in current display order
+  // Flattened playable tracks from the filtered projects in current display order
   const displayedDiscographyTracks = useMemo(() => {
     const list = []
     for (const proj of filteredProjects) {
       if (proj.tracks && Array.isArray(proj.tracks)) {
         for (const track of proj.tracks) {
-          list.push({
-            track,
-            project: proj.name,
-            projectCover: proj.cover,
-            projectArtist: proj.artist,
-          })
+          if (track?.hasAudio && track?.audioUrl) {
+            list.push({
+              track,
+              project: proj.name,
+              projectCover: proj.cover,
+              projectArtist: proj.artist,
+            })
+          }
         }
       }
     }

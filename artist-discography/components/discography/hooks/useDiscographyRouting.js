@@ -14,10 +14,12 @@ import { slugify, findProjectBySlug, findTrackBySlug } from '@/lib/data/slugs'
  *   currentView: 'ALL_PROJECTS'|'SINGLE_PROJECT',
  *   selectedProject: Object|null,
  *   highlightedTrackSlug: string|null,
+ *   pendingScrollProjectSlug: string|null,
+ *   clearPendingScrollProjectSlug: () => void,
  *   handleSelectProject: (project: Object) => void,
  *   handleSelectTrackRow: (track: Object, project: Object) => void,
  *   handleSelectTrackTitle: (track: Object, project: Object) => void,
- *   handleNavigateHome: () => void,
+ *   handleNavigateHome: (targetProject?: Object|null) => void,
  *   navigateToCurrentTrack: () => void
  * }}
  */
@@ -52,6 +54,11 @@ export function useDiscographyRouting({ projects = [], initialSlug = [] }) {
   const [currentView, setCurrentView] = useState(() => initialResolved.view)
   const [selectedProject, setSelectedProject] = useState(() => initialResolved.project)
   const [highlightedTrackSlug, setHighlightedTrackSlug] = useState(() => initialResolved.trackSlug)
+  const [pendingScrollProjectSlug, setPendingScrollProjectSlug] = useState(null)
+
+  const clearPendingScrollProjectSlug = useCallback(() => {
+    setPendingScrollProjectSlug(null)
+  }, [])
 
   // Parse path and sync SPA state with URL
   const syncStateFromLocation = useCallback(() => {
@@ -110,6 +117,7 @@ export function useDiscographyRouting({ projects = [], initialSlug = [] }) {
     setSelectedProject(project)
     setCurrentView('SINGLE_PROJECT')
     setHighlightedTrackSlug(null)
+    setPendingScrollProjectSlug(null)
   }, [])
 
   const handleSelectTrackRow = useCallback((track, project) => {
@@ -123,6 +131,7 @@ export function useDiscographyRouting({ projects = [], initialSlug = [] }) {
     setSelectedProject(project)
     setCurrentView('SINGLE_PROJECT')
     setHighlightedTrackSlug(tSlug || null)
+    setPendingScrollProjectSlug(null)
   }, [])
 
   const handleSelectTrackTitle = useCallback((track, project) => {
@@ -136,14 +145,29 @@ export function useDiscographyRouting({ projects = [], initialSlug = [] }) {
     setSelectedProject(project)
     setCurrentView('SINGLE_PROJECT')
     setHighlightedTrackSlug(tSlug || null)
+    setPendingScrollProjectSlug(null)
   }, [])
 
-  const handleNavigateHome = useCallback(() => {
-    window.history.pushState({}, '', '/')
-    setCurrentView('ALL_PROJECTS')
-    setSelectedProject(null)
-    setHighlightedTrackSlug(null)
-  }, [])
+  const handleNavigateHome = useCallback(
+    (targetProject = null) => {
+      const projectToScroll = targetProject || selectedProject
+      const targetSlug = projectToScroll?.name
+        ? slugify(projectToScroll.name)
+        : projectToScroll?.id
+          ? `project-${projectToScroll.id}`
+          : null
+
+      window.history.pushState({}, '', '/')
+      setCurrentView('ALL_PROJECTS')
+      setSelectedProject(null)
+      setHighlightedTrackSlug(null)
+
+      if (targetSlug) {
+        setPendingScrollProjectSlug(targetSlug)
+      }
+    },
+    [selectedProject],
+  )
 
   const navigateToCurrentTrack = useCallback(
     (playingTrack) => {
@@ -156,6 +180,7 @@ export function useDiscographyRouting({ projects = [], initialSlug = [] }) {
         setSelectedProject(matchedProj)
         setCurrentView('SINGLE_PROJECT')
         setHighlightedTrackSlug(trackSlug)
+        setPendingScrollProjectSlug(null)
         if (typeof window !== 'undefined') {
           window.history.pushState({}, '', `/${projectSlug}${trackSlug ? `/${trackSlug}` : ''}`)
         }
@@ -168,6 +193,8 @@ export function useDiscographyRouting({ projects = [], initialSlug = [] }) {
     currentView,
     selectedProject,
     highlightedTrackSlug,
+    pendingScrollProjectSlug,
+    clearPendingScrollProjectSlug,
     handleSelectProject,
     handleSelectTrackRow,
     handleSelectTrackTitle,

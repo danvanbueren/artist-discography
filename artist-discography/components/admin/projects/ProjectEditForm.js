@@ -1,6 +1,6 @@
 'use client'
 
-import { Stack, Paper, Typography, Grid, Divider, Box, Button, LinearProgress } from '@mui/material'
+import { Stack, Paper, Typography, Grid, Divider, Box, Button } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
@@ -86,17 +86,6 @@ export default function ProjectEditForm({
         transition: 'opacity 0.15s ease',
       }}
     >
-      {isPending && (
-        <LinearProgress
-          color='secondary'
-          sx={{
-            borderRadius: 1,
-            height: 3,
-            mb: -2,
-          }}
-        />
-      )}
-
       {/* Project Metadata & Artwork Card */}
       <Paper
         variant='outlined'
@@ -224,6 +213,7 @@ export default function ProjectEditForm({
                 allProjects={projectsList}
                 currentTracks={editTracks}
                 currentProjectIndex={selectedProjIndex}
+                isPending={isPending}
                 isDuplicate={isDup}
                 isDirtyTitle={dirtyFields.has(`edit_track_${idx}_title`)}
                 isSavedTitle={savedFields.has(`edit_track_${idx}_title`)}

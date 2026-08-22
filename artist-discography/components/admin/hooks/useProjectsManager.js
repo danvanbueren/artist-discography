@@ -28,6 +28,7 @@ export function useProjectsManager({
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [selectedProjIndex, setSelectedProjIndex] = useState(0)
   const [isPendingProjectSwitch, startProjectTransition] = useTransition()
+  const [isSwitchingProject, setIsSwitchingProject] = useState(false)
 
   const selectedProjIndexRef = useRef(selectedProjIndex)
   const isCreatingNewRef = useRef(isCreatingNew)
@@ -62,6 +63,7 @@ export function useProjectsManager({
   const validation = useProjectValidation({
     isCreatingNew,
     isPendingProjectSwitch,
+    isSwitchingProject,
     projectsList,
     selectedProjIndex,
     name: createForm.name,
@@ -113,13 +115,16 @@ export function useProjectsManager({
       setIsCreatingNew(false)
       isCreatingNewRef.current = false
       lastLoadedProjIndexRef.current = idx
+      setIsSwitchingProject(true)
 
       const proj = projectsList[idx]
-      startProjectTransition(() => {
-        setSelectedProjIndex(idx)
-        selectedProjIndexRef.current = idx
-        editForm.populateEditForm(proj)
-      })
+      setSelectedProjIndex(idx)
+      selectedProjIndexRef.current = idx
+      editForm.populateEditForm(proj)
+
+      setTimeout(() => {
+        setIsSwitchingProject(false)
+      }, 60)
     },
     [projectsList, editForm, clearPendingAutoSave],
   )
@@ -144,9 +149,7 @@ export function useProjectsManager({
     ) {
       lastLoadedProjIndexRef.current = selectedProjIndex
       const proj = projectsList[selectedProjIndex]
-      startProjectTransition(() => {
-        editForm.populateEditForm(proj)
-      })
+      editForm.populateEditForm(proj)
     }
   }, [selectedProjIndex, isCreatingNew, projectsList, editForm])
 
@@ -177,14 +180,42 @@ export function useProjectsManager({
 
   const executeCreate = useCallback(
     async (password) => {
-      return createForm.executeCreateProject(password, projectsList)
+      const result = await createForm.executeCreateProject(password, projectsList)
+      if (result && typeof result === 'object') {
+        const createdProject = result
+        setProjectsList((prev) => [createdProject, ...prev])
+        setIsCreatingNew(false)
+        setSelectedProjIndex(0)
+        return true
+      }
+      return Boolean(result)
     },
     [createForm, projectsList],
   )
 
   const executeEdit = useCallback(
-    async (password) => {
-      return editForm.executeEditProject(password, projectsList, selectedProjIndex)
+    async (password, overrideTracks = null) => {
+      const result = await editForm.executeEditProject(
+        password,
+        projectsList,
+        selectedProjIndex,
+        overrideTracks,
+      )
+      if (result && typeof result === 'object') {
+        const updatedProject = result
+        setProjectsList((prev) => {
+          const next = [...prev]
+          if (selectedProjIndex >= 0 && selectedProjIndex < next.length) {
+            next[selectedProjIndex] = {
+              ...next[selectedProjIndex],
+              ...updatedProject,
+            }
+          }
+          return next
+        })
+        return true
+      }
+      return Boolean(result)
     },
     [editForm, projectsList, selectedProjIndex],
   )
@@ -195,8 +226,8 @@ export function useProjectsManager({
     isCreatingNew,
     setIsCreatingNew,
     selectedProjIndex,
-    setSelectedProjIndex,
-    isPendingProjectSwitch,
+    isPendingProjectSwitch: isPendingProjectSwitch || isSwitchingProject,
+    isSwitchingProject,
 
     // Create form
     name: createForm.name,
@@ -265,23 +296,27 @@ export function useProjectsManager({
     handleCopyTrack: operations.handleCopyTrack,
 
     // Track handlers
-    handleUpdateCreateTrackName: (idx, val) => createForm.handleUpdateTrack(idx, 'name', val),
-    handleUpdateCreateTrackArtist: (idx, val) => createForm.handleUpdateTrack(idx, 'artist', val),
+    handleUpdateCreateTrackName: (idx, val, onDone) =>
+      createForm.handleUpdateTrack(idx, 'name', val, onDone),
+    handleUpdateCreateTrackArtist: (idx, val, onDone) =>
+      createForm.handleUpdateTrack(idx, 'artist', val, onDone),
     handleUpdateCreateTrackLink: createForm.handleTrackLinkChange,
     handleCreateTrackAudioUpload: createForm.handleTrackAudioChange,
-    handleCreateTrackAudioRemove: (idx) => createForm.handleTrackAudioChange(idx, null),
-    handleMoveCreateTrackUp: (idx) => createForm.handleMoveTrack(idx, idx - 1),
-    handleMoveCreateTrackDown: (idx) => createForm.handleMoveTrack(idx, idx + 1),
+    handleCreateTrackAudioRemove: (idx, onDone) => createForm.handleTrackAudioChange(idx, null, onDone),
+    handleMoveCreateTrackUp: (idx, onDone) => createForm.handleMoveTrack(idx, idx - 1, onDone),
+    handleMoveCreateTrackDown: (idx, onDone) => createForm.handleMoveTrack(idx, idx + 1, onDone),
     handleDeleteCreateTrack: (track, idx) =>
       operations.setTrackToDelete({ index: idx, isEditing: false, trackName: track.name }),
 
-    handleUpdateEditTrackName: (idx, val) => editForm.handleUpdateEditTrack(idx, 'name', val),
-    handleUpdateEditTrackArtist: (idx, val) => editForm.handleUpdateEditTrack(idx, 'artist', val),
+    handleUpdateEditTrackName: (idx, val, onDone) =>
+      editForm.handleUpdateEditTrack(idx, 'name', val, onDone),
+    handleUpdateEditTrackArtist: (idx, val, onDone) =>
+      editForm.handleUpdateEditTrack(idx, 'artist', val, onDone),
     handleUpdateEditTrackLink: editForm.handleEditTrackLinkChange,
     handleEditTrackAudioUpload: editForm.handleEditTrackAudioChange,
-    handleEditTrackAudioRemove: (idx) => editForm.handleEditTrackAudioChange(idx, null),
-    handleMoveEditTrackUp: (idx) => editForm.handleMoveEditTrack(idx, idx - 1),
-    handleMoveEditTrackDown: (idx) => editForm.handleMoveEditTrack(idx, idx + 1),
+    handleEditTrackAudioRemove: (idx, onDone) => editForm.handleEditTrackAudioChange(idx, null, onDone),
+    handleMoveEditTrackUp: (idx, onDone) => editForm.handleMoveEditTrack(idx, idx - 1, onDone),
+    handleMoveEditTrackDown: (idx, onDone) => editForm.handleMoveEditTrack(idx, idx + 1, onDone),
     handleDeleteEditTrack: (track, idx) =>
       operations.setTrackToDelete({ index: idx, isEditing: true, trackName: track.name }),
     handleCopyEditTrack: (track, idx) => {
