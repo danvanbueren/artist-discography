@@ -1,4 +1,4 @@
-# 🎵 Artist Discography
+# [Artist Discography](https://github.com/danvanbueren/artist-discography) &middot; [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](https://github.com/danvanbueren/artist-discography/blob/main/LICENSE) [![Repo Size](https://img.shields.io/github/repo-size/danvanbueren/artist-discography?color=blue)](https://github.com/danvanbueren/artist-discography) [![Issues](https://img.shields.io/github/issues/danvanbueren/artist-discography)](https://github.com/danvanbueren/artist-discography/issues) [![Last Commit](https://img.shields.io/github/last-commit/danvanbueren/artist-discography)](https://github.com/danvanbueren/artist-discography/commits/main/)
 
 A high-performance, modern Single Page Application (SPA) designed to showcase an artist's complete music discography—including albums, EPs, singles, collaborations, flips, and remixes—with direct links to listen across all major streaming platforms and built-in audio preview playback.
 
