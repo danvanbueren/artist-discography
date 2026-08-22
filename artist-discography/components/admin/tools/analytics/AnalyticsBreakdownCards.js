@@ -224,10 +224,12 @@ export const AnalyticsBreakdownCards = memo(function AnalyticsBreakdownCards({
                     </Box>
                     <ListItemText
                       primary={trk.name}
-                      primaryTypographyProps={{
-                        variant: 'body2',
-                        fontWeight: 600,
-                        noWrap: true,
+                      slotProps={{
+                        primary: {
+                          variant: 'body2',
+                          fontWeight: 600,
+                          noWrap: true,
+                        },
                       }}
                     />
                     <Chip
@@ -287,11 +289,13 @@ export const AnalyticsBreakdownCards = memo(function AnalyticsBreakdownCards({
                   </Box>
                   <ListItemText
                     primary={p.path}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      fontFamily: 'monospace',
-                      color: 'text.primary',
-                      noWrap: true,
+                    slotProps={{
+                      primary: {
+                        variant: 'body2',
+                        fontFamily: 'monospace',
+                        color: 'text.primary',
+                        noWrap: true,
+                      },
                     }}
                   />
                   <Chip

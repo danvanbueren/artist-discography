@@ -18,6 +18,7 @@ const AdminDateInput = memo(function AdminDateInput({
   isDirty,
   isSaved,
   sx,
+  format = 'DD-MMM-YYYY',
   ...rest
 }) {
   const dateValue = useMemo(() => {
@@ -71,7 +72,7 @@ const AdminDateInput = memo(function AdminDateInput({
       label={label}
       value={dateValue}
       onChange={handleChange}
-      format='YYYY-MM-DD'
+      format={format}
       slotProps={{
         textField: {
           size,
