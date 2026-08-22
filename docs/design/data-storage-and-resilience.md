@@ -12,6 +12,10 @@ Rather than storing the entire catalog in a single monolithic database or massiv
 artist-discography/data/
 ├── config.json                       # Global artist profile, links, credentials & settings
 ├── logo.png (or .jpg, .webp, .svg)   # Optional custom branding logo
+├── analytics/                        # Privacy-focused local metrics & bandwidth logs
+│   ├── daily.json                    # Daily aggregation of streams, visits, and bytes
+│   ├── events.json                   # Sliding window of latest 200 activity events
+│   └── totals.json                   # Lifetime cumulative counters
 ├── backups/                          # Timestamped rolling snapshot backups
 │   ├── config-2026-05-15T10-30-00.json
 │   └── project-hydrolock-2026-05-15T10-30-00.json
@@ -127,3 +131,20 @@ Following the **Fail Gracefully** standard, `lib/artistData.js` never assumes in
 - Missing visibility/copyright flags default to `"public"` and `"cleared"`.
 
 This ensures that even partially completed or legacy JSON files load smoothly in the frontend without triggering React rendering crashes.
+
+---
+
+## 📊 Privacy-First Analytics Storage & High-Frequency Buffering
+
+The built-in analytics engine (`lib/data/analyticsStorage.js`) records basic streams, page views, and bandwidth usage directly to local JSON files (`data/analytics/`):
+
+1. **Daily Aggregation (`daily.json`)**:
+   Tracks daily counts of total streams, page visits, audio bandwidth bytes, media bandwidth bytes, and per-project/per-track breakdowns.
+2. **Recent Activity Stream (`events.json`)**:
+   Maintains a sliding window of the latest 200 activity events (stream play starts and page visits) with ISO timestamps, paths, project titles, and referrer sources.
+3. **Lifetime Totals (`totals.json`)**:
+   Preserves cumulative all-time metrics for streams, pageviews, and bandwidth consumption.
+4. **Non-Blocking In-Memory Bandwidth Buffering**:
+   Because audio and image streaming involve high-frequency chunk requests, transferring bytes does not trigger synchronous disk writes. Byte counts are incremented in an in-memory buffer (`recordBandwidthUsage`) and flushed atomically to disk on a debounced schedule.
+5. **Zero-Data-Loss Resets**:
+   When an administrator resets analytics from the Admin Dashboard, the existing data is automatically archived into a rolling backup (`data/backups/analytics-daily-<timestamp>.json`) before zeroing active counters.

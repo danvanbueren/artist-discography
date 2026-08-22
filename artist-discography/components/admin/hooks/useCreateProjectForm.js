@@ -102,20 +102,17 @@ export function useCreateProjectForm({
     tracksRef.current = initialTracks
   }, [artistData?.name, defaultArtistName, artistNameInputRef])
 
-  const handleUpdateTrack = useCallback(
-    (idx, field, value, onDone) => {
-      setTracks((prev) => {
-        const updated = [...prev]
-        if (!updated[idx]) return prev
-        updated[idx] = { ...updated[idx], [field]: value }
-        return updated
-      })
-      if (typeof onDone === 'function') {
-        onDone()
-      }
-    },
-    [],
-  )
+  const handleUpdateTrack = useCallback((idx, field, value, onDone) => {
+    setTracks((prev) => {
+      const updated = [...prev]
+      if (!updated[idx]) return prev
+      updated[idx] = { ...updated[idx], [field]: value }
+      return updated
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const handleAddTrack = useCallback((onDone) => {
     setTracks((prev) => [...prev, createEmptyTrack()])
@@ -164,27 +161,24 @@ export function useCreateProjectForm({
     }
   }, [])
 
-  const handleTrackLinkChange = useCallback(
-    (trackIdx, platformKey, val, onDone) => {
-      setTracks((prev) => {
-        const updated = [...prev]
-        if (!updated[trackIdx]) return prev
-        const currentLinks = updated[trackIdx].links || {}
-        updated[trackIdx] = {
-          ...updated[trackIdx],
-          links: {
-            ...currentLinks,
-            [platformKey]: val,
-          },
-        }
-        return updated
-      })
-      if (typeof onDone === 'function') {
-        onDone()
+  const handleTrackLinkChange = useCallback((trackIdx, platformKey, val, onDone) => {
+    setTracks((prev) => {
+      const updated = [...prev]
+      if (!updated[trackIdx]) return prev
+      const currentLinks = updated[trackIdx].links || {}
+      updated[trackIdx] = {
+        ...updated[trackIdx],
+        links: {
+          ...currentLinks,
+          [platformKey]: val,
+        },
       }
-    },
-    [],
-  )
+      return updated
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const executeCreateProject = useCallback(
     async (password, projectsList = []) => {

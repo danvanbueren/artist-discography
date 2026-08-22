@@ -1,7 +1,11 @@
 'use client'
 
 import { Box, Stack, Typography, useTheme } from '@mui/material'
-import { useLogoAnalysis, getLogoFilter, shouldApplyLogoGradient } from '@/lib/hooks/useLogoAnalysis'
+import {
+  useLogoAnalysis,
+  getLogoFilter,
+  shouldApplyLogoGradient,
+} from '@/lib/hooks/useLogoAnalysis'
 import { useDynamicThemeGradients } from '@/lib/hooks/useDynamicThemeGradients'
 import { useFitTextWidth } from '@/lib/hooks/useFitTextWidth'
 import CompactHeaderActions from './header/CompactHeaderActions'
@@ -47,9 +51,7 @@ export default function CompactArtistHeader({
     ? 'drop-shadow(0px 4px 14px rgba(0,0,0,0.35))'
     : 'drop-shadow(0px 4px 14px rgba(0,0,0,0.15))'
   const dynamicFilter = getDynamicLogoFilter(
-    isGradient
-      ? baseShadow
-      : getLogoFilter(logoAnalysis, isDarkMode, baseShadow),
+    isGradient ? baseShadow : getLogoFilter(logoAnalysis, isDarkMode, baseShadow),
   )
 
   return (

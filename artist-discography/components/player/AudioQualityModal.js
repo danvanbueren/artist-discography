@@ -106,18 +106,15 @@ export default function AudioQualityModal({
             Audio Playback Quality
           </Typography>
         </Stack>
-        <IconButton
-          aria-label='close'
-          onClick={onClose}
-          sx={{ color: 'text.secondary', p: 0.5 }}
-        >
+        <IconButton aria-label='close' onClick={onClose} sx={{ color: 'text.secondary', p: 0.5 }}>
           <CloseRoundedIcon fontSize='small' />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ p: 1.5, pt: 1 }}>
         <Typography variant='body2' color='text.secondary' sx={{ mb: 2 }}>
-          Select your preferred streaming audio quality. High bitrates offer studio fidelity while lower bitrates reduce data usage and buffering.
+          Select your preferred streaming audio quality. High bitrates offer studio fidelity while
+          lower bitrates reduce data usage and buffering.
         </Typography>
 
         {isStuttering && (
@@ -220,7 +217,11 @@ export default function AudioQualityModal({
                   </Box>
 
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Stack direction='row' spacing={1} sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap' }}>
+                    <Stack
+                      direction='row'
+                      spacing={1}
+                      sx={{ alignItems: 'center', mb: 0.5, flexWrap: 'wrap' }}
+                    >
                       <Typography
                         variant='subtitle2'
                         sx={{

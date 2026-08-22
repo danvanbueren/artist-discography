@@ -20,9 +20,9 @@ docs/
 │   └── ui-and-theme-system.md          # Obsidian glassmorphism design, MUI 9 standards, interaction hooks
 └── plans/                              # Implementation blueprints & engineering roadmap
     ├── README.md                       # Roadmap master index, active plans & guidelines
-    └── archive/                        # Completed & verified plans (Phases 1 through 12)
+    └── archive/                        # Completed & verified plans (Phases 1 through 13)
         ├── README.md                   # Archive index table
-        └── 01-12-*.md                  # Individual historical phase plans
+        └── 01-13-*.md                  # Individual historical phase plans
 ```
 
 ---
@@ -35,7 +35,7 @@ Detailed deep-dives into how Artist Discography is designed and engineered:
 - **[Architecture Overview](./design/architecture-overview.md)**: Dynamic catch-all SPA routing (`[[...slug]]`), system routes isolation (`/_sys/*`), component boundaries, and request lifecycles.
 - **[Audio Playback Engine](./design/audio-engine.md)**: Memory-safe audio element management, multi-tier quality streaming (FLAC, 320k, 128k), drag-and-drop queue reordering, loop/shuffle algorithms, OS MediaSession sync, and Google Cast / Apple AirPlay.
 - **[Media Pipeline & Transcoding](./design/media-pipeline.md)**: On-the-fly Sharp image resizing, non-blocking FFmpeg transcoding over SSE, background cache warming, automated cache lifecycle pruner, and dynamic favicons.
-- **[Data Storage & Resilience](./design/data-storage-and-resilience.md)**: Modular per-project JSON storage, atomic swap writes (`fs.renameSync`), automated rolling backups, corrupted file quarantine, and heuristic auto-healing.
+- **[Data Storage & Resilience](./design/data-storage-and-resilience.md)**: Modular per-project JSON storage, atomic swap writes (`fs.renameSync`), automated rolling backups, privacy-first local analytics (`data/analytics/`), and heuristic auto-healing.
 - **[Security & Access Control](./design/security-and-permissions.md)**: Private access system, release visibility flags (`public`/`private`), copyright audio playback gating (`cleared`/`uncleared`), and defense-in-depth API protection.
 - **[UI Architecture & Theme System](./design/ui-and-theme-system.md)**: Obsidian glassmorphism design philosophy, Material UI 9 standards (`sx`/`slotProps`), horizontal drag & wheel scrolling (`useDragScroll`), and touch ergonomics.
 
@@ -43,13 +43,13 @@ Detailed deep-dives into how Artist Discography is designed and engineered:
 
 ### 🛠️ 2. Content Management & APIs
 - **[Operator Content Management Guide](./content-management.md)**: How to structure `data/config.json`, project folders (`project.json`), artwork dimensions, audio filenames, and using the Web Admin Portal (`/_sys/_admin`).
-- **[Backend API Reference](./api-reference.md)**: Complete catalog of REST endpoints for authentication, uploads, project CRUD, audio streaming, Sharp media optimization, and developer sandbox tools.
+- **[Backend API Reference](./api-reference.md)**: Complete catalog of REST endpoints for authentication, analytics tracking, uploads, project CRUD, audio streaming, Sharp media optimization, and developer sandbox tools.
 
 ---
 
 ### 📋 3. Plans & Roadmap (`docs/plans/`)
 - **[Roadmap & Plans Hub](./plans/README.md)**: Overview of current roadmap status, future feature concepts (synchronized lyrics, multi-disc box sets, visualizer presets), and plan authoring standards.
-- **[Archived Implementation Plans](./plans/archive/README.md)**: Preserved blueprints and implementation logs for all completed milestones (Phases 1 through 12).
+- **[Archived Implementation Plans](./plans/archive/README.md)**: Preserved blueprints and implementation logs for all completed milestones (Phases 1 through 13).
 
 ---
 

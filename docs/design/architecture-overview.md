@@ -34,10 +34,11 @@ Artist Discography is engineered as a **hybrid Single Page Application (SPA)** p
 │                   Next.js 16 Server Runtime (Node.js)                    │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
 │  │                       Server Route Handlers                        │  │
-│  │  - /api/audio/[...path]   (Byte-range audio streaming & 403 gates) │  │
+│  │  - /api/audio/[...path]   (Byte-range audio streaming & bandwidth) │  │
 │  │  - /api/media/[...path]   (Sharp dynamic image resizing & WebP)    │  │
+│  │  - /api/analytics/track   (Public beacon & fetch event tracker)    │  │
 │  │  - /api/logo              (Dynamic logo optimizer & cache buster)  │  │
-│  │  - /api/admin/*           (CRUD, upload, copy-track, media-jobs)   │  │
+│  │  - /api/admin/*           (CRUD, upload, analytics, media-jobs)   │  │
 │  │  - /api/auth/*            (Private access code verification)       │  │
 │  │  - /api/dev/*             (OpenAPI 3.1 live explorer, seeder)      │  │
 │  └─────────────────────────────────┬──────────────────────────────────┘  │
@@ -45,6 +46,7 @@ Artist Discography is engineered as a **hybrid Single Page Application (SPA)** p
 │  ┌─────────────────────────────────┴──────────────────────────────────┐  │
 │  │                       Data & Background Engines                    │  │
 │  │  - lib/data/atomicStorage.js (Atomic JSON reads, writes & repair)  │  │
+│  │  - lib/data/analyticsStorage.js (Atomic metrics, events, bandwidth)│  │
 │  │  - lib/data/artistData.js    (Canonical data facade & scan)        │  │
 │  │  - lib/media/mediaOptimizer.js (Sharp image transcoding pipeline)  │  │
 │  │  - lib/media/audioOptimizer.js (FFmpeg background transcoding)     │  │
@@ -57,6 +59,7 @@ Artist Discography is engineered as a **hybrid Single Page Application (SPA)** p
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                       Host Filesystem (`data/`)                          │
 │  ├── config.json               (Artist profile, links & server auth)     │
+│  ├── analytics/                (daily.json, events.json, totals.json)    │
 │  ├── projects/<slug>/          (Per-project metadata, cover art, audio)  │
 │  ├── backups/                  (Rolling timestamped JSON snapshots)      │
 │  └── cache/                    (Generated WebP images & audio tiers)     │
@@ -120,7 +123,7 @@ components/
 │   ├── projects/     # ProjectCreateForm, ProjectEditForm, ProjectSidebarList
 │   ├── sidebar/      # ProjectSidebarItem rows
 │   ├── tabs/         # AdminProjectsTab
-│   ├── tools/        # Integrated diagnostic tabs (audit, apiExplorer, overview, raw, platforms)
+│   ├── tools/        # Integrated diagnostic tabs (analytics, audit, apiExplorer, overview, raw, platforms)
 │   ├── track/        # TrackStreamingPlatformInput, TrackLinksGrid, TrackAudioUploader
 │   └── tracks/       # TrackCreateCard, TrackEditCard
 ├── auth/             # Private access passcode modal and unlock indicator
@@ -149,17 +152,20 @@ The backend and utility layer (`artist-discography/lib/`) coordinates all data s
 | Utility Module | Primary Responsibility |
 | :--- | :--- |
 | **[`lib/data/atomicStorage.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/data/atomicStorage.js)** | Core disk persistence engine. Handles atomic temporary swap writes (`fs.renameSync`), rolling backups (`data/backups/`), corrupted file quarantine, and heuristic JSON auto-repair. |
+| **[`lib/data/analyticsStorage.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/data/analyticsStorage.js)** | Local analytics storage coordinator for `data/analytics/` (`daily.json`, `events.json`, `totals.json`). Manages debounced in-memory bandwidth buffering, timeline aggregations, and data resets with automated snapshots. |
+| **[`lib/data/analyticsUtils.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/data/analyticsUtils.js)** | Isomorphic client-safe formatting and math utilities (`formatBytes`, `getTodayDateString`). |
 | **[`lib/data/artistConfig.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/data/artistConfig.js)** | Configuration storage coordinator for `data/config.json`. |
 | **[`lib/data/projectStorage.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/data/projectStorage.js)** | Project directory scanner and metadata coordinator for `data/projects/<slug>/project.json`. |
 | **[`lib/data/artistData.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/data/artistData.js)** | High-level data facade re-exporting canonical data storage APIs. |
-| **[`lib/media/audioOptimizer.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/audioOptimizer.js)** | Audio streaming engine. Supports HTTP 206 byte-range streaming, ETag generation, and FFmpeg multi-tier transcoding (FLAC, 320k, 192k, 128k). |
+| **[`lib/media/audioOptimizer.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/audioOptimizer.js)** | Audio streaming engine. Supports HTTP 206 byte-range streaming, ETag generation, FFmpeg multi-tier transcoding, and bandwidth instrumentation. |
 | **[`lib/media/ffmpegRunner.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/ffmpegRunner.js)** | FFmpeg binary probe and subprocess execution wrapper. |
-| **[`lib/media/mediaOptimizer.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/mediaOptimizer.js)** | Sharp dynamic image processing. Generates responsive WebP/AVIF images with width, height, and quality parameters, backed by an in-memory LRU cache. |
+| **[`lib/media/mediaOptimizer.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/mediaOptimizer.js)** | Sharp dynamic image processing. Generates responsive WebP/AVIF images with width, height, and quality parameters, backed by an in-memory LRU cache and bandwidth tracking. |
 | **[`lib/media/logoProcessor.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/logoProcessor.js)** | Sharp luminance calculations and multi-size favicon suite generation. |
 | **[`lib/media/mediaWarmer.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/mediaWarmer.js)** | Site-load cache warmer. Scans catalog assets in the background to ensure all media variants are generated and cached without blocking user requests. |
 | **[`lib/media/cacheCleaner.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/media/cacheCleaner.js)** | Automated cache lifecycle manager. Identifies and prunes orphaned, superseded, and temporary cache files from `data/cache/`. |
 | **[`lib/api/apiSpec.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/api/apiSpec.js)** | OpenAPI 3.0.3 specification generator composing modular endpoint specs (`specs/adminRoutesSpec.js`, `specs/mediaRoutesSpec.js`, `specs/utilityRoutesSpec.js`). |
 | **[`lib/api/projectRouteHelpers.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/api/projectRouteHelpers.js)** | Windows-resilient file rename/unlink retry operations and track audio file sync. |
+| **[`lib/hooks/useAnalyticsTracker.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/hooks/useAnalyticsTracker.js)** | Client-side tracking hook with 5s pageview debouncing and 30s track stream cooldown. |
 | **[`lib/hooks/useFitTextWidth.js`](file:///c:/Users/Dan/App%20Dev/artist-discography/artist-discography/lib/hooks/useFitTextWidth.js)** | HTML5 Canvas and ResizeObserver text dimension solver for responsive brand titles. |
 
 ---

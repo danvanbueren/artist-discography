@@ -139,7 +139,6 @@ export default function DesktopPlayerLeftInfo({
               onClick={onOpenQualityModal}
             />
           )}
-
         </Box>
       </Box>
     </Stack>

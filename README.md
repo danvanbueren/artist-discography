@@ -68,6 +68,9 @@ Follow the [Deployment & DevOps Guide](./DEPLOYMENT.md) for more information.
 🎛️ **Project Management - Unified Admin Dashboard**
   - Web-based release manager with track uploads, playlist drag-and-drop, link auto-search, OpenAPI 3.1 live explorer, and catalog health audits.
 
+📊 **Analytics - Lightweight, Local & Privacy-Focused Metrics**
+  - Built-in tracking of project streams, top tracks, page visits, and bandwidth usage stored in simple local JSON files (`data/analytics/`) with interactive timeline charts in the Admin Utilities tab.
+
 🐳 **Deployment - Docker-, Cloudflare Tunnel-Ready**
   - Multi-stage production container with unprivileged user security, persistent host storage, and outbound encrypted Cloudflare Zero Trust tunnel support.
 

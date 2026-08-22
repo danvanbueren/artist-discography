@@ -23,6 +23,7 @@ import {
   detectInitialAudioQuality,
   QUALITY_TIER_CONFIG,
 } from '@/lib/network/networkProbe'
+import { useAnalyticsTracker } from '@/lib/hooks/useAnalyticsTracker'
 import AmbientBackground from '@/components/layout/AmbientBackground'
 import FloatingNavBar from '@/components/layout/FloatingNavBar'
 import AudioPlayerBar from '@/components/player/AudioPlayerBar'
@@ -163,6 +164,20 @@ export default function MainDiscographyApp({
     handleNavigateHome,
     navigateToCurrentTrack,
   } = useDiscographyRouting({ projects, initialSlug })
+
+  // 3.1 Public Page Views Analytics Tracking
+  const currentPath = useMemo(() => {
+    if (selectedProject) {
+      const projSlug = slugify(selectedProject.name) || ''
+      if (highlightedTrackSlug) {
+        return `/${projSlug}/${highlightedTrackSlug}`
+      }
+      return `/${projSlug}`
+    }
+    return '/'
+  }, [selectedProject, highlightedTrackSlug])
+
+  useAnalyticsTracker(currentPath)
 
   // 4. Filtering & Sorting Hook
   const {

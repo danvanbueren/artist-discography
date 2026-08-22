@@ -306,6 +306,7 @@ export default function AdminDashboard({
               audioCoveragePct={audioCoveragePct}
               currentJsonSnapshot={currentJsonSnapshot}
               health={initialData?.health}
+              adminPassword={auth.password}
             />
           </Paper>
         </Container>

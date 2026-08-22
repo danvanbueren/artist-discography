@@ -20,4 +20,34 @@ export const UTILITY_ROUTES_SPEC = [
       },
     ],
   },
+  {
+    id: 'analytics-track',
+    path: '/api/analytics/track',
+    method: 'POST',
+    tag: 'Dev Utilities',
+    summary: 'Record Stream or Page View Event',
+    description:
+      'Public beacon/fetch endpoint to record audio streams and page visits with debouncing and atomic JSON persistence.',
+    requiresAdminAuth: false,
+    requestFormat: 'json',
+    defaultBody: JSON.stringify(
+      {
+        type: 'stream',
+        project: 'Sunset EP',
+        projectSlug: 'sunset-ep',
+        track: 'Nightfall',
+        path: '/sunset-ep/nightfall',
+        referrer: 'direct',
+      },
+      null,
+      2,
+    ),
+    responses: [
+      {
+        status: 200,
+        description: 'Event recorded successfully',
+        example: { success: true },
+      },
+    ],
+  },
 ]

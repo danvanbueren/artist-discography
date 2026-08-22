@@ -67,11 +67,7 @@ function buildTargetUrl(route, pathParams = {}, queryParams = {}) {
 
 function generateCurlCommand(route, state = {}, adminPassword = '') {
   try {
-    const targetUrl = buildTargetUrl(
-      route,
-      state?.pathParams ?? {},
-      state?.queryParams ?? {},
-    )
+    const targetUrl = buildTargetUrl(route, state?.pathParams ?? {}, state?.queryParams ?? {})
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const fullUrl = `${origin}${targetUrl}`
     const method = (route?.method ?? 'GET').toUpperCase()

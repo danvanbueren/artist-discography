@@ -93,8 +93,8 @@ export default function FullScreenPlayerModal({
 
   const ambientCover =
     coverArt &&
-      typeof coverArt === 'string' &&
-      (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
+    typeof coverArt === 'string' &&
+    (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
       ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=48&q=20&blur=8&fmt=webp`
       : coverArt
 

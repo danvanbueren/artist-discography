@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { mediaPreloader } from '@/lib/media/mediaPreloader'
+import { trackStreamEvent } from '@/lib/hooks/useAnalyticsTracker'
 
 /**
  * Resolves optimized audio streaming URL based on active quality tier.
@@ -211,6 +212,17 @@ export function useAudioElementEngine({
       }
     }
   }, [isPlaying, activeAudioSrc, onTogglePlay, onShowToast])
+
+  // Track audio stream event in analytics
+  useEffect(() => {
+    if (isPlaying && playingTrack?.name) {
+      trackStreamEvent({
+        project: playingTrack.project || '',
+        track: playingTrack.name || '',
+        path: typeof window !== 'undefined' ? window.location.pathname : '/',
+      })
+    }
+  }, [isPlaying, playingTrack?.name, playingTrack?.project])
 
   // Direct synchronous toggle for zero-latency playback response
   const handleDirectTogglePlay = useCallback(() => {

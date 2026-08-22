@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { NextResponse } from 'next/server'
 import { getOptimizedImage } from '@/lib/media/mediaOptimizer'
+import { recordBandwidthUsage } from '@/lib/data/analyticsStorage'
 
 const MEDIA_MIME_TYPES = {
   '.png': 'image/png',
@@ -113,6 +114,17 @@ export async function GET(request, { params }) {
     const ext = path.extname(targetFilePath).toLowerCase()
     const isRasterImage = ['.png', '.jpg', '.jpeg', '.webp', '.avif'].includes(ext)
 
+    let projectSlug = null
+    if (pathSegments[0] === 'projects' && pathSegments.length > 1) {
+      projectSlug = pathSegments[1]
+    } else if (
+      pathSegments[0] !== 'projects' &&
+      pathSegments[0] !== 'covers' &&
+      pathSegments[0] !== 'media'
+    ) {
+      projectSlug = pathSegments[0]
+    }
+
     // Apply sharp optimization for raster images when resized, blurred, or format-converted
     if (isRasterImage && (width || quality || blur || format === 'webp' || format === 'avif')) {
       const optimized = await getOptimizedImage(targetFilePath, {
@@ -120,6 +132,12 @@ export async function GET(request, { params }) {
         quality,
         format,
         blur,
+      })
+
+      recordBandwidthUsage({
+        bytes: optimized.buffer.length,
+        type: 'media',
+        projectSlug,
       })
 
       return new NextResponse(optimized.buffer, {
@@ -139,6 +157,12 @@ export async function GET(request, { params }) {
     // Default response for vector / original files
     const mimeType = MEDIA_MIME_TYPES[ext] || 'application/octet-stream'
     const fileBuffer = fs.readFileSync(/*turbopackIgnore: true*/ targetFilePath)
+
+    recordBandwidthUsage({
+      bytes: stat.size,
+      type: 'media',
+      projectSlug,
+    })
 
     return new NextResponse(fileBuffer, {
       status: 200,

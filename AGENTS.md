@@ -238,6 +238,15 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 ### Absolute URL Normalization for Social Embeds & Metadata
 - **Standard**: Discord and OpenGraph scrapers require fully qualified absolute URLs (`https://...`). Use `normalizeSiteUrl()` from `lib/data/urlNormalization.js` / `lib/media/metadata.js` to ensure configured `siteUrl` strings (or `process.env.NEXT_PUBLIC_SITE_URL`) are safely normalized with proper protocols and fallback defaults (`http://localhost:3000`).
 
+### Privacy-First Local Analytics & High-Frequency Bandwidth Buffering
+- **Storage Isolation & Atomic Safety**: Track simple metrics in `data/analytics/` (`daily.json`, `events.json`, `totals.json`) using atomic temporary file swaps (`.tmp.<pid>.<timestamp>.<rand>`) and automated rolling backups during data resets.
+- **In-Memory Bandwidth Buffering**: During high-frequency audio and media chunk streaming, buffer transferred bytes in memory (`recordBandwidthUsage`) and flush to disk on a debounced schedule to ensure zero I/O contention or latency spikes on media endpoints.
+- **Client/Server Module Boundary Separation**: Keep pure mathematical calculations, date parsing, and byte formatting in isomorphic, client-safe utilities (`lib/data/analyticsUtils.js`). Never import server-only storage modules (`lib/data/analyticsStorage.js` with `fs`/`path`) into client components (`'use client'`).
+
+### Mutually Exclusive Dashboard Accordions
+- **Standard**: When grouping dense developer, telemetry, or management views (such as Catalog Analytics vs Raw Configuration Inspector on the Utilities tab), use controlled, mutually exclusive Accordions.
+- **Persistence & Viewport Integrity**: Enforce that opening one accordion smoothly closes the other, while clicking the already-expanded header does not collapse it (`if (isExpanded) setActiveSection(...)`), preventing empty viewport states.
+
 ---
 
 ## Project Workflows & Processes

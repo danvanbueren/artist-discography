@@ -302,7 +302,8 @@ export function useProjectsManager({
       createForm.handleUpdateTrack(idx, 'artist', val, onDone),
     handleUpdateCreateTrackLink: createForm.handleTrackLinkChange,
     handleCreateTrackAudioUpload: createForm.handleTrackAudioChange,
-    handleCreateTrackAudioRemove: (idx, onDone) => createForm.handleTrackAudioChange(idx, null, onDone),
+    handleCreateTrackAudioRemove: (idx, onDone) =>
+      createForm.handleTrackAudioChange(idx, null, onDone),
     handleMoveCreateTrackUp: (idx, onDone) => createForm.handleMoveTrack(idx, idx - 1, onDone),
     handleMoveCreateTrackDown: (idx, onDone) => createForm.handleMoveTrack(idx, idx + 1, onDone),
     handleDeleteCreateTrack: (track, idx) =>
@@ -314,7 +315,8 @@ export function useProjectsManager({
       editForm.handleUpdateEditTrack(idx, 'artist', val, onDone),
     handleUpdateEditTrackLink: editForm.handleEditTrackLinkChange,
     handleEditTrackAudioUpload: editForm.handleEditTrackAudioChange,
-    handleEditTrackAudioRemove: (idx, onDone) => editForm.handleEditTrackAudioChange(idx, null, onDone),
+    handleEditTrackAudioRemove: (idx, onDone) =>
+      editForm.handleEditTrackAudioChange(idx, null, onDone),
     handleMoveEditTrackUp: (idx, onDone) => editForm.handleMoveEditTrack(idx, idx - 1, onDone),
     handleMoveEditTrackDown: (idx, onDone) => editForm.handleMoveEditTrack(idx, idx + 1, onDone),
     handleDeleteEditTrack: (track, idx) =>

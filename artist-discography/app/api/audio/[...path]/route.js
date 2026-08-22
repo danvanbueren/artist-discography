@@ -4,6 +4,7 @@ import { Readable } from 'stream'
 import { NextResponse } from 'next/server'
 import { getOptimizedAudio } from '@/lib/media/audioOptimizer'
 import { loadProjectData, loadConfigData } from '@/lib/data/artistData'
+import { recordBandwidthUsage } from '@/lib/data/analyticsStorage'
 
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
@@ -165,6 +166,7 @@ async function resolveAudioRequest(request, params) {
     lastModified,
     cacheControl,
     optimized,
+    projectSlug,
   }
 }
 
@@ -216,8 +218,16 @@ export async function GET(request, { params }) {
     const resolved = await resolveAudioRequest(request, params)
     if (resolved.errorResponse) return resolved.errorResponse
 
-    const { targetFilePath, fileSize, mimeType, etag, lastModified, cacheControl, optimized } =
-      resolved
+    const {
+      targetFilePath,
+      fileSize,
+      mimeType,
+      etag,
+      lastModified,
+      cacheControl,
+      optimized,
+      projectSlug,
+    } = resolved
 
     // HTTP 304 Validation
     const ifNoneMatch = request.headers.get('if-none-match')
@@ -282,6 +292,8 @@ export async function GET(request, { params }) {
         const fileStream = fs.createReadStream(targetFilePath, { start, end })
         const stream = Readable.toWeb(fileStream)
 
+        recordBandwidthUsage({ bytes: chunkSize, type: 'audio', projectSlug })
+
         return new NextResponse(stream, {
           status: 206,
           headers: {
@@ -302,6 +314,8 @@ export async function GET(request, { params }) {
     // Standard Full Response
     const fileStream = fs.createReadStream(targetFilePath)
     const stream = Readable.toWeb(fileStream)
+
+    recordBandwidthUsage({ bytes: fileSize, type: 'audio', projectSlug })
 
     return new NextResponse(stream, {
       status: 200,

@@ -12,6 +12,7 @@ All content and configuration files live exclusively inside `artist-discography/
 artist-discography/data/
 ├── config.json                       # Global artist profile, streaming links, social links, and security settings
 ├── logo.png (or .jpg, .webp, .svg)   # Optional custom branding logo override
+├── analytics/                        # Lightweight JSON metrics (daily.json, events.json, totals.json)
 ├── backups/                          # Automated rolling snapshot backups (managed automatically)
 ├── cache/                            # Generated WebP images & audio tiers (managed automatically)
 └── projects/                         # Project directories organized by URL slug
@@ -184,5 +185,7 @@ The Admin Portal provides a graphical interface for managing content without man
    - Use the **Auto-Search** button (`AutoAwesomeIcon`) on streaming fields to quickly locate track URLs on Spotify/YouTube.
    - Duplicate tracks between releases using the Copy Track tool (`/api/admin/copy-track`).
 5. **Tab 3 (Catalog Audit)**: Review audio coverage, missing streaming links, and cover artwork dimensions across all releases.
-6. **Tab 4 (API Explorer)**: Test server endpoints with live cURL generation and interactive responses.
-7. **Tab 5 (System Health)**: Inspect raw JSON files, view backup logs, and run telemetry checks.
+6. **Tab 4 (Utilities & Analytics)**:
+   - **Catalog Analytics & Insights**: Live timeline charts, stream counts, page visits, bandwidth usage, project distribution bars, top tracks, and recent events.
+   - **Raw Configuration Inspector**: Collapsible inspector for viewing and copying formatted `config.json`, `project.json`, and assembled discography states.
+7. **Tab 5 (OpenAPI Explorer)**: Interactive OpenAPI 3.1 live sandbox and cURL generator.

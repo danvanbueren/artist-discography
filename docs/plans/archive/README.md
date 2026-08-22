@@ -1,4 +1,4 @@
-# 🗄️ Archived Implementation Plans (Phases 1 – 12)
+# 🗄️ Archived Implementation Plans (Phases 1 – 13)
 
 This folder contains completed, verified, and preserved architecture plans from all historical development phases of **Artist Discography**.
 
@@ -20,6 +20,7 @@ This folder contains completed, verified, and preserved architecture plans from 
 | **10** | **[10-admin-streaming-links-power-tools.md](./10-admin-streaming-links-power-tools.md)** | Admin Streaming Links & Sidebar Sorting | ✅ **COMPLETED** | `AutoAwesomeIcon` search helper button on streaming fields; cross-discography duplicate link detection; YouTube playlist parameter detection & 1-click cleaner; Existing Releases sidebar dynamic sorting (Date, Title, Type, Tracks, Raw Order with Asc/Desc toggle). |
 | **11** | **[11-os-media-session-and-hardware-key-integration.md](./11-os-media-session-and-hardware-key-integration.md)** | OS Media Session & Hardware Key Controls | ✅ **COMPLETED** | Full `navigator.mediaSession` integration; multi-resolution artwork (`96-512px`); title, artist, album sync; Chrome Global Media Controls hub; desktop keyboard media keys (Play/Pause, Skip, Stop); mobile lockscreen and notification center controls with position scrubber. |
 | **12** | **[12-data-resilience-and-graceful-json-recovery.md](./12-data-resilience-and-graceful-json-recovery.md)** | Data Resilience, Graceful JSON Recovery & Backups | ✅ **COMPLETED** | Zero-data-loss architecture; atomic swap writes (`.tmp` -> `renameSync`); rolling snapshot backups (`data/backups/`); non-destructive corrupted file quarantine (`artist-data.corrupted-<timestamp>.json`); deep schema normalization & heuristic syntax repairs. |
+| **13** | **[13-simple-analytics-and-bandwidth-tracking.md](./13-simple-analytics-and-bandwidth-tracking.md)** | Simple Analytics & Bandwidth Tracking | ✅ **COMPLETED** | Privacy-first local metrics stored in `data/analytics/` (`daily.json`, `events.json`, `totals.json`); non-blocking bandwidth capture in media/audio streams; client beacon/fetch tracker; interactive SVG timeline charts and stat cards; mutually exclusive Utilities accordions. |
 
 ---
 

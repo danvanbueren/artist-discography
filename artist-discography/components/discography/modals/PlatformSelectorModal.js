@@ -92,11 +92,7 @@ export default function PlatformSelectorModal({
             Streaming Platform
           </Typography>
         </Stack>
-        <IconButton
-          aria-label='close'
-          onClick={onClose}
-          sx={{ color: 'text.secondary', p: 0.5 }}
-        >
+        <IconButton aria-label='close' onClick={onClose} sx={{ color: 'text.secondary', p: 0.5 }}>
           <CloseRoundedIcon fontSize='small' />
         </IconButton>
       </DialogTitle>

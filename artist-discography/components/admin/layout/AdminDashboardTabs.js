@@ -31,6 +31,7 @@ export default function AdminDashboardTabs({
   audioCoveragePct,
   currentJsonSnapshot,
   health = {},
+  adminPassword = '',
 }) {
   return (
     <Box
@@ -119,7 +120,10 @@ export default function AdminDashboardTabs({
 
       {/* TAB 3: SYSTEM OVERVIEW & UTILITIES */}
       {activeTab === 3 && (
-        <SystemOverviewTab currentJsonSnapshot={currentJsonSnapshot} />
+        <SystemOverviewTab
+          currentJsonSnapshot={currentJsonSnapshot}
+          adminPassword={adminPassword}
+        />
       )}
 
       {/* TAB 4: API EXPLORER */}

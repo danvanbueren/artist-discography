@@ -147,7 +147,9 @@ export function useDiscographyPlayback({
         if (clickedIndex !== -1) {
           remaining = displayedDiscographyTracks
             .slice(clickedIndex + 1)
-            .filter((item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl))
+            .filter(
+              (item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl),
+            )
         }
 
         if (isShuffle) {

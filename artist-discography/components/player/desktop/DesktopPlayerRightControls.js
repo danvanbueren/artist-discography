@@ -45,11 +45,7 @@ export default function DesktopPlayerRightControls({
         alignItems: 'flex-end',
       }}
     >
-      <Box
-        sx={{
-
-        }}
-      >
+      <Box sx={{}}>
         {/* Top Row: Action Buttons */}
         <Stack
           direction='row'
@@ -59,7 +55,6 @@ export default function DesktopPlayerRightControls({
             justifyContent: 'flex-end',
           }}
         >
-
           {/* Share Track Button */}
           <IconButton
             size='small'

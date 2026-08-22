@@ -226,10 +226,7 @@ export default function FullScreenHeader({
 
         {/* Picture in Picture (Desktop viewports only) */}
         {onTogglePip && !isTouch && (
-          <Tooltip
-            title={isPipActive ? 'Exit Picture in Picture' : 'Picture in Picture'}
-            arrow
-          >
+          <Tooltip title={isPipActive ? 'Exit Picture in Picture' : 'Picture in Picture'} arrow>
             <IconButton
               onClick={onTogglePip}
               size='small'

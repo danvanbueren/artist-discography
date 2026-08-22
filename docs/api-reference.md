@@ -94,12 +94,44 @@ Returns the list of active and completed background audio/image transcoding task
 ### `POST /api/admin/media-jobs`
 Triggers full catalog pre-transcoding and media warming (`action: "warm-all"`) or clears finished jobs (`action: "clear-completed"`).
 
+### `GET /api/admin/analytics`
+Fetches aggregated analytics, timeline distributions, project/track rankings, and recent activity log from `data/analytics/`.
+- **Query Parameters**: `range` (`7d`, `30d`, or `all`, default: `30d`).
+- **Headers**: `x-admin-password` (or `?password=...`).
+- **Response `200 OK`**:
+  ```json
+  {
+    "summary": {
+      "totalStreams": 142,
+      "totalPageViews": 380,
+      "totalBandwidthBytes": 52428800,
+      "totalBandwidthFormatted": "50.0 MB",
+      "audioBandwidthBytes": 47185920,
+      "audioBandwidthFormatted": "45.0 MB",
+      "mediaBandwidthBytes": 5242880,
+      "mediaBandwidthFormatted": "5.0 MB",
+      "topProjectName": "Starlight Odyssey",
+      "topProjectStreams": 89
+    },
+    "timeline": [...],
+    "projectBreakdown": [...],
+    "trackBreakdown": [...],
+    "pageBreakdown": [...],
+    "recentEvents": [...]
+  }
+  ```
+
+### `DELETE /api/admin/analytics`
+Archives existing analytics data into a timestamped snapshot under `data/backups/` and resets all metrics counters.
+- **Headers**: `x-admin-password` (or `?password=...`).
+- **Response `200 OK`**: `{ "success": true, "message": "Analytics data reset and archived successfully" }`
+
 ---
 
 ## 🎵 3. Media & Audio Streaming Endpoints
 
 ### `GET /api/audio/[...path]`
-High-performance byte-range audio streaming endpoint.
+High-performance byte-range audio streaming endpoint with automatic transferred bandwidth tracking.
 - **Route Format**: `/api/audio/projects/<project-slug>/<track-filename>`
 - **Query Parameters**:
   - `b`: Bitrate tier (`320k`, `192k`, `128k`).
@@ -109,7 +141,7 @@ High-performance byte-range audio streaming endpoint.
 - **Responses**: `200 OK`, `206 Partial Content`, `403 Forbidden`, `404 Not Found`.
 
 ### `GET /api/media/[...path]`
-Dynamic Sharp image optimization endpoint with WebP/AVIF transcoding and immutable caching.
+Dynamic Sharp image optimization endpoint with WebP/AVIF transcoding, immutable caching, and bandwidth tracking.
 - **Route Format**: `/api/media/projects/<project-slug>/<image-filename>`
 - **Query Parameters**: `w` (width), `q` (quality), `fmt` (format), `blur` (blur radius).
 
@@ -121,7 +153,25 @@ Dynamic favicon suite endpoint serving luminance-adjusted, high-contrast favicon
 
 ---
 
-## 🧪 4. Developer & Inspection Endpoints (`/api/dev/*`)
+## 📊 4. Public Analytics Tracking Endpoints (`/api/analytics/*`)
+
+### `POST /api/analytics/track`
+Lightweight public endpoint accepting beacon and JSON payloads for recording client page views and audio stream events with atomic persistence.
+- **Request Body (JSON / Beacon)**:
+  ```json
+  {
+    "type": "stream",
+    "project": "Starlight Odyssey",
+    "projectSlug": "starlight-odyssey",
+    "track": "Midnight Genesis",
+    "path": "/starlight-odyssey/midnight-genesis"
+  }
+  ```
+- **Response `200 OK`**: `{ "success": true }`
+
+---
+
+## 🧪 5. Developer & Inspection Endpoints (`/api/dev/*`)
 
 ### `GET /api/dev/openapi`
 Returns the complete, real-time OpenAPI 3.1 schema specification (`lib/api/apiSpec.js`) describing all system routes.

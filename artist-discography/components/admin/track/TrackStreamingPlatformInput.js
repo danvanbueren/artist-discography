@@ -80,7 +80,7 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
 
   const isWarning = Boolean(
     !isPending &&
-      (dupInfo || isAlbumLink || ytAnalysis.hasPlaylist || spotifyAnalysis.hasTrackingParams),
+    (dupInfo || isAlbumLink || ytAnalysis.hasPlaylist || spotifyAnalysis.hasTrackingParams),
   )
 
   let helperMsg = null
@@ -88,8 +88,7 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
     if (dupInfo) {
       helperMsg = dupInfo.message
     } else if (isAlbumLink) {
-      helperMsg =
-        '⚠️ Detected album-level link. A direct track/song link is strongly recommended.'
+      helperMsg = '⚠️ Detected album-level link. A direct track/song link is strongly recommended.'
     } else if (ytAnalysis.hasPlaylist) {
       helperMsg = '⚠️ YouTube playlist link detected. Direct video link is preferred.'
     } else if (spotifyAnalysis.hasTrackingParams) {

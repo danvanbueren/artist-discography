@@ -135,20 +135,17 @@ export function useEditProjectForm({
     [artistData?.name, defaultArtistName, artistNameInputRef],
   )
 
-  const handleUpdateEditTrack = useCallback(
-    (idx, field, value, onDone) => {
-      setEditTracks((prev) => {
-        const updated = [...prev]
-        if (!updated[idx]) return prev
-        updated[idx] = { ...updated[idx], [field]: value }
-        return updated
-      })
-      if (typeof onDone === 'function') {
-        onDone()
-      }
-    },
-    [],
-  )
+  const handleUpdateEditTrack = useCallback((idx, field, value, onDone) => {
+    setEditTracks((prev) => {
+      const updated = [...prev]
+      if (!updated[idx]) return prev
+      updated[idx] = { ...updated[idx], [field]: value }
+      return updated
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const handleAddEditTrack = useCallback((onDone) => {
     setEditTracks((prev) => [...prev, createEmptyTrack()])
@@ -197,27 +194,24 @@ export function useEditProjectForm({
     }
   }, [])
 
-  const handleEditTrackLinkChange = useCallback(
-    (trackIdx, platformKey, val, onDone) => {
-      setEditTracks((prev) => {
-        const updated = [...prev]
-        if (!updated[trackIdx]) return prev
-        const currentLinks = updated[trackIdx].links || {}
-        updated[trackIdx] = {
-          ...updated[trackIdx],
-          links: {
-            ...currentLinks,
-            [platformKey]: val,
-          },
-        }
-        return updated
-      })
-      if (typeof onDone === 'function') {
-        onDone()
+  const handleEditTrackLinkChange = useCallback((trackIdx, platformKey, val, onDone) => {
+    setEditTracks((prev) => {
+      const updated = [...prev]
+      if (!updated[trackIdx]) return prev
+      const currentLinks = updated[trackIdx].links || {}
+      updated[trackIdx] = {
+        ...updated[trackIdx],
+        links: {
+          ...currentLinks,
+          [platformKey]: val,
+        },
       }
-    },
-    [],
-  )
+      return updated
+    })
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const executeEditProject = useCallback(
     async (password, projectsList = [], selectedProjIndex = 0, overrideTracks = null) => {

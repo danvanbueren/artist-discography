@@ -12,14 +12,27 @@ import {
   FormControl,
   Select,
   MenuItem,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import SettingsIcon from '@mui/icons-material/Settings'
 import AlbumIcon from '@mui/icons-material/Album'
 import LayersIcon from '@mui/icons-material/Layers'
+import CodeRoundedIcon from '@mui/icons-material/CodeRounded'
 
-export default function RawJsonInspectorTab({ dataState, jsonData }) {
-  const activeDataState = dataState || jsonData || {}
+export default function RawJsonInspectorTab({
+  dataState,
+  jsonData,
+  expanded: propsExpanded,
+  onToggle,
+}) {
+  const activeDataState = useMemo(() => dataState || jsonData || {}, [dataState, jsonData])
+  const [localExpanded, setLocalExpanded] = useState(false)
+  const isExpanded = propsExpanded !== undefined ? propsExpanded : localExpanded
+  const handleAccordionChange = onToggle || ((_, exp) => setLocalExpanded(exp))
   const [copiedJson, setCopiedJson] = useState(false)
   const [viewMode, setViewMode] = useState('config') // 'config' | 'project' | 'unified'
   const [selectedProjectIndex, setSelectedProjectIndex] = useState(0)
@@ -85,7 +98,8 @@ export default function RawJsonInspectorTab({ dataState, jsonData }) {
     return 'Combined Assembled State'
   }, [viewMode, projects, selectedProjectIndex])
 
-  const handleCopyJson = () => {
+  const handleCopyJson = (e) => {
+    if (e?.stopPropagation) e.stopPropagation()
     try {
       navigator.clipboard.writeText(JSON.stringify(displayedContent, null, 2))
       setCopiedJson(true)
@@ -94,134 +108,156 @@ export default function RawJsonInspectorTab({ dataState, jsonData }) {
   }
 
   return (
-    <Stack spacing={3}>
-      <Box
+    <Accordion
+      expanded={isExpanded}
+      onChange={handleAccordionChange}
+      sx={{
+        borderRadius: 2.5,
+        backgroundColor: 'rgba(26, 26, 38, 0.75)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        '&:before': { display: 'none' },
+      }}
+    >
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon />}
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
+          px: 2.5,
+          minHeight: 56,
+          '& .MuiAccordionSummary-content': {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            pr: 1,
+          },
         }}
       >
-        <Box>
-          <Typography variant='h6' sx={{ fontWeight: 700 }}>
-            Raw Configuration &amp; Projects Inspector
-          </Typography>
-          <Typography variant='caption' sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-            Inspecting: {currentFilePath}
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <CodeRoundedIcon color='primary' sx={{ fontSize: 22 }} />
+          <Box>
+            <Typography variant='subtitle1' sx={{ fontWeight: 700 }}>
+              Raw Configuration &amp; Projects Inspector
+            </Typography>
+            <Typography variant='caption' sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
+              {currentFilePath}
+            </Typography>
+          </Box>
         </Box>
+      </AccordionSummary>
 
-        <Button
-          variant='outlined'
-          size='small'
-          startIcon={<ContentCopyIcon />}
-          onClick={handleCopyJson}
-          sx={{ borderRadius: 2 }}
-        >
-          {copiedJson ? 'Copied to Clipboard!' : 'Copy JSON'}
-        </Button>
-      </Box>
-
-      {/* View Selector Tabs */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Tabs
-          value={viewMode}
-          onChange={(_, val) => setViewMode(val)}
-          sx={{
-            minHeight: 38,
-            '& .MuiTab-root': {
-              minHeight: 38,
-              py: 0.5,
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-            },
-          }}
-        >
-          <Tab
-            value='config'
-            label='data/config.json'
-            icon={<SettingsIcon sx={{ fontSize: 16 }} />}
-            iconPosition='start'
-          />
-          <Tab
-            value='project'
-            label='data/projects/<slug>/project.json'
-            icon={<AlbumIcon sx={{ fontSize: 16 }} />}
-            iconPosition='start'
-          />
-          <Tab
-            value='unified'
-            label='Assembled State'
-            icon={<LayersIcon sx={{ fontSize: 16 }} />}
-            iconPosition='start'
-          />
-        </Tabs>
-
-        {viewMode === 'project' && projects.length > 0 && (
-          <FormControl size='small' sx={{ minWidth: 220 }}>
-            <Select
-              value={selectedProjectIndex}
-              onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}
-              slotProps={{
-                paper: {
-                  sx: {
-                    maxHeight: 350,
-                    backgroundColor: '#16161f',
-                  },
+      <AccordionDetails sx={{ px: 2.5, pt: 0, pb: 2.5 }}>
+        <Stack spacing={2.5}>
+          {/* Header Action & Tabs Row */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2,
+            }}
+          >
+            <Tabs
+              value={viewMode}
+              onChange={(_, val) => setViewMode(val)}
+              sx={{
+                minHeight: 38,
+                '& .MuiTab-root': {
+                  minHeight: 38,
+                  py: 0.5,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
                 },
               }}
+            >
+              <Tab
+                value='config'
+                label='data/config.json'
+                icon={<SettingsIcon sx={{ fontSize: 16 }} />}
+                iconPosition='start'
+              />
+              <Tab
+                value='project'
+                label='data/projects/<slug>/project.json'
+                icon={<AlbumIcon sx={{ fontSize: 16 }} />}
+                iconPosition='start'
+              />
+              <Tab
+                value='unified'
+                label='Assembled State'
+                icon={<LayersIcon sx={{ fontSize: 16 }} />}
+                iconPosition='start'
+              />
+            </Tabs>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              {viewMode === 'project' && projects.length > 0 && (
+                <FormControl size='small' sx={{ minWidth: 220 }}>
+                  <Select
+                    value={selectedProjectIndex}
+                    onChange={(e) => setSelectedProjectIndex(Number(e.target.value))}
+                    slotProps={{
+                      paper: {
+                        sx: {
+                          maxHeight: 350,
+                          backgroundColor: '#16161f',
+                        },
+                      },
+                    }}
+                    sx={{
+                      borderRadius: 2,
+                      fontSize: '0.85rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    }}
+                  >
+                    {projects.map((p, idx) => (
+                      <MenuItem key={idx} value={idx} sx={{ fontSize: '0.85rem' }}>
+                        {p.name || `Project #${idx + 1}`} ({p.type || 'Single'})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              <Button
+                variant='outlined'
+                size='small'
+                startIcon={<ContentCopyIcon />}
+                onClick={handleCopyJson}
+                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+              >
+                {copiedJson ? 'Copied to Clipboard!' : 'Copy JSON'}
+              </Button>
+            </Box>
+          </Box>
+
+          <Paper
+            variant='outlined'
+            sx={{
+              p: 2.5,
+              backgroundColor: '#0d0d12',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 2.5,
+              maxHeight: 550,
+              overflowY: 'auto',
+            }}
+          >
+            <Typography
+              component='pre'
               sx={{
-                borderRadius: 2,
+                fontFamily: 'monospace',
                 fontSize: '0.85rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                color: '#81d4fa',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
               }}
             >
-              {projects.map((p, idx) => (
-                <MenuItem key={idx} value={idx} sx={{ fontSize: '0.85rem' }}>
-                  {p.name || `Project #${idx + 1}`} ({p.type || 'Single'})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-      </Box>
-
-      <Paper
-        variant='outlined'
-        sx={{
-          p: 2.5,
-          backgroundColor: '#0d0d12',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: 2.5,
-          maxHeight: 550,
-          overflowY: 'auto',
-        }}
-      >
-        <Typography
-          component='pre'
-          sx={{
-            fontFamily: 'monospace',
-            fontSize: '0.85rem',
-            color: '#81d4fa',
-            margin: 0,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-        >
-          {JSON.stringify(displayedContent, null, 2)}
-        </Typography>
-      </Paper>
-    </Stack>
+              {JSON.stringify(displayedContent, null, 2)}
+            </Typography>
+          </Paper>
+        </Stack>
+      </AccordionDetails>
+    </Accordion>
   )
 }

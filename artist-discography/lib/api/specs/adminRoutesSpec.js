@@ -481,4 +481,88 @@ export const ADMIN_ROUTES_SPEC = [
       },
     ],
   },
+  {
+    id: 'admin-analytics-get',
+    path: '/api/admin/analytics',
+    method: 'GET',
+    tag: 'Admin Portal',
+    summary: 'Fetch Catalog Analytics & Timeline',
+    description:
+      'Retrieves aggregated streams, page visits, bandwidth usage, project breakdown, and recent activity from data/analytics/ JSON files.',
+    requiresAdminAuth: true,
+    requestFormat: 'query',
+    parameters: [
+      {
+        name: 'range',
+        in: 'query',
+        required: false,
+        schema: { type: 'string', enum: ['7d', '30d', 'all'], default: '30d' },
+        description: 'Timeframe range filter',
+      },
+      {
+        name: 'password',
+        in: 'query',
+        required: false,
+        schema: { type: 'string' },
+        description: 'Admin password for authorization',
+      },
+    ],
+    responses: [
+      {
+        status: 200,
+        description: 'Analytics summary returned successfully',
+        example: {
+          success: true,
+          analytics: {
+            range: '30d',
+            summary: {
+              totalStreams: 142,
+              totalPageViews: 280,
+              totalBandwidthBytes: 52428800,
+              totalBandwidthFormatted: '50.0 MB',
+              topProjectName: 'Sunset EP',
+              topTrackName: 'Nightfall',
+            },
+            timeline: [],
+            projectBreakdown: [],
+            trackBreakdown: [],
+            pageBreakdown: [],
+            recentEvents: [],
+          },
+        },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
+    ],
+  },
+  {
+    id: 'admin-analytics-delete',
+    path: '/api/admin/analytics',
+    method: 'DELETE',
+    tag: 'Admin Portal',
+    summary: 'Archive and Reset Analytics Data',
+    description:
+      'Archives existing metrics to data/backups/ and resets daily, events, and totals analytics counters.',
+    requiresAdminAuth: true,
+    requestFormat: 'json',
+    defaultBody: JSON.stringify({ password: 'admin' }, null, 2),
+    responses: [
+      {
+        status: 200,
+        description: 'Analytics reset successfully',
+        example: {
+          success: true,
+          message: 'Analytics data has been archived and reset successfully.',
+        },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
+    ],
+  },
 ]
