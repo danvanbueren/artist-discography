@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { loadConfigData } from '../../lib/artistData'
-import { getLogoDetails } from '../../lib/logoUtils'
+import { loadConfigData } from '@/lib/data/artistData'
+import { getLogoDetails } from '@/lib/media/logoUtils'
 
 export const dynamic = 'force-dynamic'
 

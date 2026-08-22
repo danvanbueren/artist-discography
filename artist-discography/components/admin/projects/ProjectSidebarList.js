@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, memo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Paper,
   Box,
@@ -22,178 +22,13 @@ import AlbumIcon from '@mui/icons-material/Album'
 import SyncIcon from '@mui/icons-material/Sync'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
-import { getMediaThumbnailUrl } from '../adminUtils'
+import { ProjectSidebarItem } from '../sidebar/ProjectSidebarItem'
 
-const ProjectSidebarItem = memo(function ProjectSidebarItem({
-  project: p,
-  index: idx,
-  isSelected,
-  onSelectProject,
-}) {
-  const hasCover = Boolean(p.cover || p.hasCover)
-  const trks = p.tracks ?? []
-  const audioCount = trks.filter((t) => Boolean(t.audioUrl || t.hasAudio || t.audio)).length
-  const hasAllAudio = trks.length > 0 && audioCount === trks.length
-  const linkCount = trks.reduce(
-    (acc, t) =>
-      acc +
-      Object.values(t.links ?? {}).filter((l) => l && typeof l === 'string' && l.trim() !== '')
-        .length,
-    0,
-  )
-  const hasLinks = linkCount > 0
-  const isComplete = hasCover && hasAllAudio && hasLinks
-
-  return (
-    <ListItemButton
-      selected={isSelected}
-      onClick={() => onSelectProject(idx)}
-      sx={{
-        borderRadius: 2,
-        mb: 1,
-        border: '1px solid',
-        borderColor: isSelected ? 'primary.main' : 'rgba(255,255,255,0.08)',
-        backgroundColor: isSelected ? 'rgba(144, 202, 249, 0.08)' : 'transparent',
-        py: 1.5,
-      }}
-    >
-      <ListItemIcon
-        sx={{
-          minWidth: 44,
-          mr: 1,
-          alignSelf: 'center',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {p.cover ? (
-          <Box
-            component='img'
-            src={getMediaThumbnailUrl(p.cover, 80)}
-            alt={p.name || 'Cover'}
-            sx={{
-              width: 40,
-              height: 40,
-              aspectRatio: '1 / 1',
-              borderRadius: 1.5,
-              objectFit: 'cover',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              display: 'block',
-            }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              aspectRatio: '1 / 1',
-              borderRadius: 1.5,
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AlbumIcon sx={{ fontSize: 24 }} color={isSelected ? 'primary' : 'action'} />
-          </Box>
-        )}
-      </ListItemIcon>
-      <ListItemText
-        slotProps={{
-          primary: { component: 'div' },
-          secondary: { component: 'div' },
-        }}
-        primary={
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}
-          >
-            <Typography variant='body1' sx={{ fontWeight: isSelected ? 700 : 500 }}>
-              {p.name || 'Untitled Project'}
-            </Typography>
-            {isComplete ? (
-              <Chip
-                label='Complete'
-                color='success'
-                size='small'
-                sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
-              />
-            ) : (
-              <Chip
-                label='Incomplete'
-                color='warning'
-                size='small'
-                sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
-              />
-            )}
-          </Box>
-        }
-        secondary={
-          <Box sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.8 }}>
-            <Typography variant='caption' sx={{ color: 'text.secondary' }}>
-              {p.type || 'Single'} • {trks.length} track{trks.length === 1 ? '' : 's'}
-            </Typography>
-            {!isComplete && (
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                {!hasCover && (
-                  <Chip
-                    label='No Art'
-                    color='error'
-                    variant='outlined'
-                    size='small'
-                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
-                  />
-                )}
-                {!hasAllAudio && (
-                  <Chip
-                    label={audioCount === 0 ? 'No Audio' : `${audioCount}/${trks.length} Audio`}
-                    color='warning'
-                    variant='outlined'
-                    size='small'
-                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
-                  />
-                )}
-                {!hasLinks && (
-                  <Chip
-                    label='No Links'
-                    color='info'
-                    variant='outlined'
-                    size='small'
-                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
-                  />
-                )}
-              </Box>
-            )}
-            {(p.visibility === 'private' || p.copyright === 'uncleared') && (
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                {p.visibility === 'private' && (
-                  <Chip
-                    label='Private'
-                    color='secondary'
-                    variant='outlined'
-                    size='small'
-                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }}
-                  />
-                )}
-                {p.copyright === 'uncleared' && (
-                  <Chip
-                    label='Uncleared'
-                    color='default'
-                    variant='outlined'
-                    size='small'
-                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
-                  />
-                )}
-              </Box>
-            )}
-          </Box>
-        }
-      />
-    </ListItemButton>
-  )
-})
-
+/**
+ * ProjectSidebarList
+ * Left navigation sidebar displaying sorted and filterable projects catalog,
+ * complete/incomplete checklist badges, and the Create New button.
+ */
 export default function ProjectSidebarList({
   projectsList = [],
   selectedProjIndex,
@@ -254,239 +89,179 @@ export default function ProjectSidebarList({
     <Paper
       variant='outlined'
       sx={{
-        p: 2.5,
+        p: 2,
         borderRadius: 2.5,
         backgroundColor: 'rgba(28, 28, 38, 0.6)',
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        height: { md: '100%' },
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
       }}
     >
-      <Button
-        variant={isCreatingNew ? 'contained' : 'outlined'}
-        color='secondary'
-        size='large'
-        fullWidth
-        startIcon={<AddIcon />}
-        onClick={handleStartCreateNewProject}
-        sx={{
-          mb: 2.5,
-          py: 1.2,
-          borderRadius: 2,
-          textTransform: 'none',
-          fontWeight: 700,
-          fontSize: '0.95rem',
-          flexShrink: 0,
-        }}
-      >
-        Add New Project
-      </Button>
+      {/* Header & Create Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant='h6' sx={{ fontWeight: 700 }}>
+          Projects ({projectsList.length})
+        </Typography>
+        <Button
+          variant={isCreatingNew ? 'contained' : 'outlined'}
+          color='primary'
+          size='small'
+          startIcon={<AddIcon />}
+          onClick={handleStartCreateNewProject}
+          sx={{ borderRadius: 2 }}
+        >
+          New
+        </Button>
+      </Box>
 
-      {/* Sidebar Header with Releases count, Sorting dropdown and Direction Toggle */}
+      {/* Sort Controls Bar */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 1.5,
-          px: 0.5,
           gap: 1,
-          flexShrink: 0,
+          mb: 2,
+          pb: 1.5,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <Typography
-          variant='subtitle2'
-          sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}
-        >
-          Releases ({projectsList.length})
+        <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 600 }}>
+          Sort:
         </Typography>
-
-        <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center' }}>
-          <Select
+        <Select
+          size='small'
+          value={sidebarSortBy}
+          onChange={(e) => setSidebarSortBy(e.target.value)}
+          sx={{
+            flexGrow: 1,
+            height: 28,
+            fontSize: '0.78rem',
+            '& .MuiSelect-select': { py: 0.5 },
+          }}
+        >
+          <MenuItem value='date' sx={{ fontSize: '0.8rem' }}>
+            Release Date
+          </MenuItem>
+          <MenuItem value='title' sx={{ fontSize: '0.8rem' }}>
+            Title (A-Z)
+          </MenuItem>
+          <MenuItem value='type' sx={{ fontSize: '0.8rem' }}>
+            Release Type
+          </MenuItem>
+          <MenuItem value='tracks' sx={{ fontSize: '0.8rem' }}>
+            Track Count
+          </MenuItem>
+          <MenuItem value='json' sx={{ fontSize: '0.8rem' }}>
+            Discography Order
+          </MenuItem>
+        </Select>
+        <Tooltip title={sidebarSortAsc ? 'Ascending (Oldest / A-Z)' : 'Descending (Newest / Z-A)'}>
+          <IconButton
             size='small'
-            value={sidebarSortBy}
-            onChange={(e) => setSidebarSortBy(e.target.value)}
+            onClick={() => setSidebarSortAsc((prev) => !prev)}
+            sx={{ p: 0.5, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 1 }}
+          >
+            {sidebarSortAsc ? (
+              <ArrowUpwardRoundedIcon sx={{ fontSize: 16 }} />
+            ) : (
+              <ArrowDownwardRoundedIcon sx={{ fontSize: 16 }} />
+            )}
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Projects List Container */}
+      <List sx={{ overflowY: 'auto', flexGrow: 1, p: 0, minHeight: 0 }}>
+        {/* If creating new, show staging draft item at top */}
+        {isCreatingNew && (
+          <ListItemButton
+            selected
             sx={{
-              height: 28,
-              fontSize: '0.75rem',
-              borderRadius: 1.5,
-              bgcolor: 'rgba(255, 255, 255, 0.05)',
-              '& .MuiSelect-select': { py: 0.5, px: 1 },
+              borderRadius: 2,
+              mb: 1,
+              border: '1px dashed',
+              borderColor: 'primary.main',
+              backgroundColor: 'rgba(144, 202, 249, 0.08)',
+              py: 1.5,
             }}
           >
-            <MenuItem value='date'>Date</MenuItem>
-            <MenuItem value='title'>Title</MenuItem>
-            <MenuItem value='type'>Type</MenuItem>
-            <MenuItem value='tracks'>Tracks</MenuItem>
-            <MenuItem value='json'>Raw Order</MenuItem>
-          </Select>
-
-          <Tooltip title={sidebarSortAsc ? 'Ascending' : 'Descending'} arrow>
-            <IconButton
-              size='small'
-              onClick={() => setSidebarSortAsc((prev) => !prev)}
-              sx={{ p: 0.5, color: 'text.secondary' }}
-              aria-label='Toggle sort direction'
-            >
-              {sidebarSortAsc ? (
-                <ArrowUpwardRoundedIcon sx={{ fontSize: 18 }} />
+            <ListItemIcon sx={{ minWidth: 44, mr: 1, alignSelf: 'center' }}>
+              {coverPreview ? (
+                <Box
+                  component='img'
+                  src={coverPreview}
+                  alt='Cover'
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    aspectRatio: '1 / 1',
+                    borderRadius: 1.5,
+                    objectFit: 'cover',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                  }}
+                />
               ) : (
-                <ArrowDownwardRoundedIcon sx={{ fontSize: 18 }} />
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    aspectRatio: '1 / 1',
+                    borderRadius: 1.5,
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px dashed rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AlbumIcon sx={{ fontSize: 24 }} color='primary' />
+                </Box>
               )}
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Box>
-
-      {dirtyFields?.size > 0 && !isCreatingNew && (
-        <Box sx={{ mb: 1, px: 0.5 }}>
-          <Typography
-            variant='caption'
-            sx={{
-              color: 'warning.main',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              fontWeight: 600,
-            }}
-          >
-            <SyncIcon
-              sx={{
-                fontSize: 13,
-                animation: 'spin 1s infinite linear',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(-360deg)' },
-                },
+            </ListItemIcon>
+            <ListItemText
+              slotProps={{
+                primary: { component: 'div' },
+                secondary: { component: 'div' },
               }}
-            />{' '}
-            Saving changes…
-          </Typography>
-        </Box>
-      )}
-
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-          pr: 0.5,
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255, 255, 255, 0.45) transparent',
-          '&::-webkit-scrollbar': { width: 6 },
-          '&::-webkit-scrollbar-track': { background: 'transparent' },
-          '&::-webkit-scrollbar-thumb': {
-            bgcolor: 'rgba(255, 255, 255, 0.45)',
-            borderRadius: 3,
-            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.75)' },
-          },
-        }}
-      >
-        <List sx={{ p: 0 }}>
-          {isCreatingNew && (
-            <ListItemButton
-              selected={true}
-              sx={{
-                borderRadius: 2,
-                mb: 1,
-                border: '1px dashed',
-                borderColor: 'secondary.main',
-                backgroundColor: 'rgba(206, 147, 216, 0.12)',
-                py: 1.5,
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 44,
-                  mr: 1,
-                  alignSelf: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {coverPreview ? (
-                  <Box
-                    component='img'
-                    src={getMediaThumbnailUrl(coverPreview, 80)}
-                    alt='Cover preview'
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      aspectRatio: '1 / 1',
-                      borderRadius: 1.5,
-                      objectFit: 'cover',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      display: 'block',
-                    }}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      aspectRatio: '1 / 1',
-                      borderRadius: 1.5,
-                      backgroundColor: 'rgba(206, 147, 216, 0.15)',
-                      border: '1px dashed rgba(206, 147, 216, 0.4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <AlbumIcon sx={{ fontSize: 24 }} color='secondary' />
-                  </Box>
-                )}
-              </ListItemIcon>
-              <ListItemText
-                slotProps={{
-                  primary: { component: 'div' },
-                  secondary: { component: 'div' },
-                }}
-                primary={
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 1,
-                    }}
-                  >
-                    <Typography variant='body1' sx={{ fontWeight: 700, color: 'secondary.main' }}>
-                      {name.trim() || 'New Project'}
-                    </Typography>
-                    <Chip
-                      label='Draft'
-                      color='secondary'
-                      size='small'
-                      sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
-                    />
-                  </Box>
-                }
-                secondary={
-                  <Typography
-                    variant='caption'
-                    sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}
-                  >
-                    {type || 'Single'} • {tracks.length} track{tracks.length === 1 ? '' : 's'}
+              primary={
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <Typography variant='body1' sx={{ fontWeight: 700 }}>
+                    {name || 'New Project Draft'}
                   </Typography>
-                }
-              />
-            </ListItemButton>
-          )}
-
-          {sortedProjectsWithIndex.map(({ project: p, originalIndex: idx }) => (
-            <ProjectSidebarItem
-              key={idx}
-              project={p}
-              index={idx}
-              isSelected={!isCreatingNew && selectedProjIndex === idx}
-              onSelectProject={handleSelectProject}
+                  <Chip
+                    label='Creating'
+                    color='primary'
+                    size='small'
+                    sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                  />
+                </Box>
+              }
+              secondary={
+                <Typography
+                  variant='caption'
+                  sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
+                >
+                  {type || 'Single'} • {tracks.length} track{tracks.length === 1 ? '' : 's'}
+                </Typography>
+              }
             />
-          ))}
-        </List>
-      </Box>
+          </ListItemButton>
+        )}
+
+        {/* Existing Projects */}
+        {sortedProjectsWithIndex.map(({ project, originalIndex }) => (
+          <ProjectSidebarItem
+            key={project.slug || originalIndex}
+            project={project}
+            index={originalIndex}
+            isSelected={!isCreatingNew && selectedProjIndex === originalIndex}
+            onSelectProject={handleSelectProject}
+          />
+        ))}
+      </List>
     </Paper>
   )
 }

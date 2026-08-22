@@ -1,4 +1,4 @@
-import { slugify, isSlugReserved } from '../../lib/slugs'
+import { slugify, isSlugReserved } from '@/lib/data/slugs'
 
 export function isProjectSlugReserved(name) {
   return isSlugReserved(name)

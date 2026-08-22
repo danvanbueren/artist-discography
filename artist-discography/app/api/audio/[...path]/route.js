@@ -2,8 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import { Readable } from 'stream'
 import { NextResponse } from 'next/server'
-import { getOptimizedAudio } from '../../../../lib/audioOptimizer'
-import { loadProjectData, loadConfigData } from '../../../../lib/artistData'
+import { getOptimizedAudio } from '@/lib/media/audioOptimizer'
+import { loadProjectData, loadConfigData } from '@/lib/data/artistData'
 
 const AUDIO_MIME_TYPES = {
   '.mp3': 'audio/mpeg',

@@ -8,9 +8,9 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
 import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
-import SubduedText from '../ui/SubduedText'
-import { slugify } from '../../lib/slugs'
-import { useTouchDevice } from '../../lib/hooks/useTouchDevice'
+import SubduedText from '@/components/ui/SubduedText'
+import { slugify } from '@/lib/data/slugs'
+import { useTouchDevice } from '@/lib/hooks/useTouchDevice'
 
 const TRACK_PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import { loadArtistData } from '../../../lib/artistData'
-import { getLogoDetails } from '../../../lib/logoUtils'
-import AdminDashboardClient from '../../../components/admin/AdminDashboardClient'
+import { loadArtistData } from '@/lib/data/artistData'
+import { getLogoDetails } from '@/lib/media/logoUtils'
+import AdminDashboard from '@/components/admin/AdminDashboard'
 
 export async function generateMetadata() {
   let artistName = ''
@@ -38,10 +38,6 @@ export default async function AdminPage() {
   }
 
   return (
-    <AdminDashboardClient
-      adminAccess={adminAccess}
-      defaultArtistName={artistName}
-      initialData={data}
-    />
+    <AdminDashboard adminAccess={adminAccess} defaultArtistName={artistName} initialData={data} />
   )
 }

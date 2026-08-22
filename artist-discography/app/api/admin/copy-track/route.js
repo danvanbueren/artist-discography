@@ -6,10 +6,10 @@ import {
   loadAllProjectsData,
   saveProjectData,
   getProjectsDirPath,
-} from '../../../../lib/artistData'
-import { slugify } from '../../../../lib/slugs'
-import { warmMediaFiles } from '../../../../lib/mediaWarmer'
-import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
+} from '@/lib/data/artistData'
+import { slugify } from '@/lib/data/slugs'
+import { warmMediaFiles } from '@/lib/media/mediaWarmer'
+import { scheduleAutomatedCachePrune } from '@/lib/media/cacheCleaner'
 
 const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
 
@@ -108,9 +108,8 @@ export async function POST(request) {
       newTrackSlug = slugify(newTrackName)
     }
 
-    const projectsDir = getProjectsDirPath()
-    const sourceProjDir = path.join(projectsDir, sourceProjectSlug)
-    const targetProjDir = path.join(projectsDir, targetProjectSlug)
+    const sourceProjDir = path.join(process.cwd(), 'data', 'projects', sourceProjectSlug)
+    const targetProjDir = path.join(process.cwd(), 'data', 'projects', targetProjectSlug)
 
     if (!fs.existsSync(targetProjDir)) {
       fs.mkdirSync(targetProjDir, { recursive: true })
@@ -121,9 +120,21 @@ export async function POST(request) {
     let copiedAudioExt = null
     if (fs.existsSync(sourceProjDir) && sourceTrackSlug) {
       for (const ext of SUPPORTED_AUDIO_EXTS) {
-        const candidateSourceFile = path.join(sourceProjDir, `${sourceTrackSlug}${ext}`)
+        const candidateSourceFile = path.join(
+          process.cwd(),
+          'data',
+          'projects',
+          sourceProjectSlug,
+          `${sourceTrackSlug}${ext}`,
+        )
         if (fs.existsSync(candidateSourceFile)) {
-          const destinationFile = path.join(targetProjDir, `${newTrackSlug}${ext}`)
+          const destinationFile = path.join(
+            process.cwd(),
+            'data',
+            'projects',
+            targetProjectSlug,
+            `${newTrackSlug}${ext}`,
+          )
           try {
             fs.copyFileSync(candidateSourceFile, destinationFile)
             copiedAudioExt = ext
@@ -145,11 +156,23 @@ export async function POST(request) {
       !clonedCover.startsWith('/') &&
       fs.existsSync(sourceProjDir)
     ) {
-      const sourceCoverFile = path.join(sourceProjDir, clonedCover)
+      const sourceCoverFile = path.join(
+        process.cwd(),
+        'data',
+        'projects',
+        sourceProjectSlug,
+        clonedCover,
+      )
       if (fs.existsSync(sourceCoverFile)) {
         const ext = path.extname(clonedCover).toLowerCase() || '.jpg'
         const targetCoverFilename = `${newTrackSlug}-art${ext}`
-        const destCoverFile = path.join(targetProjDir, targetCoverFilename)
+        const destCoverFile = path.join(
+          process.cwd(),
+          'data',
+          'projects',
+          targetProjectSlug,
+          targetCoverFilename,
+        )
         try {
           fs.copyFileSync(sourceCoverFile, destCoverFile)
           clonedCover = targetCoverFilename
@@ -213,7 +236,14 @@ export async function POST(request) {
       let hasAudio = false
       if (tSlug && targetProjDir && fs.existsSync(targetProjDir)) {
         for (const ext of SUPPORTED_AUDIO_EXTS) {
-          if (fs.existsSync(path.join(targetProjDir, `${tSlug}${ext}`))) {
+          const candidateAudioPath = path.join(
+            process.cwd(),
+            'data',
+            'projects',
+            targetProjectSlug,
+            `${tSlug}${ext}`,
+          )
+          if (fs.existsSync(candidateAudioPath)) {
             hasAudio = true
             audioUrl = `/api/audio/projects/${targetProjectSlug}/${tSlug}${ext}?t=${timestamp}`
             break
@@ -238,7 +268,14 @@ export async function POST(request) {
           : `/api/media/projects/${targetProjectSlug}/${targetProject.cover}?t=${timestamp}`
     } else if (targetProjDir && fs.existsSync(targetProjDir)) {
       for (const ext of SUPPORTED_IMAGE_EXTS) {
-        if (fs.existsSync(path.join(targetProjDir, `art${ext}`))) {
+        const candidateArtPath = path.join(
+          process.cwd(),
+          'data',
+          'projects',
+          targetProjectSlug,
+          `art${ext}`,
+        )
+        if (fs.existsSync(candidateArtPath)) {
           resolvedTargetCover = `/api/media/projects/${targetProjectSlug}/art${ext}?t=${timestamp}`
           break
         }

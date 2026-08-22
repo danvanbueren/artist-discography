@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { loadConfigData } from '../../../../lib/artistData'
-import { getAllJobs, clearCompletedJobs, subscribeToJobs } from '../../../../lib/jobTracker'
-import { warmAllArtistMedia } from '../../../../lib/mediaWarmer'
+import { loadConfigData } from '@/lib/data/artistData'
+import { getAllJobs, clearCompletedJobs, subscribeToJobs } from '@/lib/api/jobTracker'
+import { warmAllArtistMedia } from '@/lib/media/mediaWarmer'
 
 export const dynamic = 'force-dynamic'
 

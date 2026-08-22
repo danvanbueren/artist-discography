@@ -1,9 +1,21 @@
 import { cookies } from 'next/headers'
-import { loadArtistData, normalizeSiteUrl } from '../../lib/artistData'
-import MainDiscographyApp from '../../components/discography/MainDiscographyApp'
-import { slugify, findProjectBySlug, findTrackBySlug } from '../../lib/slugs'
-import { formatProjectDate } from '../../lib/dateUtils'
-import { ensureAllMediaReadyFallback } from '../../lib/mediaWarmer'
+import { notFound } from 'next/navigation'
+import { loadArtistData, normalizeSiteUrl } from '@/lib/data/artistData'
+import DiscographyApp from '@/components/discography/DiscographyApp'
+import { slugify, findProjectBySlug, findTrackBySlug } from '@/lib/data/slugs'
+import { formatProjectDate } from '@/lib/data/dateUtils'
+import { ensureAllMediaReadyFallback } from '@/lib/media/mediaWarmer'
+
+const STATIC_ASSET_REGEX =
+  /\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|webp|gif|svg|ico|txt|xml|woff|woff2|ttf|eot)$/i
+
+function isStaticAssetSlug(slug = []) {
+  if (!Array.isArray(slug)) return false
+  return slug.some(
+    (segment) =>
+      typeof segment === 'string' && (STATIC_ASSET_REGEX.test(segment) || segment.startsWith('_')),
+  )
+}
 
 export async function generateMetadata({ params }) {
   let resolvedParams = {}
@@ -21,6 +33,9 @@ export async function generateMetadata({ params }) {
   const artistName = rawArtistName || 'Artist'
   const publicProjects = (data?.projects ?? []).filter((p) => p.visibility !== 'private')
   const slug = resolvedParams?.slug ?? []
+  if (isStaticAssetSlug(slug)) {
+    return {}
+  }
 
   const rawSiteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || data?.siteUrl || data?.artist?.siteUrl || ''
@@ -138,7 +153,7 @@ export async function generateMetadata({ params }) {
   }
 
   // 3. MAIN SITE URL: /
-  const title = `${artistName} - Artist Discography`
+  const title = `${artistName} | Discography`
   const topProjects = publicProjects
     .slice(0, 3)
     .map((p) => p.name)
@@ -190,6 +205,11 @@ export default async function Page({ params }) {
     console.error('Failed to resolve page params:', err)
   }
 
+  const slug = resolvedParams?.slug ?? []
+  if (isStaticAssetSlug(slug)) {
+    notFound()
+  }
+
   let initialThemeMode = null
   try {
     const cookieStore = await cookies()
@@ -218,7 +238,7 @@ export default async function Page({ params }) {
   }
 
   return (
-    <MainDiscographyApp
+    <DiscographyApp
       data={data}
       health={health}
       initialSlug={resolvedParams?.slug ?? []}

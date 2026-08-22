@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { loadConfigData } from '../../../../lib/artistData'
+import { loadConfigData } from '@/lib/data/artistData'
 
 export async function POST(request) {
   try {

@@ -1,8 +1,8 @@
 'use client'
 
 import { Box, useTheme } from '@mui/material'
-import { useLogoAnalysis } from '../../lib/hooks/useLogoAnalysis'
-import { useDynamicThemeGradients } from '../../lib/hooks/useDynamicThemeGradients'
+import { useLogoAnalysis } from '@/lib/hooks/useLogoAnalysis'
+import { useDynamicThemeGradients } from '@/lib/hooks/useDynamicThemeGradients'
 
 export default function HeaderLogo({ onClick, ambientImage }) {
   const theme = useTheme()

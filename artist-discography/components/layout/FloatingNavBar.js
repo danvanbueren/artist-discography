@@ -1,62 +1,22 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  Box,
-  Container,
-  Paper,
-  Chip,
-  IconButton,
-  TextField,
-  InputAdornment,
-  Button,
-  Stack,
-  Typography,
-  useTheme,
-  Collapse,
-  Fade,
-} from '@mui/material'
-import { alpha } from '@mui/material/styles'
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
-import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
-import SortRoundedIcon from '@mui/icons-material/SortRounded'
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
+import { Box, Container, Paper, IconButton, useTheme, Fade } from '@mui/material'
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
-import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
-import ClearRoundedIcon from '@mui/icons-material/ClearRounded'
-import DarkModeIcon from '@mui/icons-material/DarkMode'
-import LightModeIcon from '@mui/icons-material/LightMode'
-import SettingsBrightnessRoundedIcon from '@mui/icons-material/SettingsBrightnessRounded'
-import LinkIcon from '@mui/icons-material/Link'
-import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
-import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
-import SortByAlphaRoundedIcon from '@mui/icons-material/SortByAlphaRounded'
-import HighQualityRoundedIcon from '@mui/icons-material/HighQualityRounded'
-import GraphicEqRoundedIcon from '@mui/icons-material/GraphicEqRounded'
-import DataSaverOnRoundedIcon from '@mui/icons-material/DataSaverOnRounded'
-import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded'
-import LockRoundedIcon from '@mui/icons-material/LockRounded'
-import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded'
-import { SOCIAL_ICONS } from '../artist/ArtistHero'
-import { useDragScroll } from '../../lib/hooks/useDragScroll'
+import { useDragScroll } from '@/lib/hooks/useDragScroll'
+import NavBarMainToolbar from './navbar/NavBarMainToolbar'
+import NavBarSearchBar from './navbar/NavBarSearchBar'
+import NavBarFilterBar, { FILTER_OPTIONS } from './navbar/NavBarFilterBar'
+import NavBarSortBar from './navbar/NavBarSortBar'
+import NavBarSettingsBar from './navbar/NavBarSettingsBar'
 
-export const FILTER_OPTIONS = [
-  'LP',
-  'EP',
-  'Single',
-  'Feature',
-  'Remix',
-  'Bootleg',
-  'Flip',
-  'Edit',
-  'Compilation',
-  'Minimix',
-  'DJ Set',
-  'Mixtape',
-  'Live',
-  'Other',
-]
+export { FILTER_OPTIONS }
 
+/**
+ * FloatingNavBar
+ * Responsive floating sticky navigation bar with fluid multi-mode toolbars:
+ * Main, Search, Release Type Filter, Sort Order, and Settings.
+ */
 export default function FloatingNavBar({
   activeTypes = [],
   onToggleType,
@@ -108,7 +68,7 @@ export default function FloatingNavBar({
     }
   }, [])
 
-  // Start 5-second inactivity timer (only when in child nav, not hovering, and search not focused)
+  // 5-second inactivity auto-dismiss timer
   const startInactivityTimer = useCallback(() => {
     clearInactivityTimer()
     if (navMode !== 'main' && !isHovering && !isSearchFocused) {
@@ -118,7 +78,6 @@ export default function FloatingNavBar({
     }
   }, [clearInactivityTimer, navMode, isHovering, isSearchFocused])
 
-  // Manage timer lifecycle based on navMode, hover, and focus
   useEffect(() => {
     if (navMode === 'main') {
       clearInactivityTimer()
@@ -127,44 +86,33 @@ export default function FloatingNavBar({
     } else {
       clearInactivityTimer()
     }
-
     return () => clearInactivityTimer()
   }, [navMode, isHovering, isSearchFocused, startInactivityTimer, clearInactivityTimer])
 
-  // Immediately jump back to parent menu on Escape key
+  // Escape key handler
   useEffect(() => {
     if (navMode === 'main') return
-
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setNavMode('main')
       }
     }
-
     document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [navMode])
 
-  // Immediately jump back to parent menu when clicking outside nav bar component
+  // Click outside handler
   useEffect(() => {
     if (navMode === 'main') return
-
     const handlePointerDown = (event) => {
       if (navRef.current && !navRef.current.contains(event.target)) {
         setNavMode('main')
       }
     }
-
     document.addEventListener('pointerdown', handlePointerDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-    }
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [navMode])
 
-  const bgDefault = theme.palette.background.default
-  const bgTransparent = alpha(bgDefault, 0)
   const isSearchActive = Boolean(searchQuery && searchQuery.trim() !== '')
   const isFilterActive = Boolean(activeTypes && activeTypes.length > 0)
 
@@ -213,7 +161,7 @@ export default function FloatingNavBar({
             alignItems: 'center',
           }}
         >
-          {/* Back Button when inside a sub-menu */}
+          {/* Back button when inside sub-menu */}
           {navMode !== 'main' && (
             <Fade in={navMode !== 'main'}>
               <IconButton
@@ -226,631 +174,67 @@ export default function FloatingNavBar({
             </Fade>
           )}
 
-          {/* --- MAIN MENU MODE --- */}
+          {/* MAIN MENU */}
           {navMode === 'main' && (
-            <Box
-              ref={mainDrag.ref}
-              {...mainDrag.bind}
-              sx={{
-                display: 'flex',
-                gap: { xs: 0.75, sm: 1.5 },
-                overflowX: 'auto',
-                py: 0.5,
-                px: 0.5,
-                minWidth: 0,
-                width: '100%',
-                alignItems: 'center',
-                justifyContent: { xs: 'flex-start', sm: 'space-around' },
-                cursor: mainDrag.isDragging ? 'grabbing' : 'grab',
-                userSelect: 'none',
-                scrollbarWidth: 'none',
-                '&::-webkit-scrollbar': { display: 'none' },
-              }}
-            >
-              {/* 1. TOP JUMP BUTTON (Appears on far left when scrolled down) */}
-              {showScrollTop && (
-                <Button
-                  size='medium'
-                  onClick={() => {
-                    if (mainDrag.hasDraggedRef.current) return
-                    if (onScrollToTop) {
-                      onScrollToTop()
-                    }
-                  }}
-                  startIcon={<ArrowUpwardRoundedIcon />}
-                  sx={{
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                    borderRadius: 3,
-                    px: { xs: 1.25, sm: 2 },
-                    py: 1,
-                    minWidth: 0,
-                    color: 'text.primary',
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                    },
-                  }}
-                >
-                  Top
-                </Button>
-              )}
-
-              {/* 2. SEARCH BUTTON & RESET */}
-              <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
-                <Button
-                  size='medium'
-                  onClick={() => {
-                    if (mainDrag.hasDraggedRef.current) return
-                    setNavMode('search')
-                  }}
-                  startIcon={<SearchRoundedIcon />}
-                  sx={{
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                    textTransform: 'none',
-                    fontWeight: isSearchActive ? 700 : 600,
-                    fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                    borderRadius: 3,
-                    px: { xs: 1.25, sm: 2 },
-                    py: 1,
-                    minWidth: 0,
-                    border: isSearchActive ? '2px solid' : '1px solid transparent',
-                    borderColor: isSearchActive ? 'primary.main' : 'transparent',
-                    bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                    color: isSearchActive ? 'primary.main' : 'text.primary',
-                    '&:hover': {
-                      bgcolor: isSearchActive ? 'rgba(144, 202, 249, 0.25)' : 'action.hover',
-                    },
-                  }}
-                >
-                  Search
-                </Button>
-
-                {isSearchActive && (
-                  <IconButton
-                    size='small'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (mainDrag.hasDraggedRef.current) return
-                      onSearchChange('')
-                    }}
-                    sx={{
-                      p: 0.75,
-                      color: 'error.main',
-                      flexShrink: 0,
-                      '&:hover': {
-                        bgcolor: 'rgba(244, 67, 54, 0.15)',
-                      },
-                    }}
-                  >
-                    <DeleteOutlineRoundedIcon fontSize='small' />
-                  </IconButton>
-                )}
-              </Stack>
-
-              {/* 3. FILTER BUTTON & RESET */}
-              <Stack direction='row' spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
-                <Button
-                  size='medium'
-                  onClick={() => {
-                    if (mainDrag.hasDraggedRef.current) return
-                    setNavMode('filter')
-                  }}
-                  startIcon={<TuneRoundedIcon />}
-                  sx={{
-                    flexShrink: 0,
-                    whiteSpace: 'nowrap',
-                    textTransform: 'none',
-                    fontWeight: isFilterActive ? 700 : 600,
-                    fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                    borderRadius: 3,
-                    px: { xs: 1.25, sm: 2 },
-                    py: 1,
-                    minWidth: 0,
-                    border: isFilterActive ? '2px solid' : '1px solid transparent',
-                    borderColor: isFilterActive ? 'primary.main' : 'transparent',
-                    bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.15)' : 'transparent',
-                    color: isFilterActive ? 'primary.main' : 'text.primary',
-                    '&:hover': {
-                      bgcolor: isFilterActive ? 'rgba(144, 202, 249, 0.25)' : 'action.hover',
-                    },
-                  }}
-                >
-                  Filter
-                </Button>
-
-                {isFilterActive && (
-                  <IconButton
-                    size='small'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (mainDrag.hasDraggedRef.current) return
-                      onResetTypes()
-                    }}
-                    sx={{
-                      p: 0.75,
-                      color: 'error.main',
-                      flexShrink: 0,
-                      '&:hover': {
-                        bgcolor: 'rgba(244, 67, 54, 0.15)',
-                      },
-                    }}
-                  >
-                    <DeleteOutlineRoundedIcon fontSize='small' />
-                  </IconButton>
-                )}
-              </Stack>
-
-              {/* 4. SORT BUTTON */}
-              <Button
-                size='medium'
-                onClick={() => {
-                  if (mainDrag.hasDraggedRef.current) return
-                  setNavMode('sort')
-                }}
-                startIcon={<SortRoundedIcon />}
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                  borderRadius: 3,
-                  px: { xs: 1.25, sm: 2 },
-                  py: 1,
-                  minWidth: 0,
-                  color: 'text.primary',
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  },
-                }}
-              >
-                Sort
-              </Button>
-
-              {/* 5. SETTINGS BUTTON */}
-              <Button
-                size='medium'
-                onClick={() => {
-                  if (mainDrag.hasDraggedRef.current) return
-                  setNavMode('settings')
-                }}
-                startIcon={
-                  isStuttering ? (
-                    <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                      <SettingsRoundedIcon />
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: -2,
-                          right: -2,
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: (theme) =>
-                            theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706',
-                          border: '1.5px solid',
-                          borderColor: (theme) =>
-                            theme.palette.mode === 'dark' ? '#181822' : '#ffffff',
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    <SettingsRoundedIcon />
-                  )
-                }
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  textTransform: 'none',
-                  fontWeight: isStuttering ? 700 : 600,
-                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                  borderRadius: 3,
-                  px: { xs: 1.25, sm: 2 },
-                  py: 1,
-                  minWidth: 0,
-                  color: isStuttering
-                    ? (theme) => (theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706')
-                    : 'text.primary',
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  },
-                }}
-              >
-                Settings
-              </Button>
-            </Box>
+            <NavBarMainToolbar
+              showScrollTop={showScrollTop}
+              onScrollToTop={onScrollToTop}
+              isSearchActive={isSearchActive}
+              onOpenSearch={() => setNavMode('search')}
+              onClearSearch={() => onSearchChange('')}
+              isFilterActive={isFilterActive}
+              onOpenFilter={() => setNavMode('filter')}
+              onResetFilter={onResetTypes}
+              onOpenSort={() => setNavMode('sort')}
+              isStuttering={isStuttering}
+              onOpenSettings={() => setNavMode('settings')}
+              mainDrag={mainDrag}
+            />
           )}
 
-          {/* --- SEARCH MODE (Full-width text input expand, stays active while focused, immediate return on blur/Esc) --- */}
+          {/* SEARCH MODE */}
           {navMode === 'search' && (
-            <Box sx={{ flexGrow: 1 }}>
-              <TextField
-                value={searchQuery}
-                onChange={(e) => {
-                  onSearchChange(e.target.value)
-                }}
-                onFocus={() => {
-                  setIsSearchFocused(true)
-                }}
-                onBlur={() => {
-                  setIsSearchFocused(false)
-                  setNavMode('main')
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    setNavMode('main')
-                  }
-                }}
-                placeholder='Search by title, artist, or track...'
-                size='small'
-                fullWidth
-                autoFocus
-                slotProps={{
-                  htmlInput: {
-                    sx: { py: 0.75, fontSize: '0.95rem' },
-                  },
-                  input: {
-                    sx: { height: 40 },
-                    endAdornment: searchQuery ? (
-                      <InputAdornment position='end'>
-                        <IconButton
-                          size='small'
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            onSearchChange('')
-                          }}
-                        >
-                          <ClearRoundedIcon fontSize='small' />
-                        </IconButton>
-                      </InputAdornment>
-                    ) : null,
-                  },
-                }}
-              />
-            </Box>
+            <NavBarSearchBar
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => {
+                setIsSearchFocused(false)
+                setNavMode('main')
+              }}
+              onCloseSearch={() => setNavMode('main')}
+            />
           )}
 
-          {/* --- FILTER MODE (Multi-select: LP, EP, Single, Feature, Remix, Bootleg, Flip, Edit) --- */}
+          {/* FILTER MODE */}
           {navMode === 'filter' && (
-            <Box
-              ref={filterDrag.ref}
-              {...filterDrag.bind}
-              sx={{
-                display: 'flex',
-                gap: 1,
-                overflowX: 'auto',
-                py: 0.5,
-                px: 0.5,
-                minWidth: 0,
-                flexGrow: 1,
-                alignItems: 'center',
-                cursor: filterDrag.isDragging ? 'grabbing' : 'grab',
-                userSelect: 'none',
-                scrollbarWidth: 'none',
-                '&::-webkit-scrollbar': { display: 'none' },
-              }}
-            >
-              {FILTER_OPTIONS.map((type) => {
-                const isSelected = activeTypes.includes(type)
-                return (
-                  <Chip
-                    key={type}
-                    label={type}
-                    clickable
-                    onClick={() => {
-                      if (filterDrag.hasDraggedRef.current) return
-                      onToggleType(type)
-                    }}
-                    color={isSelected ? 'primary' : 'default'}
-                    variant={isSelected ? 'filled' : 'outlined'}
-                    size='medium'
-                    sx={{
-                      flexShrink: 0,
-                      fontWeight: isSelected ? 700 : 500,
-                      fontSize: '0.875rem',
-                      borderRadius: 2.5,
-                      px: 1,
-                      height: 38,
-                      transition: 'all 0.2s ease',
-                      userSelect: 'none',
-                    }}
-                  />
-                )
-              })}
-            </Box>
+            <NavBarFilterBar
+              activeTypes={activeTypes}
+              onToggleType={onToggleType}
+              filterDrag={filterDrag}
+            />
           )}
 
-          {/* --- SORT MODE --- */}
+          {/* SORT MODE */}
           {navMode === 'sort' && (
-            <Box
-              ref={sortDrag.ref}
-              {...sortDrag.bind}
-              sx={{
-                display: 'flex',
-                gap: 1.25,
-                overflowX: 'auto',
-                py: 0.5,
-                px: 0.5,
-                minWidth: 0,
-                flexGrow: 1,
-                alignItems: 'center',
-                cursor: sortDrag.isDragging ? 'grabbing' : 'grab',
-                userSelect: 'none',
-                scrollbarWidth: 'none',
-                '&::-webkit-scrollbar': { display: 'none' },
-              }}
-            >
-              <Chip
-                icon={<ArrowDownwardRoundedIcon />}
-                label='Newest First'
-                clickable
-                onClick={() => {
-                  if (sortDrag.hasDraggedRef.current) return
-                  onSortChange('newest')
-                }}
-                color={sortOrder === 'newest' ? 'primary' : 'default'}
-                variant={sortOrder === 'newest' ? 'filled' : 'outlined'}
-                size='medium'
-                sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
-              />
-              <Chip
-                icon={<ArrowUpwardRoundedIcon />}
-                label='Oldest First'
-                clickable
-                onClick={() => {
-                  if (sortDrag.hasDraggedRef.current) return
-                  onSortChange('oldest')
-                }}
-                color={sortOrder === 'oldest' ? 'primary' : 'default'}
-                variant={sortOrder === 'oldest' ? 'filled' : 'outlined'}
-                size='medium'
-                sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
-              />
-              <Chip
-                icon={<SortByAlphaRoundedIcon />}
-                label='Title A-Z'
-                clickable
-                onClick={() => {
-                  if (sortDrag.hasDraggedRef.current) return
-                  onSortChange('title-asc')
-                }}
-                color={sortOrder === 'title-asc' ? 'primary' : 'default'}
-                variant={sortOrder === 'title-asc' ? 'filled' : 'outlined'}
-                size='medium'
-                sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
-              />
-              <Chip
-                icon={<SortByAlphaRoundedIcon />}
-                label='Title Z-A'
-                clickable
-                onClick={() => {
-                  if (sortDrag.hasDraggedRef.current) return
-                  onSortChange('title-desc')
-                }}
-                color={sortOrder === 'title-desc' ? 'primary' : 'default'}
-                variant={sortOrder === 'title-desc' ? 'filled' : 'outlined'}
-                size='medium'
-                sx={{ flexShrink: 0, height: 38, px: 1, fontSize: '0.875rem', userSelect: 'none' }}
-              />
-            </Box>
+            <NavBarSortBar sortOrder={sortOrder} onSortChange={onSortChange} sortDrag={sortDrag} />
           )}
 
-          {/* --- SETTINGS MODE (Theme toggle & Platform selector) --- */}
+          {/* SETTINGS MODE */}
           {navMode === 'settings' && (
-            <Box
-              ref={settingsDrag.ref}
-              {...settingsDrag.bind}
-              sx={{
-                display: 'flex',
-                gap: 1.5,
-                overflowX: 'auto',
-                py: 0.5,
-                px: 0.5,
-                minWidth: 0,
-                flexGrow: 1,
-                justifyContent: 'flex-start',
-                alignItems: 'center',
-                cursor: settingsDrag.isDragging ? 'grabbing' : 'grab',
-                userSelect: 'none',
-                scrollbarWidth: 'none',
-                '&::-webkit-scrollbar': { display: 'none' },
-              }}
-            >
-              <Button
-                size='medium'
-                variant='outlined'
-                disabled={!hasAvailablePlatforms}
-                onClick={() => {
-                  if (settingsDrag.hasDraggedRef.current) return
-                  onOpenPlatformModal()
-                }}
-                startIcon={
-                  selectedPlatform && SOCIAL_ICONS[selectedPlatform] ? (
-                    <Box
-                      component='img'
-                      src={SOCIAL_ICONS[selectedPlatform]}
-                      alt={selectedPlatform || 'Platform'}
-                      draggable={false}
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        objectFit: 'contain',
-                        borderRadius: 0.5,
-                      }}
-                    />
-                  ) : (
-                    <LinkIcon />
-                  )
-                }
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  py: 1,
-                  px: 2,
-                  color: 'text.primary',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    borderColor: 'text.primary',
-                    bgcolor: 'action.hover',
-                  },
-                }}
-              >
-                Platform
-              </Button>
-
-              <Button
-                size='medium'
-                variant='outlined'
-                onClick={() => {
-                  if (settingsDrag.hasDraggedRef.current) return
-                  if (onOpenQualityModal) onOpenQualityModal()
-                }}
-                startIcon={
-                  isStuttering ? (
-                    <Box
-                      component='span'
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706'),
-                        color: (theme) => (theme.palette.mode === 'dark' ? '#1a1400' : '#ffffff'),
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <PriorityHighRoundedIcon sx={{ fontSize: 11, color: 'inherit' }} />
-                    </Box>
-                  ) : audioQuality === 'lossless' ? (
-                    <GraphicEqRoundedIcon fontSize='small' />
-                  ) : audioQuality === '128k' ? (
-                    <DataSaverOnRoundedIcon fontSize='small' />
-                  ) : (
-                    <HighQualityRoundedIcon fontSize='small' />
-                  )
-                }
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  fontWeight: isStuttering ? 700 : 600,
-                  fontSize: '0.9rem',
-                  py: 1,
-                  px: 2,
-                  color: isStuttering
-                    ? (theme) => (theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706')
-                    : 'text.primary',
-                  borderColor: isStuttering
-                    ? (theme) =>
-                        theme.palette.mode === 'dark'
-                          ? 'rgba(245, 158, 11, 0.6)'
-                          : 'rgba(217, 119, 6, 0.55)'
-                    : 'divider',
-                  bgcolor: isStuttering
-                    ? (theme) =>
-                        theme.palette.mode === 'dark'
-                          ? 'rgba(245, 158, 11, 0.14)'
-                          : 'rgba(245, 158, 11, 0.1)'
-                    : 'transparent',
-                  boxShadow: isStuttering
-                    ? (theme) =>
-                        theme.palette.mode === 'dark'
-                          ? '0 0 8px rgba(245, 158, 11, 0.3)'
-                          : '0 0 6px rgba(217, 119, 6, 0.2)'
-                    : 'none',
-                  transition: 'all 0.25s ease',
-                  '&:hover': {
-                    borderColor: isStuttering
-                      ? (theme) => (theme.palette.mode === 'dark' ? '#fbbf24' : '#d97706')
-                      : 'text.primary',
-                    bgcolor: isStuttering
-                      ? (theme) =>
-                          theme.palette.mode === 'dark'
-                            ? 'rgba(245, 158, 11, 0.24)'
-                            : 'rgba(245, 158, 11, 0.18)'
-                      : 'action.hover',
-                  },
-                }}
-              >
-                Quality
-              </Button>
-
-              <Button
-                size='medium'
-                variant='outlined'
-                onClick={() => {
-                  if (settingsDrag.hasDraggedRef.current) return
-                  onToggleTheme()
-                }}
-                startIcon={
-                  darkMode ? <DarkModeIcon fontSize='small' /> : <LightModeIcon fontSize='small' />
-                }
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  py: 1,
-                  px: 2,
-                  color: 'text.primary',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    borderColor: 'text.primary',
-                    bgcolor: 'action.hover',
-                  },
-                }}
-              >
-                Theme
-              </Button>
-
-              <Button
-                size='medium'
-                variant='outlined'
-                onClick={() => {
-                  if (settingsDrag.hasDraggedRef.current) return
-                  if (onOpenPrivateAccessModal) onOpenPrivateAccessModal()
-                }}
-                startIcon={
-                  isPrivateAuthenticated ? (
-                    <LockOpenRoundedIcon fontSize='small' />
-                  ) : (
-                    <LockRoundedIcon fontSize='small' />
-                  )
-                }
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  py: 1,
-                  px: 2,
-                  color: isPrivateAuthenticated ? 'success.main' : 'text.primary',
-                  borderColor: isPrivateAuthenticated ? 'success.main' : 'divider',
-                  '&:hover': {
-                    borderColor: isPrivateAuthenticated ? 'success.main' : 'text.primary',
-                    bgcolor: 'action.hover',
-                  },
-                }}
-              >
-                {isPrivateAuthenticated ? 'Unlocked' : 'Locked'}
-              </Button>
-            </Box>
+            <NavBarSettingsBar
+              hasAvailablePlatforms={hasAvailablePlatforms}
+              onOpenPlatformModal={onOpenPlatformModal}
+              selectedPlatform={selectedPlatform}
+              onOpenQualityModal={onOpenQualityModal}
+              isStuttering={isStuttering}
+              audioQuality={audioQuality}
+              darkMode={darkMode}
+              onToggleTheme={onToggleTheme}
+              onOpenPrivateAccessModal={onOpenPrivateAccessModal}
+              isPrivateAuthenticated={isPrivateAuthenticated}
+              settingsDrag={settingsDrag}
+            />
           )}
         </Paper>
       </Container>

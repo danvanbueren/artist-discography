@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { loadConfigData, saveConfigData } from '../../../../lib/artistData'
+import { loadConfigData, saveConfigData } from '@/lib/data/artistData'
 
 export async function POST(request) {
   try {
@@ -55,7 +55,7 @@ export async function POST(request) {
     }
 
     if (body.siteUrl !== undefined) {
-      configData.siteUrl = String(body.siteUrl || '').trim() || 'localhost'
+      configData.siteUrl = String(body.siteUrl || '').trim()
     }
 
     if (body.adminAccess !== undefined) {

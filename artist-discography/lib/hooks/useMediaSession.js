@@ -40,25 +40,31 @@ export function useMediaSession({
   const isPlayingRef = useRef(isPlaying)
   isPlayingRef.current = isPlaying
 
+  // Extract primitive properties to maintain clean, static dependency arrays
+  const hasTrack = Boolean(playingTrack)
+  const trackTitle = playingTrack?.name || 'Untitled Track'
+  const trackArtist = playingTrack?.artist || playingTrack?.projectArtist || 'Artist'
+  const trackAlbum = playingTrack?.project || 'Discography'
+  const rawCover =
+    playingTrack?.cover ||
+    playingTrack?.image ||
+    playingTrack?.projectCover ||
+    '/api/logo?w=512&fmt=png'
+
   // 1. Synchronize Metadata (Track Title, Artist, Album, Multi-Resolution Artwork)
   useEffect(() => {
     if (
       typeof window === 'undefined' ||
       !('mediaSession' in navigator) ||
       !window.MediaMetadata ||
-      !playingTrack
+      !hasTrack
     ) {
       return
     }
 
-    const title = playingTrack.name || 'Untitled Track'
-    const artist = playingTrack.artist || playingTrack.projectArtist || 'Artist'
-    const album = playingTrack.project || 'Discography'
-    const rawCover =
-      playingTrack.cover ||
-      playingTrack.image ||
-      playingTrack.projectCover ||
-      '/api/logo?w=512&fmt=png'
+    const title = trackTitle
+    const artist = trackArtist
+    const album = trackAlbum
 
     const artworkList = []
 
@@ -95,22 +101,14 @@ export function useMediaSession({
     } catch (err) {
       console.warn('Failed to set MediaSession metadata:', err)
     }
-  }, [
-    playingTrack?.name,
-    playingTrack?.artist,
-    playingTrack?.projectArtist,
-    playingTrack?.project,
-    playingTrack?.cover,
-    playingTrack?.image,
-    playingTrack?.projectCover,
-  ])
+  }, [hasTrack, trackTitle, trackArtist, trackAlbum, rawCover])
 
   // 2. Synchronize Playback State (playing vs. paused vs. none)
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return
 
     try {
-      if (playingTrack) {
+      if (hasTrack) {
         navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
       } else {
         navigator.mediaSession.playbackState = 'none'
@@ -118,12 +116,12 @@ export function useMediaSession({
     } catch (err) {
       console.warn('Failed to set MediaSession playbackState:', err)
     }
-  }, [isPlaying, Boolean(playingTrack)])
+  }, [isPlaying, hasTrack])
 
   // 3. Synchronize Position State (Timeline / Scrubber)
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return
-    if (!playingTrack || !duration || isNaN(duration) || duration <= 0) return
+    if (!hasTrack || !duration || isNaN(duration) || duration <= 0) return
 
     try {
       if ('setPositionState' in navigator.mediaSession) {
@@ -137,11 +135,11 @@ export function useMediaSession({
     } catch (err) {
       // Ignored if invoked during stream buffer transitions
     }
-  }, [currentTime, duration, Boolean(playingTrack)])
+  }, [currentTime, duration, hasTrack])
 
   // 4. Register Action Handlers (Hardware Keys & OS Widget Buttons)
   useEffect(() => {
-    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !playingTrack) {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !hasTrack) {
       return
     }
 
@@ -230,5 +228,5 @@ export function useMediaSession({
         } catch (err) {}
       }
     }
-  }, [Boolean(playingTrack)])
+  }, [hasTrack])
 }

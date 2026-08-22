@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { loadConfigData } from '../../../../lib/artistData'
-import { getLogoDetails, saveCustomLogo, deleteCustomLogo } from '../../../../lib/logoUtils'
-import { scheduleAutomatedCachePrune } from '../../../../lib/cacheCleaner'
+import { loadConfigData } from '@/lib/data/artistData'
+import { getLogoDetails, saveCustomLogo, deleteCustomLogo } from '@/lib/media/logoUtils'
+import { scheduleAutomatedCachePrune } from '@/lib/media/cacheCleaner'
 
 function authenticateAdmin(password, request) {
   const dataResult = loadConfigData()

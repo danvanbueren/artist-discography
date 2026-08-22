@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getOptimizedImage } from '../../../lib/mediaOptimizer'
-import { getLogoDetails } from '../../../lib/logoUtils'
+import { getOptimizedImage } from '@/lib/media/mediaOptimizer'
+import { getLogoDetails } from '@/lib/media/logoUtils'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

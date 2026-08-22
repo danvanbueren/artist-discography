@@ -6,19 +6,52 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Agent Rules & Core Standards
 
-Welcome! This document outlines the core guidelines, architectural rules, and lessons learned for working on this project.
+Welcome! This document outlines the core guidelines, architectural rules, coding priorities, and lessons learned for working on this project.
 
 ## Table of Contents
-1. [Core Development Rules & Frameworks](#core-development-rules--frameworks)
+1. [Core Priorities & Architectural Standards](#core-priorities--architectural-standards)
+   - [Plan-First Requirement](#plan-first-requirement)
+   - [Modular, Chunked Code & No Monolithic Files](#modular-chunked-code--no-monolithic-files)
+   - [High Readability & Self-Documenting Code](#high-readability--self-documenting-code)
+2. [Core Development Rules & Frameworks](#core-development-rules--frameworks)
    - [Material UI (MUI 9) Guidelines](#material-ui-mui-9-guidelines)
    - [React Effects & Hook Dependencies](#react-effects-and-hook-dependencies)
    - [Code Formatting & Styling](#code-formatting-and-styling)
-2. [Lessons Learned & Core Design Standards](#lessons-learned--core-design-standards)
+3. [Lessons Learned & Core Design Standards](#lessons-learned--core-design-standards)
+   - [Zero-Data-Loss Principle & Modular Disk Operations](#zero-data-loss-principle--modular-atomic-disk-operations)
    - [Fail Gracefully](#fail-gracefully)
    - [React State Updates in Event Handlers, Not Render/Dispatch Callbacks](#react-state-updates-in-event-handlers-not-renderdispatch-callbacks)
-3. [Project Workflows & Processes](#project-workflows--processes)
+   - [Non-Blocking Media Pipelines & Ephemeral Overlays](#non-blocking-media-pipelines--ephemeral-overlays)
+   - [Private Access Gating & Permissions Security](#private-access-gating--permissions-security)
+   - [Cross-Device Casting, AirPlay & Media CORS Standards](#cross-device-casting-airplay--media-cors-standards)
+   - [Date Picking with MUI X Date Pickers & Dayjs](#date-picking-with-mui-x-date-pickers--dayjs)
+   - [Horizontal Drag & Mouse Wheel Scrolling (`useDragScroll`)](#horizontal-drag--mouse-wheel-scrolling-usedragscroll)
+   - [Absolute URL Normalization for Social Embeds & Metadata](#absolute-url-normalization-for-social-embeds--metadata)
+4. [Project Workflows & Processes](#project-workflows--processes)
    - [Pull Requests (Keep Scope Unified)](#pull-requests)
    - [Documentation](#documentation)
+
+---
+
+## Core Priorities & Architectural Standards
+
+### Plan-First Requirement
+Always construct a comprehensive implementation plan before making modifications to the codebase. When presented with architectural changes, refactors, or new features, review the design thoroughly, outline the file breakdown, and wait for user approval before writing code.
+
+### Modular, Chunked Code & No Monolithic Files
+- **Strict Size Bounds**: Never write monolithic or run-on files. Component, hook, and utility files should remain focused and chunked into single-responsibility modules (target <150–200 lines per file).
+- **Splinter Large Files**: Decompose large views into focused presentational subcomponents and extract state management and reusable logic into dedicated custom hooks (`use*.js`).
+- **Domain Directory Segregation**: Group related subcomponents and hooks in cohesive domain subfolders:
+  - `components/player/hooks/`, `components/player/desktop/`, `components/player/fullscreen/`, `components/player/queue/`
+  - `components/discography/hooks/`, `components/discography/views/`, `components/discography/header/`, `components/discography/banners/`, `components/discography/modals/`
+  - `components/layout/navbar/`, `components/layout/header/`
+  - `components/admin/hooks/`, `components/admin/track/`, `components/admin/project/`, `components/admin/sidebar/`, `components/admin/tabs/`, `components/admin/tools/`
+  - `lib/data/`, `lib/media/`, `lib/api/specs/`, `lib/network/`, `lib/hooks/`
+
+### High Readability & Self-Documenting Code
+- **Explicit Naming**: Use clear, descriptive function, variable, and prop names that immediately communicate intent without requiring mental translation.
+- **Explanatory Comments**: Write concise, clear JSDoc comments explaining the purpose, parameters, and return values of every exported component, hook, and helper function.
+- **Zero Guesswork**: Nothing should need to be "inferred" by another developer reading the code. Avoid obscure abbreviations, dense nested ternaries, and implicit state dependencies.
 
 ---
 
@@ -160,15 +193,19 @@ Prefer vertical formatting with line breaks to improve readability in JSX/TSX co
 >
 ```
 
-
 ---
 
 ## Lessons Learned & Core Design Standards
 
 Future agents should automatically update this section to capture new lessons learned, design patterns, or user preferences as they are identified. Always review existing standards and adhere to them during development:
 
-### Fail Gracefully
+### Zero-Data-Loss Principle & Modular Atomic Disk Operations
+- **Atomic Writes**: Always write modified JSON data to an adjacent temporary file (`.tmp.<pid>.<timestamp>.<rand>`) before atomically swapping it via `fs.renameSync`. This prevents partial write corruption during server crashes or process kills across both `data/config.json` and `data/projects/<slug>/project.json`.
+- **Corrupted File Quarantine**: If `config.json` or any `project.json` is unparseable and heuristic syntax recovery fails, NEVER overwrite it with default scaffold data. Immediately copy/rename the corrupted file to `data/config.corrupted-<timestamp>.json` (or `data/projects/<slug>/project.corrupted-<timestamp>.json`) before creating a working fallback.
+- **Automated Rolling Backups**: Maintain automated timestamped snapshots in `data/backups/config-<timestamp>.json` and `data/backups/project-<slug>-<timestamp>.json` before any destructive write or repair operation, bounded to the latest 15 snapshots per target.
+- **Modular Project Isolation**: Store project-level metadata within its respective project directory (`data/projects/<slug>/project.json`) alongside artwork (`art.jpg`) and track masters (`<track-slug>.<ext>`), with general configuration in `data/config.json`. Projects are discovered automatically and ordered chronologically by release date (newest first).
 
+### Fail Gracefully
 Design all systems to fail gracefully. Never assume that input values from `localStorage`, network requests, database queries, or user inputs are perfectly structured or initialized. Always use defensive defaults, nullish coalescing, optional chaining, and proper array/object sanitization to ensure that partial or corrupted data never crashes the application.
 
 ### React State Updates in Event Handlers, Not Render/Dispatch Callbacks
@@ -185,12 +222,6 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Defense in Depth**: Gated private projects and uncleared audio streams must be secured both in frontend state (omitting private releases, masking `hasAudio`/`audioUrl` on uncleared releases) and at the HTTP streaming endpoint (`/api/audio/[...path]` returning 403 Forbidden for unauthenticated requests).
 - **Public Frontend Cleanliness**: Never display "locked" text, warnings, or padlock icons to unauthenticated public visitors. Keep the interface inviting and frictionless, only displaying subtle `UNLOCKED` badges when an authorized user enters the private access code.
 
-### Zero-Data-Loss Principle & Modular Atomic Disk Operations
-- **Atomic Writes**: Always write modified JSON data to an adjacent temporary file (`.tmp.<pid>.<timestamp>.<rand>`) before atomically swapping it via `fs.renameSync`. This prevents partial write corruption during server crashes or process kills across both `data/config.json` and `data/projects/<slug>/project.json`.
-- **Corrupted File Quarantine**: If `config.json` or any `project.json` is unparseable and heuristic syntax recovery fails, NEVER overwrite it with default scaffold data. Immediately copy/rename the corrupted file to `data/config.corrupted-<timestamp>.json` (or `data/projects/<slug>/project.corrupted-<timestamp>.json`) before creating a working fallback.
-- **Automated Rolling Backups**: Maintain automated timestamped snapshots in `data/backups/config-<timestamp>.json` and `data/backups/project-<slug>-<timestamp>.json` before any destructive write or repair operation, bounded to the latest 15 snapshots per target.
-- **Modular Project Isolation**: Store project-level metadata within its respective project directory (`data/projects/<slug>/project.json`) alongside artwork (`art.jpg`) and track masters (`<track-slug>.<ext>`), with general configuration in `data/config.json`. Projects are discovered automatically and ordered chronologically by release date (newest first).
-
 ### Cross-Device Casting, AirPlay & Media CORS Standards
 - **CORS & Preflight Compliance on Media Endpoints**: Google Cast and external media receivers (Chromecast, Google Home, Nest Audio, smart speakers, Android TVs, Apple TVs) run isolated web receiver engines that enforce strict CORS. All media streaming endpoints (`/api/audio/[...path]`, `/api/media/[...path]`, `/api/logo`, `/api/icon`) must export `OPTIONS` (HTTP 204 with `Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: GET, HEAD, OPTIONS`, `Access-Control-Max-Age: 86400`) and `HEAD` handlers, attach full CORS headers across all response statuses (200, 206, 304, error statuses), and ensure `<audio>` tags include `crossOrigin="anonymous"`.
 - **Dual-Engine Casting & AirPlay Integration**: Combine W3C Remote Playback API (`audio.remote.prompt()`) for Chromium/Android/Desktop with Apple WebKit AirPlay API (`audio.webkitShowPlaybackTargetPicker()`, `webkitplaybacktargetavailabilitychanged`, `webkitcurrentplaybacktargetiswirelesschanged`) for iOS/iPadOS/macOS Safari. Accurately detect device capability and provide helpful diagnostic feedback if connecting on localhost or private networks.
@@ -204,12 +235,8 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Standard**: For horizontally overflowing containers (such as platform button groups, navbar links, and filter pill lists), use the `useDragScroll` custom hook.
 - **Interaction**: This provides smooth mouse click-and-drag panning and converts vertical mouse wheel ticks (`deltaY`) into horizontal scroll progress (`scrollLeft`) while suppressing accidental click triggers during drags.
 
-### Code Style, Formatting & Tooling
-- **Prettier**: Use Prettier (`.prettierrc`) with 2 spaces, single quotes, no semicolons, JSX single quotes, and trailing commas.
-- **ESLint**: Next.js flat configuration in `eslint.config.mjs` extending core web vitals and Prettier.
-
 ### Absolute URL Normalization for Social Embeds & Metadata
-- **Standard**: Discord and OpenGraph scrapers require fully qualified absolute URLs (`https://...`). Use `normalizeSiteUrl()` from `lib/artistData.js` / `lib/metadata.js` to ensure configured `siteUrl` strings (or `process.env.NEXT_PUBLIC_SITE_URL`) are safely normalized with proper protocols and fallback defaults (`http://localhost:3000`).
+- **Standard**: Discord and OpenGraph scrapers require fully qualified absolute URLs (`https://...`). Use `normalizeSiteUrl()` from `lib/data/urlNormalization.js` / `lib/media/metadata.js` to ensure configured `siteUrl` strings (or `process.env.NEXT_PUBLIC_SITE_URL`) are safely normalized with proper protocols and fallback defaults (`http://localhost:3000`).
 
 ---
 

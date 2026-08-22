@@ -6,7 +6,7 @@ import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
 import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
-import ProgressiveImage from '../common/ProgressiveImage'
+import ProgressiveImage from '@/components/ui/ProgressiveImage'
 import AudioQualityPill from './AudioQualityPill'
 
 /**

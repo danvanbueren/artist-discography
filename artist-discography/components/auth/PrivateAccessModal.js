@@ -227,26 +227,7 @@ export default function PrivateAccessModal({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: 1.5, pt: 0, justifyContent: 'space-between' }}>
-        <Button
-          onClick={onClose}
-          size='medium'
-          variant='outlined'
-          sx={{
-            textTransform: 'none',
-            fontWeight: 600,
-            borderRadius: 2,
-            borderColor: 'divider',
-            color: 'text.primary',
-            '&:hover': {
-              borderColor: 'text.primary',
-              bgcolor: 'action.hover',
-            },
-          }}
-        >
-          Cancel
-        </Button>
-
+      <DialogActions sx={{ p: 1.5, pt: 0, justifyContent: 'flex-end' }}>
         {isAuthenticated ? (
           <Button
             onClick={handleLock}

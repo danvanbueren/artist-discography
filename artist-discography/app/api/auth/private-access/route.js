@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { loadConfigData } from '../../../../lib/artistData'
+import { loadConfigData } from '@/lib/data/artistData'
 
 export async function GET() {
   try {

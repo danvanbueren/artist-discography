@@ -24,7 +24,7 @@ export function useArtistProfile(
   const [privateAccessCodeInput, setPrivateAccessCodeInput] = useState(
     () => initialData?.privateAccessCode || '',
   )
-  const [siteUrlInput, setSiteUrlInput] = useState(() => initialData?.siteUrl || 'localhost')
+  const [siteUrlInput, setSiteUrlInput] = useState(() => initialData?.siteUrl || '')
 
   // Logo State
   const [logoInfo, setLogoInfo] = useState(
@@ -101,7 +101,7 @@ export function useArtistProfile(
       setPrivateAccessCodeInput(initialData.privateAccessCode || '')
     }
     if (initialData?.siteUrl !== undefined) {
-      setSiteUrlInput(initialData.siteUrl || 'localhost')
+      setSiteUrlInput(initialData.siteUrl || '')
     }
     if (initialData?.logoInfo) {
       setLogoInfo(initialData.logoInfo)
@@ -124,7 +124,7 @@ export function useArtistProfile(
             adminAccess: Boolean(adminAccessInputRef.current),
             adminPassword: savedAdminPassword,
             privateAccessCode: privateAccessCodeInputRef.current?.trim?.() || '',
-            siteUrl: siteUrlInputRef.current?.trim?.() || 'localhost',
+            siteUrl: siteUrlInputRef.current?.trim?.() || '',
           }),
           signal: AbortSignal.timeout(20000),
         })

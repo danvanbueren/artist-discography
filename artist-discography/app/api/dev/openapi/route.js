@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { generateOpenApiSpec } from '../../../../lib/apiSpec'
+import { generateOpenApiSpec } from '@/lib/api/apiSpec'
 
 export async function GET(request) {
   try {

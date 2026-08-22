@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Box } from '@mui/material'
-import { useVibrantColors } from '../../lib/hooks/useVibrantColors'
-import { isHighResCached, markHighResCached } from '../../lib/mediaPreloader'
+import { useVibrantColors } from '@/lib/hooks/useVibrantColors'
+import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
 
 function getLowResUrl(src) {
   if (!src || typeof src !== 'string') return ''

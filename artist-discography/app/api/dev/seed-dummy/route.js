@@ -7,8 +7,8 @@ import {
   saveProjectData,
   loadArtistData,
   getProjectsDirPath,
-} from '../../../../lib/artistData'
-import { slugify } from '../../../../lib/slugs'
+} from '@/lib/data/artistData'
+import { slugify } from '@/lib/data/slugs'
 
 const ARTIST_NAMES = [
   'Astraea & The Neon Sun',

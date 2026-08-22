@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { NextResponse } from 'next/server'
-import { getOptimizedImage } from '../../../../lib/mediaOptimizer'
+import { getOptimizedImage } from '@/lib/media/mediaOptimizer'
 
 const MEDIA_MIME_TYPES = {
   '.png': 'image/png',
