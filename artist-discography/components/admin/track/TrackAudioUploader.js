@@ -68,7 +68,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
           gap: 1,
         }}
       >
@@ -76,6 +76,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
           {isAudioTranscoding ? (
             <GraphicEqIcon
               sx={{
+                flexShrink: 0,
                 color: 'success.main',
                 animation: 'pulse 1s infinite ease-in-out',
                 '@keyframes pulse': {
@@ -85,14 +86,14 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
               }}
             />
           ) : hasUploadedAudio ? (
-            <CheckCircleIcon sx={{ color: 'success.main' }} />
+            <CheckCircleIcon sx={{ color: 'success.main', flexShrink: 0 }} />
           ) : isBlue ? (
-            <AudioFileIcon sx={{ color: 'primary.main' }} />
+            <AudioFileIcon sx={{ color: 'primary.main', flexShrink: 0 }} />
           ) : (
-            <AudioFileIcon sx={{ color: 'warning.main' }} />
+            <AudioFileIcon sx={{ color: 'warning.main', flexShrink: 0 }} />
           )}
 
-          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+          <Box sx={{ minWidth: 0, flexGrow: 1, overflow: 'hidden' }}>
             <Typography
               variant='body2'
               sx={{
@@ -100,6 +101,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                minWidth: 0,
                 color: isGreen
                   ? 'success.main'
                   : isBlue
@@ -121,6 +123,9 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
               sx={{
                 color: isYellow ? 'warning.light' : 'text.secondary',
                 display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {isAudioTranscoding

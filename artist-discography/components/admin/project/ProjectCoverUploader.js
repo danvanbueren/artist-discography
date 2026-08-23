@@ -78,7 +78,7 @@ export default function ProjectCoverUploader({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            flexWrap: 'wrap',
+            flexWrap: 'nowrap',
             gap: 2,
           }}
         >
@@ -120,8 +120,8 @@ export default function ProjectCoverUploader({
               )}
             </Box>
 
-            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
+            <Box sx={{ minWidth: 0, flexGrow: 1, overflow: 'hidden' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25, minWidth: 0 }}>
                 <Typography
                   variant='body2'
                   sx={{
@@ -129,6 +129,7 @@ export default function ProjectCoverUploader({
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
+                    minWidth: 0,
                     color: isGreen
                       ? 'success.main'
                       : isBlue
@@ -149,7 +150,7 @@ export default function ProjectCoverUploader({
                     label='Optimizing'
                     size='small'
                     color='success'
-                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800 }}
+                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}
                   />
                 )}
                 {!isCoverOptimizing && hasUploadedCover && (
@@ -157,7 +158,7 @@ export default function ProjectCoverUploader({
                     label='Staged'
                     size='small'
                     color='success'
-                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800 }}
+                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800, flexShrink: 0 }}
                   />
                 )}
                 {isYellow && (
@@ -166,14 +167,20 @@ export default function ProjectCoverUploader({
                     size='small'
                     color='warning'
                     variant='outlined'
-                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700, flexShrink: 0 }}
                   />
                 )}
               </Box>
 
               <Typography
                 variant='caption'
-                sx={{ color: isYellow ? 'warning.light' : 'text.secondary', display: 'block' }}
+                sx={{
+                  color: isYellow ? 'warning.light' : 'text.secondary',
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {isCoverOptimizing
                   ? `Optimizing responsive sizes: ${coverJob.currentStep || coverJob.phase || 'Generating thumbnails...'}`
