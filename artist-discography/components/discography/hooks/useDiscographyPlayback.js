@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 
 function shuffleArray(array) {
   const arr = [...array]
@@ -16,10 +16,10 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
     const nameA = (a.track?.name || a.name || '').toLowerCase()
     const nameB = (b.track?.name || b.name || '').toLowerCase()
     const indexA = discographyList.findIndex(
-      (item) => (item.track.name || '').toLowerCase() === nameA,
+      (item) => (item.track?.name || item.name || '').toLowerCase() === nameA,
     )
     const indexB = discographyList.findIndex(
-      (item) => (item.track.name || '').toLowerCase() === nameB,
+      (item) => (item.track?.name || item.name || '').toLowerCase() === nameB,
     )
     if (indexA === -1) return 1
     if (indexB === -1) return -1
@@ -27,9 +27,33 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
   })
 }
 
+function formatTrackItem(track, parentProj, artistName) {
+  if (!track) return null
+  const projName =
+    typeof parentProj === 'string' ? parentProj : parentProj?.name || track.project || ''
+  const projCover =
+    track.cover ||
+    (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
+    track.projectCover ||
+    ''
+  const projArtist =
+    (typeof parentProj === 'object' ? parentProj?.artist : '') ||
+    track.projectArtist ||
+    artistName ||
+    ''
+
+  return {
+    ...track,
+    project: projName,
+    projectCover: projCover,
+    projectArtist: projArtist,
+    artist: track.artist || projArtist,
+  }
+}
+
 /**
  * Custom hook managing the master audio player queue, shuffle, repeat,
- * and track playback transition handlers.
+ * playback history stack, and track playback transition handlers.
  *
  * @param {Object} params
  * @param {Array} params.projects - Projects array
@@ -44,6 +68,7 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
  *   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>,
  *   manualQueue: Array<Object>,
  *   autoplayTracks: Array<Object>,
+ *   playbackHistory: Array<Object>,
  *   isShuffle: boolean,
  *   repeatMode: 'off'|'all'|'one',
  *   restartCount: number,
@@ -72,9 +97,27 @@ export function useDiscographyPlayback({
   const [isPlaying, setIsPlaying] = useState(false)
   const [manualQueue, setManualQueue] = useState([])
   const [autoplayTracks, setAutoplayTracks] = useState([])
+  const [playbackHistory, setPlaybackHistory] = useState([])
+  const [activeTrackPool, setActiveTrackPool] = useState([])
   const [isShuffle, setIsShuffle] = useState(false)
   const [repeatMode, setRepeatMode] = useState('off') // 'off' | 'all' | 'one'
   const [restartCount, setRestartCount] = useState(0)
+
+  // Current fallback pool
+  const currentFallbackPool = useMemo(() => {
+    if (activeTrackPool.length > 0) return activeTrackPool
+    if (selectedProject?.tracks && Array.isArray(selectedProject.tracks)) {
+      return selectedProject.tracks
+        .filter((t) => t?.hasAudio && Boolean(t?.audioUrl))
+        .map((t) => ({
+          track: t,
+          project: selectedProject.name,
+          projectCover: selectedProject.cover || selectedProject.image || '',
+          projectArtist: selectedProject.artist || artist.name || '',
+        }))
+    }
+    return displayedDiscographyTracks
+  }, [activeTrackPool, selectedProject, displayedDiscographyTracks, artist.name])
 
   const handleToggleShuffle = useCallback(() => {
     setIsShuffle((prev) => {
@@ -82,13 +125,12 @@ export function useDiscographyPlayback({
       if (nextShuffle) {
         setAutoplayTracks((current) => shuffleArray(current))
       } else {
-        setAutoplayTracks((current) =>
-          sortTracksByDiscographyOrder(current, displayedDiscographyTracks),
-        )
+        const pool = currentFallbackPool.length > 0 ? currentFallbackPool : displayedDiscographyTracks
+        setAutoplayTracks((current) => sortTracksByDiscographyOrder(current, pool))
       }
       return nextShuffle
     })
-  }, [displayedDiscographyTracks])
+  }, [currentFallbackPool, displayedDiscographyTracks])
 
   const handleCycleRepeatMode = useCallback(() => {
     setRepeatMode((prev) => {
@@ -134,27 +176,48 @@ export function useDiscographyPlayback({
           projectCover: projCover,
           artist: track.artist || parentProj?.artist || artist.name || '',
         }
+
+        // Determine context pool (single project vs all discography)
+        let pool = []
+        if (selectedProject?.tracks && Array.isArray(selectedProject.tracks)) {
+          pool = selectedProject.tracks
+            .filter((t) => t?.hasAudio && Boolean(t?.audioUrl))
+            .map((t) => ({
+              track: t,
+              project: selectedProject.name,
+              projectCover: selectedProject.cover || selectedProject.image || '',
+              projectArtist: selectedProject.artist || artist.name || '',
+            }))
+        } else {
+          pool = displayedDiscographyTracks
+        }
+
+        setActiveTrackPool(pool)
         setPlayingTrack(trackWithProject)
         setIsPlaying(true)
         setManualQueue([])
+        setPlaybackHistory([])
 
-        // Populate autoplay queue with subsequent playable tracks
-        const clickedIndex = displayedDiscographyTracks.findIndex(
-          (item) => (item.track.name || '').toLowerCase() === (track.name || '').toLowerCase(),
+        const clickedIndex = pool.findIndex(
+          (item) =>
+            (item.track?.name || item.name || '').toLowerCase() ===
+            (track.name || '').toLowerCase(),
         )
 
-        let remaining = []
-        if (clickedIndex !== -1) {
-          remaining = displayedDiscographyTracks
-            .slice(clickedIndex + 1)
-            .filter(
-              (item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl),
-            )
-        }
-
         if (isShuffle) {
-          setAutoplayTracks(shuffleArray(remaining))
+          // Shuffle all other playable tracks in the pool
+          const otherTracks =
+            clickedIndex !== -1
+              ? pool.filter((_, idx) => idx !== clickedIndex)
+              : pool.filter(
+                  (item) =>
+                    (item.track?.name || item.name || '').toLowerCase() !==
+                    (track.name || '').toLowerCase(),
+                )
+          setAutoplayTracks(shuffleArray(otherTracks))
         } else {
+          // Subsequent tracks in linear order
+          const remaining = clickedIndex !== -1 ? pool.slice(clickedIndex + 1) : []
           setAutoplayTracks(remaining)
         }
       }
@@ -176,6 +239,11 @@ export function useDiscographyPlayback({
   }, [])
 
   const handleSkipNext = useCallback(() => {
+    // Capture current track into history before navigating forward
+    if (playingTrack) {
+      setPlaybackHistory((prev) => [...prev, playingTrack])
+    }
+
     // 1. Check manual queue for next playable item
     if (manualQueue.length > 0) {
       const validIndex = manualQueue.findIndex(
@@ -188,24 +256,7 @@ export function useDiscographyPlayback({
 
         const nextTrack = nextItem.track || nextItem
         const parentProj = nextItem.project || selectedProject
-        const projName =
-          typeof parentProj === 'string' ? parentProj : parentProj?.name || nextTrack.project || ''
-        const projCover =
-          nextTrack.cover ||
-          (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
-          nextTrack.projectCover ||
-          ''
-
-        setPlayingTrack({
-          ...nextTrack,
-          project: projName,
-          projectCover: projCover,
-          artist:
-            nextTrack.artist ||
-            (typeof parentProj === 'object' ? parentProj?.artist : '') ||
-            artist.name ||
-            '',
-        })
+        setPlayingTrack(formatTrackItem(nextTrack, parentProj, artist.name))
         setIsPlaying(true)
         return
       }
@@ -224,24 +275,7 @@ export function useDiscographyPlayback({
 
         const nextTrack = nextItem.track || nextItem
         const parentProj = nextItem.project || selectedProject
-        const projName =
-          typeof parentProj === 'string' ? parentProj : parentProj?.name || nextTrack.project || ''
-        const projCover =
-          nextTrack.cover ||
-          (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
-          nextTrack.projectCover ||
-          ''
-
-        setPlayingTrack({
-          ...nextTrack,
-          project: projName,
-          projectCover: projCover,
-          artist:
-            nextTrack.artist ||
-            (typeof parentProj === 'object' ? parentProj?.artist : '') ||
-            artist.name ||
-            '',
-        })
+        setPlayingTrack(formatTrackItem(nextTrack, parentProj, artist.name))
         setIsPlaying(true)
         return
       }
@@ -250,60 +284,104 @@ export function useDiscographyPlayback({
 
     // 3. Loop if repeat all is active
     if (repeatMode === 'all') {
-      const playableTracks = displayedDiscographyTracks.filter(
+      const poolToLoop = currentFallbackPool.filter(
         (item) => (item.track || item)?.hasAudio && Boolean((item.track || item)?.audioUrl),
       )
-      if (playableTracks.length > 0) {
-        const firstItem = playableTracks[0]
-        const firstTrack = firstItem.track || firstItem
-        const parentProj = firstItem.project
-        setPlayingTrack({
-          ...firstTrack,
-          project: parentProj?.name || firstTrack.project || '',
-          projectCover: firstTrack.cover || parentProj?.cover || parentProj?.image || '',
-          artist: firstTrack.artist || parentProj?.artist || artist.name || '',
-        })
-        setIsPlaying(true)
-        setAutoplayTracks(playableTracks.slice(1))
-        return
+      if (poolToLoop.length > 0) {
+        if (isShuffle) {
+          const shuffledPool = shuffleArray(poolToLoop)
+          const firstItem = shuffledPool[0]
+          const firstTrack = firstItem.track || firstItem
+          const parentProj = firstItem.project
+          setPlayingTrack(formatTrackItem(firstTrack, parentProj, artist.name))
+          setIsPlaying(true)
+          setAutoplayTracks(shuffledPool.slice(1))
+          return
+        } else {
+          const firstItem = poolToLoop[0]
+          const firstTrack = firstItem.track || firstItem
+          const parentProj = firstItem.project
+          setPlayingTrack(formatTrackItem(firstTrack, parentProj, artist.name))
+          setIsPlaying(true)
+          setAutoplayTracks(poolToLoop.slice(1))
+          return
+        }
       }
     }
 
     setIsPlaying(false)
   }, [
+    playingTrack,
     manualQueue,
     autoplayTracks,
     repeatMode,
+    currentFallbackPool,
     selectedProject,
     artist.name,
-    displayedDiscographyTracks,
+    isShuffle,
   ])
 
   const handleSkipPrev = useCallback(() => {
-    if (displayedDiscographyTracks.length > 0 && playingTrack) {
-      const currentIndex = displayedDiscographyTracks.findIndex(
-        (item) => (item.track.name || '').toLowerCase() === (playingTrack.name || '').toLowerCase(),
+    // 1. If we have play history, pop previous track and push current track to upcoming queue
+    if (playbackHistory.length > 0) {
+      const prevTrack = playbackHistory[playbackHistory.length - 1]
+      setPlaybackHistory((prev) => prev.slice(0, -1))
+      if (playingTrack) {
+        setAutoplayTracks((curr) => [playingTrack, ...curr])
+      }
+      setPlayingTrack(prevTrack)
+      setIsPlaying(true)
+      return
+    }
+
+    // 2. In shuffle mode with no history, restart the current track
+    if (isShuffle) {
+      setRestartCount((c) => c + 1)
+      return
+    }
+
+    // 3. In linear mode with no history: navigate to previous track in active pool
+    const pool = currentFallbackPool.length > 0 ? currentFallbackPool : displayedDiscographyTracks
+    if (pool.length > 0 && playingTrack) {
+      const currentIndex = pool.findIndex(
+        (item) =>
+          (item.track?.name || item.name || '').toLowerCase() ===
+          (playingTrack.name || '').toLowerCase(),
       )
       if (currentIndex > 0) {
-        const prevItem = displayedDiscographyTracks[currentIndex - 1]
-        const prevTrack = prevItem.track
+        const prevItem = pool[currentIndex - 1]
+        const prevTrack = prevItem.track || prevItem
         const parentProj = prevItem.project
-        setPlayingTrack({
-          ...prevTrack,
-          project: parentProj?.name || prevTrack.project || '',
-          projectCover: prevTrack.cover || parentProj?.cover || parentProj?.image || '',
-          artist: prevTrack.artist || parentProj?.artist || artist.name || '',
-        })
+        if (playingTrack) {
+          setAutoplayTracks((curr) => [playingTrack, ...curr])
+        }
+        setPlayingTrack(formatTrackItem(prevTrack, parentProj, artist.name))
         setIsPlaying(true)
-        const subsequent = displayedDiscographyTracks.slice(currentIndex)
-        setAutoplayTracks(isShuffle ? shuffleArray(subsequent) : subsequent)
+      } else if (currentIndex === 0 && repeatMode === 'all' && pool.length > 0) {
+        // Wrap to the last track in the active pool
+        const lastItem = pool[pool.length - 1]
+        const lastTrack = lastItem.track || lastItem
+        const parentProj = lastItem.project
+        if (playingTrack) {
+          setAutoplayTracks((curr) => [playingTrack, ...curr])
+        }
+        setPlayingTrack(formatTrackItem(lastTrack, parentProj, artist.name))
+        setIsPlaying(true)
       } else {
         setRestartCount((c) => c + 1)
       }
     } else {
       setRestartCount((c) => c + 1)
     }
-  }, [displayedDiscographyTracks, playingTrack, artist.name, isShuffle])
+  }, [
+    playbackHistory,
+    playingTrack,
+    isShuffle,
+    currentFallbackPool,
+    displayedDiscographyTracks,
+    repeatMode,
+    artist.name,
+  ])
 
   const handleQueueDragDrop = useCallback(
     ({ fromList, fromIndex, toList, toIndex }) => {
@@ -398,24 +476,12 @@ export function useDiscographyPlayback({
         return
       }
       const parentProj = item.project || selectedProject
-      const projName =
-        typeof parentProj === 'string' ? parentProj : parentProj?.name || track.project || ''
-      const projCover =
-        track.cover ||
-        (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
-        track.projectCover ||
-        ''
 
-      setPlayingTrack({
-        ...track,
-        project: projName,
-        projectCover: projCover,
-        artist:
-          track.artist ||
-          (typeof parentProj === 'object' ? parentProj?.artist : '') ||
-          artist.name ||
-          '',
-      })
+      if (playingTrack) {
+        setPlaybackHistory((prev) => [...prev, playingTrack])
+      }
+
+      setPlayingTrack(formatTrackItem(track, parentProj, artist.name))
       setIsPlaying(true)
 
       if (isQueueType) {
@@ -424,7 +490,7 @@ export function useDiscographyPlayback({
         setAutoplayTracks((prev) => prev.slice(index + 1))
       }
     },
-    [selectedProject, artist.name, showToast],
+    [playingTrack, selectedProject, artist.name, showToast],
   )
 
   const handleClosePlayer = useCallback(() => {
@@ -432,6 +498,8 @@ export function useDiscographyPlayback({
     setPlayingTrack(null)
     setManualQueue([])
     setAutoplayTracks([])
+    setPlaybackHistory([])
+    setActiveTrackPool([])
   }, [])
 
   return {
@@ -441,6 +509,7 @@ export function useDiscographyPlayback({
     setIsPlaying,
     manualQueue,
     autoplayTracks,
+    playbackHistory,
     isShuffle,
     repeatMode,
     restartCount,

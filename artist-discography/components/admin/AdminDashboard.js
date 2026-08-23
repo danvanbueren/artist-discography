@@ -12,6 +12,7 @@ import { useArtistProfile } from './hooks/useArtistProfile'
 import { useProjectsManager } from './hooks/useProjectsManager'
 import { useMediaJobs } from './hooks/useMediaJobs'
 import { useDevAudioPreview } from './tools/hooks/useDevAudioPreview'
+import { useAdminRouting } from './hooks/useAdminRouting'
 
 import AdminAccessDisabled from './auth/AdminAccessDisabled'
 import AdminLoginView from './auth/AdminLoginView'
@@ -31,13 +32,8 @@ export default function AdminDashboard({
   adminAccess = true,
   defaultArtistName = 'Artist',
   initialData = {},
+  initialSlug = [],
 }) {
-  // Tabs: 0 = Settings, 1 = Projects, 2 = Audit, 3 = Utilities, 4 = API, 5 = JSON
-  const [activeTab, setActiveTab] = useState(() => {
-    const existingName = initialData?.artist?.name
-    return Boolean(existingName && existingName.trim()) ? 1 : 0
-  })
-
   // 1. Authentication hook
   const auth = useAdminAuth(initialData)
 
@@ -59,19 +55,34 @@ export default function AdminDashboard({
     auth.updateSessionPassword,
   )
 
-  // 6. Projects & releases manager hook
+  // 6. Admin URL routing & history management hook
+  const hasArtistName = Boolean(initialData?.artist?.name && initialData?.artist?.name.trim())
+  const routing = useAdminRouting({
+    initialSlug,
+    projectsList: initialData?.projects ?? [],
+    hasArtistName,
+  })
+
+  // 7. Projects & releases manager hook
   const projects = useProjectsManager({
     initialData,
     defaultArtistName,
     artistData: profile.artistData,
     artistNameInputRef: profile.artistNameInputRef,
+    initialSelectedProjIndex: routing.selectedProjIndex,
+    initialIsCreatingNew: routing.isCreatingNew,
+    onNavigateToProject: routing.navigateToProject,
+    onNavigateToNewProject: routing.navigateToNewProject,
+    onProjectRenamed: routing.replaceProjectSlug,
+    onProjectDeleted: routing.replaceDeletedProject,
     markFieldDirty: autoSave.markFieldDirty,
+    flushPendingAutoSave: autoSave.flushPendingAutoSave,
     clearPendingAutoSave: autoSave.clearPendingAutoSave,
     setErrorMessage: autoSave.setErrorMessage,
     setStatusMessage: autoSave.setStatusMessage,
   })
 
-  // 7. Dev Audio Preview Hook
+  // 8. Dev Audio Preview Hook
   const audioPreview = useDevAudioPreview()
 
   // 8. Computed Metrics & Stats for Health Overview
@@ -142,6 +153,13 @@ export default function AdminDashboard({
   useEffect(() => {
     editNameBridgeRef.current = projects.editName
   }, [projects.editName])
+
+  // Sync document title across all tabs on the admin dashboard
+  useEffect(() => {
+    const artistName =
+      (profile?.artistNameInput || defaultArtistName || 'Artist').trim() || 'Artist'
+    document.title = `${artistName} | Admin Dashboard`
+  }, [profile?.artistNameInput, defaultArtistName])
 
   // Save callbacks
   const handleSaveArtist = useCallback(() => {
@@ -265,8 +283,8 @@ export default function AdminDashboard({
             setStatusMessage={autoSave.setStatusMessage}
             errorMessage={autoSave.errorMessage}
             setErrorMessage={autoSave.setErrorMessage}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            activeTab={routing.activeTab}
+            setActiveTab={routing.setActiveTab}
             mediaJobs={mediaJobs}
           />
 
@@ -286,7 +304,7 @@ export default function AdminDashboard({
             }}
           >
             <AdminDashboardTabs
-              activeTab={activeTab}
+              activeTab={routing.activeTab}
               profile={profile}
               projects={projects}
               autoSave={autoSave}
@@ -338,24 +356,35 @@ export default function AdminDashboard({
 
         <CopyTrackDialog
           open={Boolean(projects.trackToCopy)}
+          trackToCopy={projects.trackToCopy}
           trackName={projects.trackToCopy?.track?.name || 'this track'}
           sourceProjectName={
             projects.projectsList[projects.trackToCopy?.sourceProjectIndex]?.name ||
             'Source Project'
           }
           projectsList={projects.projectsList}
+          copyTargetProjectIndex={projects.copyTargetProjectIndex}
           selectedTargetIndex={projects.copyTargetProjectIndex}
+          onChangeTargetProjectIndex={projects.setCopyTargetProjectIndex}
           onChangeTargetIndex={projects.setCopyTargetProjectIndex}
+          isCopyingTrack={projects.isCopyingTrack}
           isCopying={projects.isCopyingTrack}
           onClose={() => projects.setTrackToCopy(null)}
+          onConfirmCopy={() => projects.handleCopyTrack(auth.password)}
           onConfirm={() => projects.handleCopyTrack(auth.password)}
         />
 
         <MediaProcessingDrawer
-          open={mediaJobs.drawerOpen}
-          onClose={() => mediaJobs.setDrawerOpen(false)}
-          jobs={mediaJobs.jobs}
+          open={mediaJobs.isDrawerOpen}
+          onClose={() => mediaJobs.setIsDrawerOpen(false)}
+          activeJobs={mediaJobs.activeJobs}
+          completedJobs={mediaJobs.completedJobs}
+          overallProgress={mediaJobs.overallProgress}
+          isProcessing={mediaJobs.isProcessing}
+          onTriggerWarmAll={mediaJobs.triggerWarmAll}
           onClearCompleted={mediaJobs.clearCompleted}
+          isTriggeringWarm={mediaJobs.isTriggeringWarm}
+          adminPassword={auth.password}
         />
       </Box>
     </ThemeProvider>

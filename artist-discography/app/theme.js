@@ -137,7 +137,7 @@ const theme = createTheme({
           width: 0,
           height: 0,
         },
-        'input, textarea, [contenteditable="true"]': {
+        'input, textarea, [contenteditable="true"], pre, code, .selectable-text': {
           userSelect: 'text',
           WebkitUserSelect: 'text',
         },
@@ -145,5 +145,6 @@ const theme = createTheme({
     },
   },
 })
+
 
 export default theme

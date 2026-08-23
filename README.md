@@ -100,7 +100,7 @@ All technical architecture blueprints, operational guides, and implementation pl
 | **[Security & Private Access](./docs/design/security-and-permissions.md)** | Private access passcodes, release visibility flags (`public`/`private`), and defense-in-depth API stream protection. |
 | **[UI & Theme System](./docs/design/ui-and-theme-system.md)** | Obsidian glassmorphism design, Material UI 9 standards, and horizontal drag scrolling (`useDragScroll`). |
 | **[API Reference](./docs/api-reference.md)** | Complete REST endpoint catalog and OpenAPI 3.1 live explorer guide. |
-| **[Roadmap & Plans](./docs/plans/README.md)** | Engineering roadmap, future concepts, and archived milestone blueprints (Phases 1–12). |
+| **[Roadmap & Plans](./docs/plans/README.md)** | Engineering roadmap, future concepts, and archived milestone blueprints (Phases 1–14). |
 | **[Deployment & DevOps](./DEPLOYMENT.md)** | End-to-end self-hosting guide with Docker, Cloudflare Zero Trust, domain setup, and permissions. |
 | **[Development Standards](./AGENTS.md)** | Core code standards, MUI 9 guidelines, React hook rules, and contribution practices. |
 

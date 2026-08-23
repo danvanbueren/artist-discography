@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Paper,
   Box,
   Typography,
   Chip,
   Button,
+  IconButton,
   Alert,
   Snackbar,
   Tabs,
@@ -24,6 +26,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import FactCheckIcon from '@mui/icons-material/FactCheck'
 import CodeIcon from '@mui/icons-material/Code'
 import DashboardIcon from '@mui/icons-material/Dashboard'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
 
 export default function AdminHeader({
   isAutoSaving,
@@ -43,6 +48,7 @@ export default function AdminHeader({
   mediaJobs,
 }) {
   const isCompact = useMediaQuery((theme) => theme.breakpoints.down('md'))
+  const [isErrorCopied, setIsErrorCopied] = useState(false)
 
   return (
     <>
@@ -186,6 +192,8 @@ export default function AdminHeader({
             size='small'
             startIcon={<HomeIcon />}
             href='/'
+            target='_blank'
+            rel='noopener noreferrer'
             sx={{ borderRadius: 2, textTransform: 'none' }}
           >
             View Site
@@ -229,19 +237,51 @@ export default function AdminHeader({
 
       <Snackbar
         open={Boolean(errorMessage)}
-        autoHideDuration={6000}
+        autoHideDuration={null}
         onClose={() => setErrorMessage('')}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{ zIndex: 2000 }}
+        sx={{ zIndex: 2000, maxWidth: '90vw' }}
       >
         <Alert
           severity='error'
           variant='filled'
-          onClose={() => setErrorMessage('')}
+          action={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Tooltip title={isErrorCopied ? 'Copied!' : 'Copy Error'} arrow>
+                <IconButton
+                  size='small'
+                  color='inherit'
+                  onClick={() => {
+                    if (errorMessage && typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(errorMessage)
+                      setIsErrorCopied(true)
+                      setTimeout(() => setIsErrorCopied(false), 2000)
+                    }
+                  }}
+                  sx={{ p: 0.5 }}
+                >
+                  {isErrorCopied ? (
+                    <CheckIcon fontSize='small' />
+                  ) : (
+                    <ContentCopyIcon fontSize='small' />
+                  )}
+                </IconButton>
+              </Tooltip>
+              <IconButton
+                size='small'
+                color='inherit'
+                onClick={() => setErrorMessage('')}
+                sx={{ p: 0.5 }}
+              >
+                <CloseIcon fontSize='small' />
+              </IconButton>
+            </Box>
+          }
           sx={{
             borderRadius: 2,
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
             fontWeight: 600,
+            alignItems: 'center',
           }}
         >
           {errorMessage}

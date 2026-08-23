@@ -14,7 +14,11 @@ async function getSharp() {
   if (sharpModule !== null) return sharpModule
   try {
     const mod = await import('sharp')
-    sharpModule = mod.default || mod
+    const sharpInstance = mod.default || mod
+    if (sharpInstance && typeof sharpInstance.cache === 'function') {
+      sharpInstance.cache(false)
+    }
+    sharpModule = sharpInstance
   } catch (err) {
     console.warn('Sharp module failed to load, falling back to original images:', err.message)
     sharpModule = false

@@ -1,4 +1,4 @@
-# 🗄️ Archived Implementation Plans (Phases 1 – 13)
+# 🗄️ Archived Implementation Plans (Phases 1 – 14)
 
 This folder contains completed, verified, and preserved architecture plans from all historical development phases of **Artist Discography**.
 
@@ -21,6 +21,11 @@ This folder contains completed, verified, and preserved architecture plans from 
 | **11** | **[11-os-media-session-and-hardware-key-integration.md](./11-os-media-session-and-hardware-key-integration.md)** | OS Media Session & Hardware Key Controls | ✅ **COMPLETED** | Full `navigator.mediaSession` integration; multi-resolution artwork (`96-512px`); title, artist, album sync; Chrome Global Media Controls hub; desktop keyboard media keys (Play/Pause, Skip, Stop); mobile lockscreen and notification center controls with position scrubber. |
 | **12** | **[12-data-resilience-and-graceful-json-recovery.md](./12-data-resilience-and-graceful-json-recovery.md)** | Data Resilience, Graceful JSON Recovery & Backups | ✅ **COMPLETED** | Zero-data-loss architecture; atomic swap writes (`.tmp` -> `renameSync`); rolling snapshot backups (`data/backups/`); non-destructive corrupted file quarantine (`artist-data.corrupted-<timestamp>.json`); deep schema normalization & heuristic syntax repairs. |
 | **13** | **[13-simple-analytics-and-bandwidth-tracking.md](./13-simple-analytics-and-bandwidth-tracking.md)** | Simple Analytics & Bandwidth Tracking | ✅ **COMPLETED** | Privacy-first local metrics stored in `data/analytics/` (`daily.json`, `events.json`, `totals.json`); non-blocking bandwidth capture in media/audio streams; client beacon/fetch tracker; interactive SVG timeline charts and stat cards; mutually exclusive Utilities accordions. |
+| **14** | **[14-admin-dashboard-reliability-and-crud-refinements.md](./14-admin-dashboard-reliability-and-crud-refinements.md)** | Admin Dashboard Reliability, Media Pipeline Synchronization & CRUD Integrity | ✅ **COMPLETED** | Track artist override hierarchy; track copying system fix; track reorder type safety; audio upload staged state reset & media warming integration; artwork delete Windows file lock release; missing artwork/audio warning color theming; project renaming folder migration; delete project dialog wiring; autosave 1s debounce isolation; flush unsaved changes on fast navigation; persistent error toast with copy button; sidebar selection autoscroll; + Add Project button; invalid slug route fallback. |
+
+---
+
+*For current roadmap status and active plans, see [`plans/README.md`](../README.md).*
 
 ---
 

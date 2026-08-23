@@ -194,7 +194,7 @@ export function useMediaJobs() {
 
   const isProcessing = activeJobs.length > 0
 
-  // Trigger Catalog Optimization
+  // Trigger Catalog Cache Validation
   const triggerWarmAll = useCallback(async (password) => {
     setIsTriggeringWarm(true)
     try {
@@ -204,7 +204,7 @@ export function useMediaJobs() {
           'Content-Type': 'application/json',
           'x-admin-password': password || '',
         },
-        body: JSON.stringify({ action: 'warm-all', password }),
+        body: JSON.stringify({ action: 'validate-cache', password }),
       })
       const result = await res.json().catch(() => ({}))
       if (res.ok && result.success) {
@@ -213,7 +213,7 @@ export function useMediaJobs() {
       }
       return false
     } catch (err) {
-      console.error('Error triggering catalog media warming:', err)
+      console.error('Error triggering catalog media cache validation:', err)
       return false
     } finally {
       setIsTriggeringWarm(false)
@@ -358,6 +358,7 @@ export function useMediaJobs() {
     triggerWarmAll,
     clearCompleted,
     getJobForTrack,
+    getJobForAudio: getJobForTrack,
     getJobForCover,
     getJobForFile,
     lastUpdated,

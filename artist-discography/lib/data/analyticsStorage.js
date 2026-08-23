@@ -1,9 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 import { atomicWriteJson, createRollingBackup, tryHeuristicJsonRepair } from './atomicStorage'
-import { formatBytes, getTodayDateString } from './analyticsUtils'
+import { formatBytes, getTodayDateString, buildTimelineBuckets } from './analyticsUtils'
 
-export { formatBytes, getTodayDateString }
+export { formatBytes, getTodayDateString, buildTimelineBuckets }
+
+
 
 const ANALYTICS_DIR_NAME = 'analytics'
 const MAX_RECENT_EVENTS = 200
@@ -321,35 +323,12 @@ export function getAnalyticsSummary({ range = '30d' } = {}) {
     projectsBandwidth: {},
   })
 
-  // Determine date boundary
-  const now = new Date()
-  let daysCount = 30
-  if (range === '7d') daysCount = 7
-  else if (range === 'all') daysCount = 365
-
-  const cutoffDate = new Date()
-  cutoffDate.setDate(now.getDate() - (daysCount - 1))
-  cutoffDate.setHours(0, 0, 0, 0)
-
-  // Generate complete sequence of dates for timeline chart
-  const timelineMap = {}
-  for (let i = daysCount - 1; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(now.getDate() - i)
-    const yyyy = d.getFullYear()
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const key = `${yyyy}-${mm}-${dd}`
-    timelineMap[key] = {
-      date: key,
-      dayLabel: `${d.getMonth() + 1}/${d.getDate()}`,
-      streams: 0,
-      pageViews: 0,
-      bandwidthBytes: 0,
-      bandwidthAudioBytes: 0,
-      bandwidthMediaBytes: 0,
-    }
-  }
+  // Build chronological timeline buckets according to range and fidelity
+  const { timeline, fidelity, cutoffDate } = buildTimelineBuckets({
+    dailyData,
+    range,
+    firstTrackedDate: totalsData.firstTrackedDate,
+  })
 
   let rangeStreams = 0
   let rangePageViews = 0
@@ -364,14 +343,6 @@ export function getAnalyticsSummary({ range = '30d' } = {}) {
   for (const [dateStr, dayEntry] of Object.entries(dailyData)) {
     const entryDate = new Date(`${dateStr}T00:00:00`)
     const isWithinRange = range === 'all' || entryDate >= cutoffDate
-
-    if (timelineMap[dateStr]) {
-      timelineMap[dateStr].streams = dayEntry.streams || 0
-      timelineMap[dateStr].pageViews = dayEntry.pageViews || 0
-      timelineMap[dateStr].bandwidthBytes = dayEntry.bandwidthBytes || 0
-      timelineMap[dateStr].bandwidthAudioBytes = dayEntry.bandwidthAudioBytes || 0
-      timelineMap[dateStr].bandwidthMediaBytes = dayEntry.bandwidthMediaBytes || 0
-    }
 
     if (isWithinRange) {
       rangeStreams += dayEntry.streams || 0
@@ -395,7 +366,6 @@ export function getAnalyticsSummary({ range = '30d' } = {}) {
     }
   }
 
-  const timeline = Object.values(timelineMap).sort((a, b) => a.date.localeCompare(b.date))
 
   // Project Breakdown
   const projectBreakdown = Object.entries(rangeProjects)
@@ -471,6 +441,7 @@ export function getAnalyticsSummary({ range = '30d' } = {}) {
       firstTrackedDate: totalsData.firstTrackedDate || null,
       lastTrackedDate: totalsData.lastTrackedDate || null,
     },
+    fidelity,
     timeline,
     projectBreakdown,
     trackBreakdown,

@@ -51,15 +51,15 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
           : hasUploadedAudio
             ? 'rgba(102, 187, 106, 0.08)'
             : hasExistingAudio
-              ? 'rgba(255, 255, 255, 0.03)'
-              : 'rgba(255, 255, 255, 0.01)',
+              ? 'rgba(144, 202, 249, 0.08)'
+              : 'rgba(255, 179, 0, 0.08)',
         borderColor: isAudioTranscoding
           ? 'primary.main'
           : hasUploadedAudio
             ? 'success.main'
             : hasExistingAudio
-              ? 'divider'
-              : 'dashed',
+              ? 'primary.main'
+              : 'warning.main',
         transition: 'all 0.2s ease',
       }}
     >
@@ -86,8 +86,10 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
             />
           ) : hasUploadedAudio ? (
             <CheckCircleIcon sx={{ color: 'success.main' }} />
+          ) : hasExistingAudio ? (
+            <MusicNoteIcon sx={{ color: 'primary.main' }} />
           ) : (
-            <MusicNoteIcon sx={{ color: hasExistingAudio ? 'text.secondary' : 'text.disabled' }} />
+            <MusicNoteIcon sx={{ color: 'warning.main' }} />
           )}
 
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
@@ -101,8 +103,8 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                 color: hasUploadedAudio
                   ? 'success.main'
                   : hasExistingAudio
-                    ? 'text.primary'
-                    : 'text.secondary',
+                    ? 'primary.main'
+                    : 'warning.main',
               }}
             >
               {isAudioTranscoding
@@ -114,7 +116,13 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                     : 'No Audio File Attached'}
             </Typography>
 
-            <Typography variant='caption' sx={{ color: 'text.secondary', display: 'block' }}>
+            <Typography
+              variant='caption'
+              sx={{
+                color: hasUploadedAudio || hasExistingAudio ? 'text.secondary' : 'warning.light',
+                display: 'block',
+              }}
+            >
               {isAudioTranscoding
                 ? 'Generating AAC (320k, 192k, 128k) streaming variants...'
                 : hasUploadedAudio

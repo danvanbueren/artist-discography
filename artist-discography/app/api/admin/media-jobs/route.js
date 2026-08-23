@@ -125,19 +125,26 @@ export async function POST(request) {
       })
     }
 
-    if (action === 'warm-all' || action === 'optimize-all') {
-      // Trigger media warming in background
+    if (
+      action === 'validate-cache' ||
+      action === 'warm-all' ||
+      action === 'optimize-all' ||
+      action === 'validate'
+    ) {
+      // Trigger media warming and orphaned cache cleanup in background
       setTimeout(async () => {
         try {
           await warmAllArtistMedia()
+          const { pruneUnusedCacheFiles } = await import('@/lib/media/cacheCleaner')
+          await pruneUnusedCacheFiles({ force: true })
         } catch (err) {
-          console.error('Background catalog media warming failed:', err)
+          console.error('Background catalog media validation failed:', err)
         }
       }, 50)
 
       return NextResponse.json({
         success: true,
-        message: 'Catalog media optimization and pre-transcoding started.',
+        message: 'Catalog media cache validation and orphaned file cleanup started.',
       })
     }
 

@@ -11,7 +11,7 @@ import {
 import { slugify, isSlugReserved } from '@/lib/data/slugs'
 import { warmMediaFiles } from '@/lib/media/mediaWarmer'
 import { scheduleAutomatedCachePrune } from '@/lib/media/cacheCleaner'
-import { syncProjectTrackFiles, safeRenameSync } from '@/lib/api/projectRouteHelpers'
+import { syncProjectTrackFiles, safeRenameSync, safeUnlinkSync } from '@/lib/api/projectRouteHelpers'
 
 /**
  * POST /api/admin/project
@@ -159,41 +159,111 @@ export async function POST(request) {
     }
 
     const oldProjectDir = path.join(process.cwd(), 'data', 'projects', oldSlug)
+    const newProjectDir = path.join(process.cwd(), 'data', 'projects', newSlug)
     let currentProjectDir = oldProjectDir
 
-    // If project name changed, rename directory
+    // If project name changed, rename or migrate directory
     if (oldSlug !== newSlug && fs.existsSync(oldProjectDir)) {
-      const newProjectDir = path.join(process.cwd(), 'data', 'projects', newSlug)
       if (safeRenameSync(oldProjectDir, newProjectDir)) {
         currentProjectDir = newProjectDir
+      } else {
+        if (!fs.existsSync(newProjectDir)) {
+          fs.mkdirSync(newProjectDir, { recursive: true })
+        }
+        try {
+          const oldFiles = fs.readdirSync(oldProjectDir)
+          for (const file of oldFiles) {
+            const src = path.join(oldProjectDir, file)
+            const dst = path.join(newProjectDir, file)
+            if (fs.existsSync(src) && fs.statSync(src).isFile()) {
+              fs.copyFileSync(src, dst)
+            }
+          }
+          deleteProjectData(oldSlug)
+          currentProjectDir = newProjectDir
+        } catch (migErr) {
+          console.error(`Failed to migrate files from ${oldSlug} to ${newSlug}:`, migErr)
+          currentProjectDir = newProjectDir
+        }
       }
+    } else if (oldSlug !== newSlug) {
+      currentProjectDir = newProjectDir
     }
 
     if (!fs.existsSync(currentProjectDir)) {
       fs.mkdirSync(currentProjectDir, { recursive: true })
     }
 
-    // Cover Artwork Upload
+    const filesToWarm = []
+    const targetMap = {}
+    const detailsMap = {}
+
+    // Cover Artwork Upload / Removal
     const coverFile = formData.get('coverFile')
+    const removeCover = String(formData.get('removeCover') || 'false').toLowerCase() === 'true'
     let coverUrl = oldProject.cover || ''
-    if (coverFile && typeof coverFile.arrayBuffer === 'function') {
+
+    if (removeCover) {
+      // Find and delete existing cover art files from currentProjectDir
+      if (fs.existsSync(currentProjectDir)) {
+        const dirFiles = fs.readdirSync(currentProjectDir)
+        for (const file of dirFiles) {
+          if (file.toLowerCase().startsWith('art.') || file.toLowerCase().includes('cover')) {
+            const cPath = path.join(currentProjectDir, file)
+            safeUnlinkSync(cPath)
+          }
+        }
+      }
+      coverUrl = ''
+      scheduleAutomatedCachePrune(1000)
+    } else if (
+      coverFile &&
+      typeof coverFile === 'object' &&
+      typeof coverFile.arrayBuffer === 'function' &&
+      coverFile.size > 0
+    ) {
       const coverExt = path.extname(coverFile.name || '.jpg').toLowerCase() || '.jpg'
       const coverFileName = `art${coverExt}`
-      const coverDestPath = path.join(process.cwd(), 'data', 'projects', newSlug, coverFileName)
+      const coverDestPath = path.join(currentProjectDir, coverFileName)
 
       const buffer = Buffer.from(await coverFile.arrayBuffer())
       fs.writeFileSync(coverDestPath, buffer)
       coverUrl = `/api/media/${newSlug}/${coverFileName}`
+
+      filesToWarm.push(coverDestPath)
+      targetMap[coverDestPath] = `${name} (Cover Art)`
+      detailsMap[coverDestPath] = {
+        projectSlug: newSlug,
+        projectName: name,
+        isCover: true,
+        fileName: coverFileName,
+      }
+    } else if (coverUrl && oldSlug !== newSlug) {
+      const coverFileName = path.basename(coverUrl)
+      coverUrl = `/api/media/${newSlug}/${coverFileName}`
     }
 
     // Sync Audio Tracks
-    const updatedTracks = await syncProjectTrackFiles({
+    const { updatedTracks, newlyUploadedFiles } = await syncProjectTrackFiles({
       formData,
       parsedTracks,
       oldTracks: oldProject.tracks || [],
       projectDir: currentProjectDir,
       newSlug,
+      projectName: name,
     })
+
+    if (Array.isArray(newlyUploadedFiles) && newlyUploadedFiles.length > 0) {
+      for (const item of newlyUploadedFiles) {
+        if (item.filePath && fs.existsSync(item.filePath)) {
+          filesToWarm.push(item.filePath)
+          if (item.target) targetMap[item.filePath] = item.target
+          if (item.details) detailsMap[item.filePath] = item.details
+        }
+      }
+    }
+
+    scheduleAutomatedCachePrune(2000)
 
     const projectDataToSave = {
       name,
@@ -216,7 +286,14 @@ export async function POST(request) {
       )
     }
 
-    warmMediaFiles(newSlug)
+    // Immediately pre-optimize in background and broadcast progress to media jobs center
+    if (filesToWarm.length > 0) {
+      setTimeout(() => {
+        warmMediaFiles(filesToWarm, { targetMap, detailsMap }).catch((warmErr) => {
+          console.warn('Post-update media warming error:', warmErr)
+        })
+      }, 10)
+    }
 
     return NextResponse.json({
       success: true,

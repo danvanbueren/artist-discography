@@ -250,6 +250,18 @@ export default function MainDiscographyApp({
     onTogglePlay: handleTogglePlayPause,
   })
 
+  // 7.1 Active Ambient Image
+  const ambientImage = useMemo(() => {
+    if (playingTrack) {
+      return playingTrack.cover || playingTrack.projectCover || null
+    }
+    if (currentView === 'SINGLE_PROJECT' && selectedProject) {
+      return selectedProject.cover || selectedProject.image || null
+    }
+    const newestProject = filteredProjects[0] || projects[0]
+    return newestProject?.cover || newestProject?.image || null
+  }, [playingTrack, currentView, selectedProject, filteredProjects, projects])
+
   // 8. Platforms Preference & Modal
   const [selectedPlatform, setSelectedPlatform] = useState('youtube')
   const [platformModalOpen, setPlatformModalOpen] = useState(false)
@@ -334,21 +346,16 @@ export default function MainDiscographyApp({
     [showToast],
   )
 
-  // 10. Preload Essential Visual Assets & Idle Preloading
+  // 10. Preload Essential Visual Assets Before Revealing UI
   useEffect(() => {
     let isCurrent = true
-    const essentialImages = ['/api/logo?w=320&fmt=webp', '/api/logo?w=96&fmt=webp']
-    const activeLinks = getSortedActiveLinks(artist)
-    for (const link of activeLinks) {
-      if (link?.icon && !essentialImages.includes(link.icon)) {
-        essentialImages.push(link.icon)
-      }
-    }
-    for (const pId of availablePlatformIds || []) {
-      const iconPath = `/platforms/${pId}.webp`
-      if (!essentialImages.includes(iconPath)) {
-        essentialImages.push(iconPath)
-      }
+    const essentialImages = [
+      '/api/logo?w=320&fmt=webp',
+      '/api/logo?w=96&fmt=webp',
+      '/api/logo?w=640&fmt=webp',
+    ]
+    if (ambientImage && !essentialImages.includes(ambientImage)) {
+      essentialImages.push(ambientImage)
     }
 
     const loadPromises = essentialImages.map((src) => {
@@ -364,7 +371,7 @@ export default function MainDiscographyApp({
       })
     })
 
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1000))
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800))
     Promise.race([Promise.allSettled(loadPromises), timeoutPromise]).then(() => {
       if (isCurrent) setMounted(true)
     })
@@ -372,7 +379,7 @@ export default function MainDiscographyApp({
     return () => {
       isCurrent = false
     }
-  }, [artist, availablePlatformIds])
+  }, [ambientImage])
 
   // 11. Theme Object
   const theme = useMemo(
@@ -424,17 +431,6 @@ export default function MainDiscographyApp({
     selectedProject?.name,
     projects,
   ])
-
-  const ambientImage = useMemo(() => {
-    if (playingTrack) {
-      return playingTrack.cover || playingTrack.projectCover || null
-    }
-    if (currentView === 'SINGLE_PROJECT' && selectedProject) {
-      return selectedProject.cover || selectedProject.image || null
-    }
-    const newestProject = filteredProjects[0] || projects[0]
-    return newestProject?.cover || newestProject?.image || null
-  }, [playingTrack, currentView, selectedProject, filteredProjects, projects])
 
   // Scroll aware Jump to Top & Dynamic Masking
   const mainScrollRef = useRef(null)

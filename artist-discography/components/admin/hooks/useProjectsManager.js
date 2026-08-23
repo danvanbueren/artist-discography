@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
+import { slugify } from '@/lib/data/slugs'
 import { resolveOverrideArtist } from '../adminUtils'
 import { useCreateProjectForm } from './useCreateProjectForm'
 import { useEditProjectForm, formatProjectTracks } from './useEditProjectForm'
@@ -19,14 +20,21 @@ export function useProjectsManager({
   defaultArtistName = 'Artist',
   artistData = {},
   artistNameInputRef,
+  initialSelectedProjIndex = 0,
+  initialIsCreatingNew = false,
+  onNavigateToProject,
+  onNavigateToNewProject,
+  onProjectRenamed,
+  onProjectDeleted,
   markFieldDirty,
+  flushPendingAutoSave,
   clearPendingAutoSave,
   setErrorMessage,
   setStatusMessage,
 }) {
   const [projectsList, setProjectsList] = useState(() => initialData?.projects ?? [])
-  const [isCreatingNew, setIsCreatingNew] = useState(false)
-  const [selectedProjIndex, setSelectedProjIndex] = useState(0)
+  const [isCreatingNew, setIsCreatingNew] = useState(() => initialIsCreatingNew)
+  const [selectedProjIndex, setSelectedProjIndex] = useState(() => initialSelectedProjIndex)
   const [isPendingProjectSwitch, startProjectTransition] = useTransition()
   const [isSwitchingProject, setIsSwitchingProject] = useState(false)
 
@@ -89,8 +97,10 @@ export function useProjectsManager({
     setEditCoverFile: editForm.setEditCoverFile,
     setEditCoverPreview: editForm.setEditCoverPreview,
     setEditTracks: editForm.setEditTracks,
+    editTracksRef: editForm.editTracksRef,
     setErrorMessage,
     setStatusMessage,
+    onProjectDeleted,
   })
 
   // Sync initialData
@@ -98,20 +108,51 @@ export function useProjectsManager({
     if (initialData?.projects) {
       setProjectsList(initialData.projects)
       if (initialData.projects.length === 0) {
-        setIsCreatingNew(false)
+        setIsCreatingNew(true)
         setSelectedProjIndex(-1)
       }
     }
   }, [initialData])
 
+  // Sync state when router navigates (initial load or popstate)
+  useEffect(() => {
+    if (initialIsCreatingNew) {
+      if (!isCreatingNewRef.current) {
+        clearPendingAutoSave?.()
+        setSelectedProjIndex(-1)
+        selectedProjIndexRef.current = -1
+        setIsCreatingNew(true)
+        isCreatingNewRef.current = true
+        createForm.resetCreateForm()
+      }
+    } else if (
+      initialSelectedProjIndex >= 0 &&
+      initialSelectedProjIndex < projectsList.length &&
+      (selectedProjIndexRef.current !== initialSelectedProjIndex || isCreatingNewRef.current)
+    ) {
+      clearPendingAutoSave?.()
+      setIsCreatingNew(false)
+      isCreatingNewRef.current = false
+      setSelectedProjIndex(initialSelectedProjIndex)
+      selectedProjIndexRef.current = initialSelectedProjIndex
+      const proj = projectsList[initialSelectedProjIndex]
+      if (proj) {
+        editForm.populateEditForm(proj)
+      }
+    }
+  }, [initialSelectedProjIndex, initialIsCreatingNew, projectsList, createForm, editForm, clearPendingAutoSave])
+
   const lastLoadedProjIndexRef = useRef(-1)
 
   // Select project handler
   const handleSelectProject = useCallback(
-    (idx) => {
+    async (idx, options = {}) => {
       if (idx < 0 || idx >= projectsList.length) return
 
-      clearPendingAutoSave?.()
+      if (flushPendingAutoSave) {
+        await flushPendingAutoSave()
+      }
+
       setIsCreatingNew(false)
       isCreatingNewRef.current = false
       lastLoadedProjIndexRef.current = idx
@@ -122,21 +163,34 @@ export function useProjectsManager({
       selectedProjIndexRef.current = idx
       editForm.populateEditForm(proj)
 
+      if (options.syncUrl !== false) {
+        onNavigateToProject?.(idx)
+      }
+
       setTimeout(() => {
         setIsSwitchingProject(false)
       }, 60)
     },
-    [projectsList, editForm, clearPendingAutoSave],
+    [projectsList, editForm, flushPendingAutoSave, onNavigateToProject],
   )
 
   // Start create new project handler
-  const handleStartCreateNewProject = useCallback(() => {
-    clearPendingAutoSave?.()
-    setSelectedProjIndex(-1)
-    lastLoadedProjIndexRef.current = -1
-    setIsCreatingNew(true)
-    createForm.resetCreateForm()
-  }, [createForm, clearPendingAutoSave])
+  const handleStartCreateNewProject = useCallback(
+    async (options = {}) => {
+      if (flushPendingAutoSave) {
+        await flushPendingAutoSave()
+      }
+      setSelectedProjIndex(-1)
+      lastLoadedProjIndexRef.current = -1
+      setIsCreatingNew(true)
+      createForm.resetCreateForm()
+
+      if (options.syncUrl !== false) {
+        onNavigateToNewProject?.()
+      }
+    },
+    [createForm, flushPendingAutoSave, onNavigateToNewProject],
+  )
 
   // Populate Edit Project form on initial mount or index changes
   useEffect(() => {
@@ -186,11 +240,12 @@ export function useProjectsManager({
         setProjectsList((prev) => [createdProject, ...prev])
         setIsCreatingNew(false)
         setSelectedProjIndex(0)
+        onNavigateToProject?.(0)
         return true
       }
       return Boolean(result)
     },
-    [createForm, projectsList],
+    [createForm, projectsList, onNavigateToProject],
   )
 
   const executeEdit = useCallback(
@@ -213,11 +268,15 @@ export function useProjectsManager({
           }
           return next
         })
+        if (updatedProject.name) {
+          const newSlug = slugify(updatedProject.name)
+          onProjectRenamed?.(newSlug)
+        }
         return true
       }
       return Boolean(result)
     },
-    [editForm, projectsList, selectedProjIndex],
+    [editForm, projectsList, selectedProjIndex, onProjectRenamed],
   )
 
   return {
@@ -321,6 +380,7 @@ export function useProjectsManager({
     handleMoveEditTrackDown: (idx, onDone) => editForm.handleMoveEditTrack(idx, idx + 1, onDone),
     handleDeleteEditTrack: (track, idx) =>
       operations.setTrackToDelete({ index: idx, isEditing: true, trackName: track.name }),
+    handleRemoveEditCover: editForm.handleRemoveEditCover,
     handleCopyEditTrack: (track, idx) => {
       operations.setTrackToCopy({
         track,

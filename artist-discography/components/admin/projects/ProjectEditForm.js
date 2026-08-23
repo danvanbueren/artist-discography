@@ -56,6 +56,7 @@ export default function ProjectEditForm({
   executeUpdateProject,
   setDeleteConfirmOpen,
   mediaJobs,
+  handleRemoveEditCover,
   handleUpdateEditTrackName,
   handleUpdateEditTrackArtist,
   handleUpdateEditTrackLink,
@@ -155,11 +156,16 @@ export default function ProjectEditForm({
           <ProjectCoverUploader
             coverFile={editCoverFile}
             coverPreview={editCoverPreview}
-            existingCoverUrl={currentProject.cover}
+            existingCoverUrl={editCoverPreview ? currentProject.cover : null}
             onCoverChange={(file) => {
               setEditCoverFile(file)
               if (editCoverFileRef) editCoverFileRef.current = file
               markFieldDirty('edit_cover', executeUpdateProject)
+            }}
+            onCoverRemove={() => {
+              handleRemoveEditCover?.(() =>
+                markFieldDirty('edit_cover_remove', executeUpdateProject),
+              )
             }}
             coverJob={coverJob}
             isEditing
@@ -208,7 +214,7 @@ export default function ProjectEditForm({
                 track={track}
                 index={idx}
                 totalTracks={editTracks.length}
-                defaultArtist={artistNameInput?.trim() || defaultArtistName}
+                defaultArtist={editArtist?.trim() || artistNameInput?.trim() || defaultArtistName}
                 projectName={editName || currentProject.name}
                 allProjects={projectsList}
                 currentTracks={editTracks}
@@ -249,13 +255,13 @@ export default function ProjectEditForm({
                   markFieldDirty(`edit_track_${tIdx}_audio_remove`, executeUpdateProject)
                 }}
                 onMoveUp={(tIdx) =>
-                  handleMoveEditTrackUp(tIdx, (key, newTracksList) =>
-                    markFieldDirty(key, (pwd) => executeUpdateProject(pwd, newTracksList)),
+                  handleMoveEditTrackUp(tIdx, (newTracksList) =>
+                    markFieldDirty('edit_tracks_order', (pwd) => executeUpdateProject(pwd, newTracksList)),
                   )
                 }
                 onMoveDown={(tIdx) =>
-                  handleMoveEditTrackDown(tIdx, (key, newTracksList) =>
-                    markFieldDirty(key, (pwd) => executeUpdateProject(pwd, newTracksList)),
+                  handleMoveEditTrackDown(tIdx, (newTracksList) =>
+                    markFieldDirty('edit_tracks_order', (pwd) => executeUpdateProject(pwd, newTracksList)),
                   )
                 }
                 onDeleteTrack={handleDeleteEditTrack}

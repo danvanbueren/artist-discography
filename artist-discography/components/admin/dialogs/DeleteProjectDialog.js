@@ -9,7 +9,14 @@ import {
   Button,
 } from '@mui/material'
 
-export default function DeleteProjectDialog({ open, onClose, projectName, onConfirmDelete }) {
+export default function DeleteProjectDialog({
+  open,
+  onClose,
+  projectName,
+  onConfirmDelete,
+  onConfirm,
+}) {
+  const handleConfirm = onConfirmDelete || onConfirm
   return (
     <Dialog
       open={open}
@@ -57,7 +64,7 @@ export default function DeleteProjectDialog({ open, onClose, projectName, onConf
         <Button
           variant='contained'
           color='error'
-          onClick={onConfirmDelete}
+          onClick={handleConfirm}
           sx={{ borderRadius: 2 }}
         >
           Confirm Delete

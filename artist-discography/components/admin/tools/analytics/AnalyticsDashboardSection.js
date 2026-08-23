@@ -30,7 +30,6 @@ import { useAdminAnalytics } from './hooks/useAdminAnalytics'
 import { AnalyticsMetricsCards } from './AnalyticsMetricsCards'
 import { AnalyticsTimelineChart } from './AnalyticsTimelineChart'
 import { AnalyticsBreakdownCards } from './AnalyticsBreakdownCards'
-import { AnalyticsRecentFeed } from './AnalyticsRecentFeed'
 
 /**
  * AnalyticsDashboardSection
@@ -63,18 +62,45 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
     <Accordion
       expanded={expanded}
       onChange={onToggle}
+      disableGutters
+      slotProps={{
+        transition: {
+          timeout: 0,
+        },
+      }}
       sx={{
+
         borderRadius: 2.5,
         backgroundColor: 'rgba(26, 26, 38, 0.75)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
         '&:before': { display: 'none' },
+        ...(expanded
+          ? {
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              overflow: 'hidden',
+              '& .MuiCollapse-root, & .MuiCollapse-wrapper, & .MuiCollapse-wrapperInner, & .MuiAccordion-region':
+                {
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                },
+            }
+          : {
+              flexShrink: 0,
+            }),
       }}
     >
+
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
         sx={{
           px: 2.5,
           minHeight: 56,
+          flexShrink: 0,
           '& .MuiAccordionSummary-content': {
             display: 'flex',
             justifyContent: 'space-between',
@@ -110,7 +136,8 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
         )}
       </AccordionSummary>
 
-      <AccordionDetails sx={{ px: 2.5, pt: 0, pb: 2.5 }}>
+      <AccordionDetails sx={{ px: 2.5, pt: 0, pb: 2.5, flexGrow: 1, minHeight: 0, overflowY: 'auto' }}>
+
         <Stack spacing={2.5}>
           {/* Header Action Controls */}
           <Box
@@ -240,20 +267,22 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
                 {/* 2. Activity & Bandwidth Timeline Chart */}
                 <AnalyticsTimelineChart
                   timeline={analyticsData.timeline || []}
+                  fidelity={analyticsData.fidelity || 'day'}
+                  range={range}
                   metricMode={metricMode}
                   onMetricModeChange={setMetricMode}
                 />
 
-                {/* 3. Breakdowns Grid */}
+
+                {/* 3. Breakdowns & Live Activity Grid */}
                 <AnalyticsBreakdownCards
                   projectBreakdown={analyticsData.projectBreakdown || []}
                   trackBreakdown={analyticsData.trackBreakdown || []}
                   pageBreakdown={analyticsData.pageBreakdown || []}
+                  recentEvents={analyticsData.recentEvents || []}
                 />
-
-                {/* 4. Live / Recent Events Feed */}
-                <AnalyticsRecentFeed recentEvents={analyticsData.recentEvents || []} />
               </>
+
             )
           )}
 

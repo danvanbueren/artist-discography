@@ -57,6 +57,7 @@ export function useEditProjectForm({
   const [editCopyright, setEditCopyright] = useState('cleared')
   const [editCoverFile, setEditCoverFile] = useState(null)
   const [editCoverPreview, setEditCoverPreview] = useState(null)
+  const [editRemoveCover, setEditRemoveCover] = useState(false)
   const [editTracks, setEditTracks] = useState([])
 
   // Stable refs
@@ -67,6 +68,7 @@ export function useEditProjectForm({
   const editVisibilityRef = useRef(editVisibility)
   const editCopyrightRef = useRef(editCopyright)
   const editCoverFileRef = useRef(editCoverFile)
+  const editRemoveCoverRef = useRef(editRemoveCover)
   const editTracksRef = useRef(editTracks)
 
   useEffect(() => {
@@ -91,6 +93,9 @@ export function useEditProjectForm({
     editCoverFileRef.current = editCoverFile
   }, [editCoverFile])
   useEffect(() => {
+    editRemoveCoverRef.current = editRemoveCover
+  }, [editRemoveCover])
+  useEffect(() => {
     editTracksRef.current = editTracks
   }, [editTracks])
 
@@ -99,6 +104,8 @@ export function useEditProjectForm({
     if (!editCoverFile) return
     const objectUrl = URL.createObjectURL(editCoverFile)
     setEditCoverPreview(objectUrl)
+    setEditRemoveCover(false)
+    editRemoveCoverRef.current = false
     return () => URL.revokeObjectURL(objectUrl)
   }, [editCoverFile])
 
@@ -121,6 +128,7 @@ export function useEditProjectForm({
       setEditCopyright(proj.copyright || 'cleared')
       setEditCoverFile(null)
       setEditCoverPreview(proj.cover || null)
+      setEditRemoveCover(false)
       setEditTracks(formatted)
 
       editNameRef.current = proj.name || ''
@@ -130,16 +138,29 @@ export function useEditProjectForm({
       editVisibilityRef.current = proj.visibility || 'public'
       editCopyrightRef.current = proj.copyright || 'cleared'
       editCoverFileRef.current = null
+      editRemoveCoverRef.current = false
       editTracksRef.current = formatted
     },
     [artistData?.name, defaultArtistName, artistNameInputRef],
   )
+
+  const handleRemoveEditCover = useCallback((onDone) => {
+    setEditCoverFile(null)
+    setEditCoverPreview(null)
+    setEditRemoveCover(true)
+    editCoverFileRef.current = null
+    editRemoveCoverRef.current = true
+    if (typeof onDone === 'function') {
+      onDone()
+    }
+  }, [])
 
   const handleUpdateEditTrack = useCallback((idx, field, value, onDone) => {
     setEditTracks((prev) => {
       const updated = [...prev]
       if (!updated[idx]) return prev
       updated[idx] = { ...updated[idx], [field]: value }
+      editTracksRef.current = updated
       return updated
     })
     if (typeof onDone === 'function') {
@@ -148,7 +169,11 @@ export function useEditProjectForm({
   }, [])
 
   const handleAddEditTrack = useCallback((onDone) => {
-    setEditTracks((prev) => [...prev, createEmptyTrack()])
+    setEditTracks((prev) => {
+      const next = [...prev, createEmptyTrack()]
+      editTracksRef.current = next
+      return next
+    })
     if (typeof onDone === 'function') {
       onDone()
     }
@@ -157,7 +182,9 @@ export function useEditProjectForm({
   const handleRemoveEditTrack = useCallback((idx, onDone) => {
     setEditTracks((prev) => {
       if (prev.length <= 1) return prev
-      return prev.filter((_, i) => i !== idx)
+      const next = prev.filter((_, i) => i !== idx)
+      editTracksRef.current = next
+      return next
     })
     if (typeof onDone === 'function') {
       onDone()
@@ -170,6 +197,7 @@ export function useEditProjectForm({
       const updated = [...prev]
       const [moved] = updated.splice(fromIndex, 1)
       updated.splice(toIndex, 0, moved)
+      editTracksRef.current = updated
       if (typeof onDone === 'function') {
         onDone(updated)
       }
@@ -183,10 +211,12 @@ export function useEditProjectForm({
       if (!updated[idx]) return prev
       updated[idx] = {
         ...updated[idx],
+        audio: file ? updated[idx].audio : '',
         audioFile: file,
         audioFileName: file ? file.name : '',
-        hasAudio: Boolean(file || updated[idx].audio),
+        hasAudio: Boolean(file),
       }
+      editTracksRef.current = updated
       return updated
     })
     if (typeof onDone === 'function') {
@@ -206,6 +236,7 @@ export function useEditProjectForm({
           [platformKey]: val,
         },
       }
+      editTracksRef.current = updated
       return updated
     })
     if (typeof onDone === 'function') {
@@ -255,6 +286,8 @@ export function useEditProjectForm({
 
         if (currentCoverFile) {
           formData.append('coverFile', currentCoverFile)
+        } else if (editRemoveCoverRef.current) {
+          formData.append('removeCover', 'true')
         }
 
         const cleanTracks = currentTracks.map((t, idx) => {
@@ -262,9 +295,9 @@ export function useEditProjectForm({
             formData.append(`track_${idx}_audioFile`, t.audioFile)
           }
           return {
-            name: t.name.trim(),
+            name: (t.name || '').trim(),
             originalName: t.originalName || '',
-            artist: t.artist.trim(),
+            artist: (t.artist || '').trim(),
             audio: t.audio || '',
             links: t.links,
           }
@@ -282,6 +315,31 @@ export function useEditProjectForm({
           throw new Error(json.error || 'Failed to update project')
         }
 
+        // Reset staged cover state after successful persist
+        setEditCoverFile(null)
+        editCoverFileRef.current = null
+        setEditRemoveCover(false)
+        editRemoveCoverRef.current = false
+        if (json.updatedProject) {
+          setEditCoverPreview(json.updatedProject.cover || null)
+        }
+
+        // Reset staged track audio files and update resolved audio URLs
+        if (json.updatedProject && Array.isArray(json.updatedProject.tracks)) {
+          const primaryName = (
+            artistNameInputRef?.current ||
+            artistData?.name ||
+            defaultArtistName
+          ).trim()
+          const formatted = formatProjectTracks(
+            json.updatedProject.tracks,
+            primaryName,
+            json.updatedProject.artist,
+          )
+          setEditTracks(formatted)
+          editTracksRef.current = formatted
+        }
+
         setStatusMessage?.(`Successfully updated "${currentName}"`)
         return json.updatedProject || true
       } catch (err) {
@@ -289,7 +347,7 @@ export function useEditProjectForm({
         return false
       }
     },
-    [defaultArtistName, setErrorMessage, setStatusMessage],
+    [defaultArtistName, artistData?.name, artistNameInputRef, setErrorMessage, setStatusMessage],
   )
 
   return {
@@ -309,9 +367,12 @@ export function useEditProjectForm({
     setEditCoverFile,
     editCoverPreview,
     setEditCoverPreview,
+    editRemoveCover,
+    setEditRemoveCover,
     editTracks,
     setEditTracks,
     populateEditForm,
+    handleRemoveEditCover,
     handleUpdateEditTrack,
     handleAddEditTrack,
     handleRemoveEditTrack,

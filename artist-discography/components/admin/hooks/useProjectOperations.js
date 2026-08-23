@@ -26,6 +26,7 @@ export function useProjectOperations({
   editTracksRef,
   setErrorMessage,
   setStatusMessage,
+  onProjectDeleted,
 }) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [trackToDelete, setTrackToDelete] = useState(null)
@@ -62,6 +63,7 @@ export function useProjectOperations({
           if (nextList.length === 0) {
             setIsCreatingNew(false)
             setSelectedProjIndex(-1)
+            onProjectDeleted?.(null)
           } else {
             const nextIndex = Math.min(selectedProjIndex, nextList.length - 1)
             const nextProj = nextList[nextIndex]
@@ -84,6 +86,7 @@ export function useProjectOperations({
             setEditTracks(formattedTracks)
             if (editTracksRef) editTracksRef.current = formattedTracks
             setSelectedProjIndex(nextIndex)
+            onProjectDeleted?.(nextProj)
           }
         } else {
           setErrorMessage?.(result.error || 'Failed to delete project.')
@@ -111,6 +114,7 @@ export function useProjectOperations({
       editTracksRef,
       setErrorMessage,
       setStatusMessage,
+      onProjectDeleted,
     ],
   )
 

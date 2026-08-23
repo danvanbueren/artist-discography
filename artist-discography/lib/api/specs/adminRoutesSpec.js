@@ -515,6 +515,7 @@ export const ADMIN_ROUTES_SPEC = [
           success: true,
           analytics: {
             range: '30d',
+            fidelity: 'day',
             summary: {
               totalStreams: 142,
               totalPageViews: 280,

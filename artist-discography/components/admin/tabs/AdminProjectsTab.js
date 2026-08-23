@@ -159,6 +159,7 @@ export default function AdminProjectsTab({
             executeUpdateProject={handleSaveUpdateProject}
             setDeleteConfirmOpen={projects.setDeleteConfirmOpen}
             mediaJobs={mediaJobs}
+            handleRemoveEditCover={projects.handleRemoveEditCover}
             handleUpdateEditTrackName={projects.handleUpdateEditTrackName}
             handleUpdateEditTrackArtist={projects.handleUpdateEditTrackArtist}
             handleUpdateEditTrackLink={projects.handleUpdateEditTrackLink}

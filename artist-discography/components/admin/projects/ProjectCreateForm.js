@@ -125,6 +125,11 @@ export default function ProjectCreateForm({
               if (coverFileRef) coverFileRef.current = file
               markFieldDirty('new_cover', executeCreateProject)
             }}
+            onCoverRemove={() => {
+              setCoverFile(null)
+              if (coverFileRef) coverFileRef.current = null
+              setCoverPreview(null)
+            }}
             isEditing={false}
           />
         </Grid>
@@ -165,7 +170,7 @@ export default function ProjectCreateForm({
                 track={track}
                 index={idx}
                 totalTracks={tracks.length}
-                defaultArtist={artistNameInput?.trim() || defaultArtistName}
+                defaultArtist={artist?.trim() || artistNameInput?.trim() || defaultArtistName}
                 projectName={name}
                 allProjects={projectsList}
                 currentTracks={tracks}

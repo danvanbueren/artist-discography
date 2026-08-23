@@ -107,6 +107,7 @@ export function useCreateProjectForm({
       const updated = [...prev]
       if (!updated[idx]) return prev
       updated[idx] = { ...updated[idx], [field]: value }
+      tracksRef.current = updated
       return updated
     })
     if (typeof onDone === 'function') {
@@ -115,7 +116,11 @@ export function useCreateProjectForm({
   }, [])
 
   const handleAddTrack = useCallback((onDone) => {
-    setTracks((prev) => [...prev, createEmptyTrack()])
+    setTracks((prev) => {
+      const next = [...prev, createEmptyTrack()]
+      tracksRef.current = next
+      return next
+    })
     if (typeof onDone === 'function') {
       onDone()
     }
@@ -124,7 +129,9 @@ export function useCreateProjectForm({
   const handleRemoveTrack = useCallback((idx, onDone) => {
     setTracks((prev) => {
       if (prev.length <= 1) return prev
-      return prev.filter((_, i) => i !== idx)
+      const next = prev.filter((_, i) => i !== idx)
+      tracksRef.current = next
+      return next
     })
     if (typeof onDone === 'function') {
       onDone()
@@ -137,6 +144,7 @@ export function useCreateProjectForm({
       const updated = [...prev]
       const [moved] = updated.splice(fromIndex, 1)
       updated.splice(toIndex, 0, moved)
+      tracksRef.current = updated
       if (typeof onDone === 'function') {
         onDone(updated)
       }
@@ -154,6 +162,7 @@ export function useCreateProjectForm({
         audioFileName: file ? file.name : '',
         hasAudio: Boolean(file),
       }
+      tracksRef.current = updated
       return updated
     })
     if (typeof onDone === 'function') {
@@ -173,6 +182,7 @@ export function useCreateProjectForm({
           [platformKey]: val,
         },
       }
+      tracksRef.current = updated
       return updated
     })
     if (typeof onDone === 'function') {
@@ -220,8 +230,8 @@ export function useCreateProjectForm({
             formData.append(`track_${idx}_audioFile`, t.audioFile)
           }
           return {
-            name: t.name.trim(),
-            artist: t.artist.trim(),
+            name: (t.name || '').trim(),
+            artist: (t.artist || '').trim(),
             links: t.links,
           }
         })

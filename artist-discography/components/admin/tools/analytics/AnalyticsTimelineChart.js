@@ -1,16 +1,24 @@
 'use client'
 
 import { memo, useState } from 'react'
-import { Paper, Box, Typography, ToggleButtonGroup, ToggleButton, Tooltip } from '@mui/material'
+import {
+  Paper,
+  Box,
+  Typography,
+  ToggleButtonGroup,
+  ToggleButton,
+  Chip,
+} from '@mui/material'
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded'
 import DataUsageRoundedIcon from '@mui/icons-material/DataUsageRounded'
 import { formatBytes } from '@/lib/data/analyticsUtils'
 
 /**
- * Interactive SVG Activity and Bandwidth Timeline Chart
+ * Interactive SVG Activity and Bandwidth Timeline Chart with Adaptive Fidelity
  */
 export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
   timeline = [],
+  fidelity = 'day',
   metricMode = 'activity',
   onMetricModeChange,
 }) {
@@ -21,14 +29,28 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
     5,
   )
 
-  const maxBandwidthVal = Math.max(...timeline.map((d) => d.bandwidthBytes || 0), 1024 * 1024)
+  const maxBandwidthVal = Math.max(
+    ...timeline.map((d) => d.bandwidthBytes || 0),
+    1024 * 1024,
+  )
 
   const chartHeight = 180
   const svgPaddingTop = 20
   const svgPaddingBottom = 30
   const availableHeight = chartHeight - svgPaddingTop - svgPaddingBottom
 
+  const activeFidelity = timeline[0]?.fidelity || fidelity || 'day'
+  const fidelityText =
+    activeFidelity === 'year'
+      ? 'Yearly'
+      : activeFidelity === 'month'
+        ? 'Monthly'
+        : activeFidelity === 'week'
+          ? 'Weekly'
+          : 'Daily'
+
   const hoveredItem = hoveredIndex !== null ? timeline[hoveredIndex] : null
+  const count = timeline.length
 
   return (
     <Paper
@@ -51,15 +73,28 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
         }}
       >
         <Box>
-          <Typography variant='subtitle1' sx={{ fontWeight: 700 }}>
-            {metricMode === 'activity'
-              ? 'Streams & Page Views Over Time'
-              : 'Bandwidth Transferred Over Time'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant='subtitle1' sx={{ fontWeight: 700 }}>
+              {metricMode === 'activity'
+                ? 'Streams & Page Views Over Time'
+                : 'Bandwidth Transferred Over Time'}
+            </Typography>
+            <Chip
+              label={fidelityText}
+              size='small'
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.7rem',
+                height: 20,
+                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                color: 'text.secondary',
+              }}
+            />
+          </Box>
           <Typography variant='caption' sx={{ color: 'text.secondary' }}>
             {metricMode === 'activity'
-              ? 'Daily playback streams and web visitor interactions'
-              : 'Daily audio streaming and media asset transfer volume'}
+              ? `${fidelityText} playback streams and web visitor interactions`
+              : `${fidelityText} audio streaming and media asset transfer volume`}
           </Typography>
         </Box>
 
@@ -136,18 +171,33 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
         </Box>
       </Box>
 
-      {/* SVG Bar Chart Container */}
-      <Box
-        sx={{
-          position: 'relative',
-          width: '100%',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          pt: 1,
-        }}
-      >
-        <Box sx={{ minWidth: timeline.length * 28, height: chartHeight }}>
-          <svg width='100%' height={chartHeight} style={{ overflow: 'visible', display: 'block' }}>
+      {/* SVG Bar Chart Container - Constrained to 100% card width with zero horizontal scrolling */}
+      {count === 0 ? (
+        <Box
+          sx={{
+            height: chartHeight,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'text.secondary',
+          }}
+        >
+          <Typography variant='caption'>No timeline metrics available for this timeframe</Typography>
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            position: 'relative',
+            width: '100%',
+            height: chartHeight,
+            pt: 1,
+          }}
+        >
+          <svg
+            width='100%'
+            height={chartHeight}
+            style={{ overflow: 'visible', display: 'block' }}
+          >
             {/* Horizontal Grid lines */}
             {[0, 0.5, 1].map((ratio, i) => {
               const y = svgPaddingTop + (1 - ratio) * availableHeight
@@ -167,19 +217,24 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
 
             {/* Bars */}
             {timeline.map((item, index) => {
-              const count = timeline.length
               const slotWidth = 100 / count
               const xCenterPct = (index + 0.5) * slotWidth
               const isHovered = hoveredIndex === index
 
+              const shouldShowLabel =
+                count <= 14 ||
+                index === 0 ||
+                index === count - 1 ||
+                index % Math.ceil(count / 8) === 0
+
               if (metricMode === 'activity') {
                 const streamH = ((item.streams || 0) / maxActivityVal) * availableHeight
                 const viewH = ((item.pageViews || 0) / maxActivityVal) * availableHeight
-                const barWidth = Math.max(4, Math.min(10, 300 / count))
+                const barWidth = Math.max(3, Math.min(14, Math.floor(180 / count)))
 
                 return (
                   <g
-                    key={item.date}
+                    key={item.date || index}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(null)}
                     style={{ cursor: 'pointer' }}
@@ -218,7 +273,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
                     )}
 
                     {/* Date label */}
-                    {(count <= 14 || index % Math.ceil(count / 10) === 0) && (
+                    {shouldShowLabel && (
                       <text
                         x={`${xCenterPct}%`}
                         y={chartHeight - 8}
@@ -234,11 +289,11 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
                 )
               } else {
                 const bH = ((item.bandwidthBytes || 0) / maxBandwidthVal) * availableHeight
-                const barWidth = Math.max(6, Math.min(18, 500 / count))
+                const barWidth = Math.max(4, Math.min(28, Math.floor(280 / count)))
 
                 return (
                   <g
-                    key={item.date}
+                    key={item.date || index}
                     onMouseEnter={() => setHoveredIndex(index)}
                     onMouseLeave={() => setHoveredIndex(null)}
                     style={{ cursor: 'pointer' }}
@@ -262,7 +317,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
                       />
                     )}
 
-                    {(count <= 14 || index % Math.ceil(count / 10) === 0) && (
+                    {shouldShowLabel && (
                       <text
                         x={`${xCenterPct}%`}
                         y={chartHeight - 8}
@@ -280,7 +335,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
             })}
           </svg>
         </Box>
-      </Box>
+      )}
 
       {/* Dynamic Hover Details Bar */}
       <Box
@@ -299,7 +354,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
         {hoveredItem ? (
           <>
             <Typography variant='caption' sx={{ fontWeight: 700, color: 'text.primary' }}>
-              {hoveredItem.date}:
+              {hoveredItem.label || hoveredItem.date}:
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Typography variant='caption' sx={{ color: '#42a5f5', fontWeight: 600 }}>
@@ -315,7 +370,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
           </>
         ) : (
           <Typography variant='caption' sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-            Hover over any day bar to view detailed metrics
+            Hover over any {activeFidelity === 'year' ? 'year' : activeFidelity === 'month' ? 'month' : activeFidelity === 'week' ? 'week' : 'day'} bar to view detailed metrics
           </Typography>
         )}
       </Box>

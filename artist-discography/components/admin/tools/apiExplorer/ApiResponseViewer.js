@@ -60,10 +60,14 @@ const ApiResponseViewer = memo(function ApiResponseViewer({ response }) {
           p: 1.5,
           backgroundColor: 'rgba(0,0,0,0.4)',
           borderRadius: 1.5,
+          userSelect: 'text',
+          WebkitUserSelect: 'text',
+          cursor: 'text',
         }}
       >
         {response.body || ''}
       </Typography>
+
     </Paper>
   )
 })

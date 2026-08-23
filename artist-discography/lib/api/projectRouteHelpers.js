@@ -85,8 +85,18 @@ export async function syncProjectTrackFiles({
   oldTracks = [],
   projectDir,
   newSlug,
+  projectName = '',
 }) {
   const updatedTracks = []
+  const newlyUploadedFiles = []
+
+  // Collect all preexisting audio files to detect removals/deletions
+  const existingAudioFiles = new Set(
+    oldTracks
+      .map((t) => (t.audio || t.audioUrl ? path.basename(t.audio || t.audioUrl) : null))
+      .filter(Boolean),
+  )
+  const retainedAudioFiles = new Set()
 
   for (let i = 0; i < parsedTracks.length; i++) {
     const rawTrack = parsedTracks[i] || {}
@@ -96,34 +106,56 @@ export async function syncProjectTrackFiles({
     const oldTrack =
       oldTracks.find((ot) => ot.name === originalName || ot.name === tName) || oldTracks[i] || {}
 
-    let audioRelativeUrl =
-      rawTrack.audio || rawTrack.audioUrl || oldTrack.audio || oldTrack.audioUrl || ''
+    let audioRelativeUrl = ''
 
     // Check for staged audio file upload for this track
     const audioFile = formData.get(`track_${i}_audioFile`) || formData.get(`audioFile_${i}`)
     if (audioFile && typeof audioFile.arrayBuffer === 'function') {
       const ext = path.extname(audioFile.name || '.wav').toLowerCase() || '.wav'
       const audioFileName = `${tSlug}${ext}`
-      const audioDestPath = path.join(process.cwd(), 'data', 'projects', newSlug, audioFileName)
+      const audioDestPath = path.join(/*turbopackIgnore: true*/ projectDir, audioFileName)
 
       const buffer = Buffer.from(await audioFile.arrayBuffer())
-      fs.writeFileSync(audioDestPath, buffer)
+      fs.writeFileSync(/*turbopackIgnore: true*/ audioDestPath, buffer)
       audioRelativeUrl = `/api/audio/${newSlug}/${audioFileName}`
-    } else if (oldTrack.audio || oldTrack.audioUrl) {
-      // Audio already existed. If track title changed, rename the file on disk.
-      const oldAudioUrl = oldTrack.audio || oldTrack.audioUrl || ''
+      retainedAudioFiles.add(audioFileName)
+
+      newlyUploadedFiles.push({
+        filePath: audioDestPath,
+        target: `${projectName || newSlug} - Track: "${tName || `Track ${i + 1}`}"`,
+        details: {
+          projectSlug: newSlug,
+          projectName: projectName || newSlug,
+          trackSlug: tSlug,
+          trackName: tName || `Track ${i + 1}`,
+          fileName: audioFileName,
+        },
+      })
+    } else if (rawTrack.audio) {
+      // Audio was preserved by the client (rawTrack.audio is non-empty)
+      const oldAudioUrl = rawTrack.audio || oldTrack.audio || oldTrack.audioUrl || ''
       const oldFileName = path.basename(oldAudioUrl)
       const oldExt = path.extname(oldFileName)
       const expectedFileName = `${tSlug}${oldExt}`
 
       if (oldFileName && oldFileName !== expectedFileName) {
-        const oldFilePath = path.join(process.cwd(), 'data', 'projects', newSlug, oldFileName)
-        const newFilePath = path.join(process.cwd(), 'data', 'projects', newSlug, expectedFileName)
-        if (fs.existsSync(oldFilePath)) {
+        const oldFilePath = path.join(/*turbopackIgnore: true*/ projectDir, oldFileName)
+        const newFilePath = path.join(/*turbopackIgnore: true*/ projectDir, expectedFileName)
+        if (fs.existsSync(/*turbopackIgnore: true*/ oldFilePath)) {
           safeRenameSync(oldFilePath, newFilePath)
           audioRelativeUrl = `/api/audio/${newSlug}/${expectedFileName}`
+          retainedAudioFiles.add(expectedFileName)
+        } else {
+          audioRelativeUrl = `/api/audio/${newSlug}/${oldFileName}`
+          retainedAudioFiles.add(oldFileName)
         }
+      } else {
+        audioRelativeUrl = `/api/audio/${newSlug}/${oldFileName}`
+        retainedAudioFiles.add(oldFileName)
       }
+    } else {
+      // Audio was explicitly removed by the client or never existed
+      audioRelativeUrl = ''
     }
 
     updatedTracks.push({
@@ -135,5 +167,13 @@ export async function syncProjectTrackFiles({
     })
   }
 
-  return updatedTracks
+  // Safely unlink any orphaned audio files on disk that were removed or belonged to deleted tracks
+  for (const oldFile of existingAudioFiles) {
+    if (!retainedAudioFiles.has(oldFile)) {
+      const oldFilePath = path.join(/*turbopackIgnore: true*/ projectDir, oldFile)
+      safeUnlinkSync(oldFilePath)
+    }
+  }
+
+  return { updatedTracks, newlyUploadedFiles }
 }

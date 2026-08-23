@@ -19,12 +19,24 @@ export default function CopyTrackDialog({
   open,
   onClose,
   trackToCopy,
+  trackName,
+  sourceProjectName,
   projectsList = [],
-  copyTargetProjectIndex = 0,
+  copyTargetProjectIndex,
+  selectedTargetIndex,
   onChangeTargetProjectIndex,
+  onChangeTargetIndex,
   onConfirmCopy,
-  isCopyingTrack = false,
+  onConfirm,
+  isCopyingTrack,
+  isCopying,
 }) {
+  const targetIndex = copyTargetProjectIndex ?? selectedTargetIndex ?? 0
+  const handleTargetChange = onChangeTargetProjectIndex || onChangeTargetIndex
+  const handleConfirm = onConfirmCopy || onConfirm
+  const copying = Boolean(isCopyingTrack ?? isCopying)
+  const displayTrackName = trackToCopy?.track?.name || trackName || 'Untitled Track'
+  const sourceProjIdx = trackToCopy?.sourceProjectIndex
   return (
     <Dialog
       open={open}
@@ -56,7 +68,7 @@ export default function CopyTrackDialog({
       </DialogTitle>
       <DialogContent sx={{ pt: 1 }}>
         <Typography variant='body2' sx={{ color: 'text.secondary', mb: 2 }}>
-          Copying track <strong>&quot;{trackToCopy?.track?.name || 'Untitled Track'}&quot;</strong>{' '}
+          Copying track <strong>&quot;{displayTrackName}&quot;</strong>{' '}
           into a destination project. Any audio file will also be duplicated as an independent copy.
         </Typography>
 
@@ -65,13 +77,13 @@ export default function CopyTrackDialog({
           <Select
             labelId='target-project-label'
             label='Destination Project'
-            value={copyTargetProjectIndex}
-            onChange={(e) => onChangeTargetProjectIndex?.(Number(e.target.value))}
+            value={targetIndex}
+            onChange={(e) => handleTargetChange?.(Number(e.target.value))}
           >
             {projectsList.map((p, idx) => (
               <MenuItem key={idx} value={idx}>
                 {p.name || `Project #${idx + 1}`}{' '}
-                {idx === trackToCopy?.sourceProjectIndex ? '(Current Project)' : ''}
+                {idx === sourceProjIdx ? '(Current Project)' : ''}
               </MenuItem>
             ))}
           </Select>
@@ -84,14 +96,14 @@ export default function CopyTrackDialog({
         <Button
           variant='contained'
           color='primary'
-          onClick={onConfirmCopy}
-          disabled={isCopyingTrack || projectsList.length === 0}
+          onClick={handleConfirm}
+          disabled={copying || projectsList.length === 0}
           startIcon={
-            isCopyingTrack ? <CircularProgress size={16} color='inherit' /> : <ContentCopyIcon />
+            copying ? <CircularProgress size={16} color='inherit' /> : <ContentCopyIcon />
           }
           sx={{ borderRadius: 2 }}
         >
-          {isCopyingTrack ? 'Copying…' : 'Copy Track'}
+          {copying ? 'Copying…' : 'Copy Track'}
         </Button>
       </DialogActions>
     </Dialog>

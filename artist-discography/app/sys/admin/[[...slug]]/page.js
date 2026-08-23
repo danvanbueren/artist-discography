@@ -5,6 +5,7 @@ import AdminDashboard from '@/components/admin/AdminDashboard'
 
 export async function generateMetadata() {
   let artistName = ''
+
   try {
     const { data } = loadArtistData()
     artistName = data?.artist?.name?.trim() || ''
@@ -13,12 +14,20 @@ export async function generateMetadata() {
   const name = artistName || 'Artist'
 
   return {
-    title: 'Admin Dashboard',
+    title: { absolute: `${name} | Admin Dashboard` },
     description: `Admin management portal for ${name} discography.`,
   }
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({ params }) {
+  let resolvedParams = {}
+  try {
+    resolvedParams = (await params) ?? {}
+  } catch (err) {
+    console.error('Failed to resolve admin page params:', err)
+  }
+
+  const initialSlug = resolvedParams?.slug ?? []
   let adminAccess = true
   let artistName = 'Artist'
   let data = {}
@@ -39,6 +48,11 @@ export default async function AdminPage() {
   }
 
   return (
-    <AdminDashboard adminAccess={adminAccess} defaultArtistName={artistName} initialData={data} />
+    <AdminDashboard
+      adminAccess={adminAccess}
+      defaultArtistName={artistName}
+      initialData={data}
+      initialSlug={initialSlug}
+    />
   )
 }

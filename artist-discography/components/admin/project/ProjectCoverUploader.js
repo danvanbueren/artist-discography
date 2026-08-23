@@ -14,7 +14,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import ImageIcon from '@mui/icons-material/Image'
 import AlbumIcon from '@mui/icons-material/Album'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { formatMediaPath, getMediaThumbnailUrl } from '../adminUtils'
 
 /**
@@ -25,6 +25,7 @@ export default function ProjectCoverUploader({
   coverPreview,
   existingCoverUrl,
   onCoverChange,
+  onCoverRemove,
   coverJob = null,
   isEditing = false,
 }) {
@@ -44,6 +45,8 @@ export default function ProjectCoverUploader({
       : getMediaThumbnailUrl(coverPreview, 160)
     : null
 
+  const hasAnyCover = hasUploadedCover || hasExistingCover
+
   return (
     <Grid size={{ xs: 12 }}>
       <Paper
@@ -55,8 +58,16 @@ export default function ProjectCoverUploader({
             ? 'rgba(144, 202, 249, 0.08)'
             : hasUploadedCover
               ? 'rgba(102, 187, 106, 0.08)'
-              : 'rgba(255, 255, 255, 0.02)',
-          borderColor: coverJob ? 'primary.main' : hasUploadedCover ? 'success.main' : 'divider',
+              : hasExistingCover
+                ? 'rgba(144, 202, 249, 0.08)'
+                : 'rgba(255, 179, 0, 0.08)',
+          borderColor: coverJob
+            ? 'primary.main'
+            : hasUploadedCover
+              ? 'success.main'
+              : hasExistingCover
+                ? 'primary.main'
+                : 'warning.main',
           transition: 'all 0.2s ease',
         }}
       >
@@ -77,13 +88,14 @@ export default function ProjectCoverUploader({
                 height: 64,
                 aspectRatio: '1 / 1',
                 borderRadius: 2,
-                bgcolor: 'rgba(255, 255, 255, 0.06)',
+                bgcolor: hasAnyCover ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 179, 0, 0.12)',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid',
+                borderColor: hasAnyCover ? 'rgba(255, 255, 255, 0.15)' : 'warning.main',
               }}
             >
               {thumbUrl ? (
@@ -94,7 +106,7 @@ export default function ProjectCoverUploader({
                   sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                <AlbumIcon sx={{ fontSize: 36, color: 'text.disabled' }} />
+                <AlbumIcon sx={{ fontSize: 36, color: 'warning.main' }} />
               )}
             </Box>
 
@@ -107,6 +119,11 @@ export default function ProjectCoverUploader({
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
+                    color: hasUploadedCover
+                      ? 'success.main'
+                      : hasExistingCover
+                        ? 'primary.main'
+                        : 'warning.main',
                   }}
                 >
                   {hasUploadedCover
@@ -123,9 +140,21 @@ export default function ProjectCoverUploader({
                     sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800 }}
                   />
                 )}
+                {!hasAnyCover && (
+                  <Chip
+                    label='Missing Artwork'
+                    size='small'
+                    color='warning'
+                    variant='outlined'
+                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 700 }}
+                  />
+                )}
               </Box>
 
-              <Typography variant='caption' sx={{ color: 'text.secondary', display: 'block' }}>
+              <Typography
+                variant='caption'
+                sx={{ color: hasAnyCover ? 'text.secondary' : 'warning.light', display: 'block' }}
+              >
                 {coverJob
                   ? `Optimizing responsive sizes: ${coverJob.phase || 'Generating thumbnails...'}`
                   : 'Square 1:1 format recommended (JPG, PNG, WebP). Scaled automatically.'}
@@ -133,8 +162,8 @@ export default function ProjectCoverUploader({
             </Box>
           </Box>
 
-          {/* Upload Button */}
-          <Box sx={{ flexShrink: 0 }}>
+          {/* Action Buttons: Upload / Replace and Delete */}
+          <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
             <input
               type='file'
               accept='image/*'
@@ -143,18 +172,43 @@ export default function ProjectCoverUploader({
               onChange={handleFileChange}
             />
             <label htmlFor={`project-cover-input-${isEditing ? 'edit' : 'create'}`}>
-              <IconButton
-                component='span'
-                size='medium'
-                color='primary'
-                sx={{
-                  bgcolor: 'action.hover',
-                  '&:hover': { bgcolor: 'action.selected' },
-                }}
+              <Tooltip
+                title={
+                  hasUploadedCover || hasExistingCover
+                    ? 'Replace Cover Artwork'
+                    : 'Upload Cover Artwork'
+                }
+                arrow
               >
-                <CloudUploadIcon />
-              </IconButton>
+                <IconButton
+                  component='span'
+                  size='medium'
+                  sx={{
+                    color: hasUploadedCover || hasExistingCover ? '#ffffff' : 'primary.main',
+                    bgcolor: 'action.hover',
+                    '&:hover': { bgcolor: 'action.selected' },
+                  }}
+                >
+                  <CloudUploadIcon />
+                </IconButton>
+              </Tooltip>
             </label>
+
+            {(hasUploadedCover || hasExistingCover) && (
+              <Tooltip title='Remove Cover Artwork' arrow>
+                <IconButton
+                  size='medium'
+                  color='error'
+                  onClick={() => onCoverRemove?.()}
+                  sx={{
+                    bgcolor: 'action.hover',
+                    '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.15)' },
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
         </Box>
 

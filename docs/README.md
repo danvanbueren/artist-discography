@@ -20,9 +20,9 @@ docs/
 │   └── ui-and-theme-system.md          # Obsidian glassmorphism design, MUI 9 standards, interaction hooks
 └── plans/                              # Implementation blueprints & engineering roadmap
     ├── README.md                       # Roadmap master index, active plans & guidelines
-    └── archive/                        # Completed & verified plans (Phases 1 through 13)
+    └── archive/                        # Completed & verified plans (Phases 1 through 14)
         ├── README.md                   # Archive index table
-        └── 01-13-*.md                  # Individual historical phase plans
+        └── 01-14-*.md                  # Individual historical phase plans
 ```
 
 ---
@@ -49,7 +49,7 @@ Detailed deep-dives into how Artist Discography is designed and engineered:
 
 ### 📋 3. Plans & Roadmap (`docs/plans/`)
 - **[Roadmap & Plans Hub](./plans/README.md)**: Overview of current roadmap status, future feature concepts (synchronized lyrics, multi-disc box sets, visualizer presets), and plan authoring standards.
-- **[Archived Implementation Plans](./plans/archive/README.md)**: Preserved blueprints and implementation logs for all completed milestones (Phases 1 through 13).
+- **[Archived Implementation Plans](./plans/archive/README.md)**: Preserved blueprints and implementation logs for all completed milestones (Phases 1 through 14).
 
 ---
 

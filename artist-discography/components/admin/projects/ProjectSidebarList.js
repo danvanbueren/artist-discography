@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   Paper,
   Box,
@@ -52,6 +52,22 @@ export default function ProjectSidebarList({
   const [mobileExpanded, setMobileExpanded] = useState(false)
   const [sidebarSortBy, setSidebarSortBy] = useState('date')
   const [sidebarSortAsc, setSidebarSortAsc] = useState(false)
+  const listContainerRef = useRef(null)
+
+  // Auto-scroll list when selected project changes or when starting new project
+  useEffect(() => {
+    if (!listContainerRef.current) return
+    if (isCreatingNew) {
+      listContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (selectedProjIndex !== null && selectedProjIndex >= 0) {
+      const selectedEl = listContainerRef.current.querySelector(
+        `[data-project-index="${selectedProjIndex}"]`,
+      )
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }
+  }, [selectedProjIndex, isCreatingNew])
 
   const selectedProject =
     !isCreatingNew && selectedProjIndex !== null && selectedProjIndex >= 0
@@ -231,7 +247,7 @@ export default function ProjectSidebarList({
             Switch
           </Button>
           <Button
-            variant={isCreatingNew ? 'contained' : 'outlined'}
+            variant='contained'
             color='primary'
             size='small'
             startIcon={<AddIcon />}
@@ -248,7 +264,7 @@ export default function ProjectSidebarList({
               py: 0.5,
             }}
           >
-            New
+            Add Project
           </Button>
         </Box>
       </Paper>
@@ -294,7 +310,7 @@ export default function ProjectSidebarList({
             </Button>
           )}
           <Button
-            variant={isCreatingNew ? 'contained' : 'outlined'}
+            variant='contained'
             color='primary'
             size='small'
             startIcon={<AddIcon />}
@@ -304,7 +320,7 @@ export default function ProjectSidebarList({
             }}
             sx={{ borderRadius: 2 }}
           >
-            New
+            Add Project
           </Button>
         </Box>
       </Box>
@@ -367,6 +383,7 @@ export default function ProjectSidebarList({
 
       {/* Projects List Container */}
       <List
+        ref={listContainerRef}
         sx={{
           overflowY: 'auto',
           flexGrow: 1,

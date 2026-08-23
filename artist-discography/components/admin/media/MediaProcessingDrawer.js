@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import {
   Drawer,
   Box,
@@ -12,7 +13,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
-import WhatshotIcon from '@mui/icons-material/Whatshot'
+import FactCheckIcon from '@mui/icons-material/FactCheck'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import MediaJobCard from './MediaJobCard'
 
@@ -30,6 +31,44 @@ export default function MediaProcessingDrawer({
 }) {
   const hasActive = activeJobs.length > 0
   const hasCompleted = completedJobs.length > 0
+
+  const [isValidated, setIsValidated] = useState(false)
+  const prevProcessingRef = useRef(false)
+  const wasTriggeredRef = useRef(false)
+
+  const handleValidateClick = async () => {
+    wasTriggeredRef.current = true
+    const success = await onTriggerWarmAll?.(adminPassword)
+    if (success) {
+      setTimeout(() => {
+        if (activeJobs.length === 0) {
+          setIsValidated(true)
+          wasTriggeredRef.current = false
+        }
+      }, 600)
+    }
+  }
+
+  useEffect(() => {
+    if (
+      wasTriggeredRef.current &&
+      prevProcessingRef.current &&
+      !isProcessing &&
+      activeJobs.length === 0
+    ) {
+      setIsValidated(true)
+      wasTriggeredRef.current = false
+    }
+    prevProcessingRef.current = isProcessing
+  }, [isProcessing, activeJobs.length])
+
+  useEffect(() => {
+    if (!isValidated) return
+    const timer = setTimeout(() => {
+      setIsValidated(false)
+    }, 3500)
+    return () => clearTimeout(timer)
+  }, [isValidated])
 
   return (
     <Drawer
@@ -133,20 +172,33 @@ export default function MediaProcessingDrawer({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
           <Button
             size='small'
-            variant='outlined'
-            color='primary'
-            startIcon={<WhatshotIcon />}
+            variant={isValidated ? 'contained' : 'outlined'}
+            color={isValidated ? 'success' : 'primary'}
+            startIcon={isValidated ? <CheckCircleIcon /> : <FactCheckIcon />}
             disabled={isTriggeringWarm || isProcessing}
-            onClick={() => onTriggerWarmAll?.(adminPassword)}
+            onClick={handleValidateClick}
             sx={{
               borderRadius: 2,
               textTransform: 'none',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '0.8rem',
               flexGrow: 1,
+              ...(isValidated
+                ? {
+                    backgroundColor: 'success.main',
+                    color: '#ffffff',
+                    '&:hover': {
+                      backgroundColor: 'success.dark',
+                    },
+                  }
+                : {}),
             }}
           >
-            {isTriggeringWarm ? 'Starting...' : 'Warm All Media'}
+            {isTriggeringWarm || isProcessing
+              ? 'Validating Cache...'
+              : isValidated
+                ? 'Validated Media Cache'
+                : 'Validate Media Cache'}
           </Button>
 
           {hasCompleted && (

@@ -19,7 +19,7 @@ For full project documentation, technology stack, and comprehensive operator con
     - `auth/`: Admin login view & password challenge.
     - `common/`: Standardized text inputs, date pickers, and form controls.
     - `dialogs/`: Delete project, delete track, and cross-project track copy dialogs.
-    - `hooks/`: Domain hooks (`useAdminAuth`, `useAutoSave`, `useArtistProfile`, `useProjectsManager`, `useCreateProjectForm`, `useEditProjectForm`, `useProjectValidation`, `useProjectOperations`, `useMediaJobs`).
+    - `hooks/`: Domain hooks (`useAdminAuth`, `useAdminRouting`, `useAutoSave`, `useArtistProfile`, `useProjectsManager`, `useCreateProjectForm`, `useEditProjectForm`, `useProjectValidation`, `useProjectOperations`, `useMediaJobs`).
     - `layout/`: Admin header, navigation tabs, notifications, and media drawer.
     - `media/`: Background media processing drawer and active job cards.
     - `profile/`: Server security credentials, branding logo, biography, and social links cards.
@@ -60,6 +60,12 @@ For full project documentation, technology stack, and comprehensive operator con
 ## 🔐 System Routes
 
 - **Admin Dashboard**: `/_sys/_admin` (rewritten internally to `/sys/admin`). Consolidates artist profile settings, server security, project management, catalog & media audit, OpenAPI interactive explorer, and system health & seeder tools into a unified password-protected dashboard. Legacy `/_sys/_dev` requests are automatically redirected here.
+  - `/_sys/_admin/settings` - Artist profile, site URL, branding logo, and server credentials.
+  - `/_sys/_admin/projects/<project-slug>` - Direct deep-link to edit a specific catalog release.
+  - `/_sys/_admin/projects?action=new` - Direct deep-link to the new project creation draft form.
+  - `/_sys/_admin/audit` - Catalog health overview, audio streaming status, and artwork resolution checks.
+  - `/_sys/_admin/utilities` - Telemetry analytics, traffic metrics, and raw JSON configuration inspector.
+  - `/_sys/_admin/api` - Interactive OpenAPI Explorer and API endpoint documentation.
 
 ## Managing Artist Content (`data/`)
 

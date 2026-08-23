@@ -22,7 +22,7 @@ const AdminTextInput = memo(function AdminTextInput({
   isSaved,
   slotProps,
   sx,
-  debounceMs = 250,
+  debounceMs = 0,
   onBlur,
   onKeyDown,
   ...rest

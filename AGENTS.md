@@ -247,6 +247,11 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Standard**: When grouping dense developer, telemetry, or management views (such as Catalog Analytics vs Raw Configuration Inspector on the Utilities tab), use controlled, mutually exclusive Accordions.
 - **Persistence & Viewport Integrity**: Enforce that opening one accordion smoothly closes the other, while clicking the already-expanded header does not collapse it (`if (isExpanded) setActiveSection(...)`), preventing empty viewport states.
 
+### Playback History, Reverse Shuffle & Repeat Contexts
+- **Playback History Stack**: When implementing audio player queue traversal, maintain a dedicated `playbackHistory` state stack. Popping from history on `handleSkipPrev` ensures that shuffle mode respects the exact past sequence in reverse without jumping to arbitrary track indices or re-shuffling upcoming tracks.
+- **Bi-Directional Queue Integrity**: When moving backwards via `handleSkipPrev`, prepend the vacated `playingTrack` to `autoplayTracks` so that immediately pressing `handleSkipNext` traverses back forward smoothly.
+- **Scoped Playback Pools for Project Repeat**: When initiating playback inside single project views, scope the active playback pool to that project so that `repeatMode = 'all'` loops that specific release rather than defaulting to the global discography list.
+
 ---
 
 ## Project Workflows & Processes

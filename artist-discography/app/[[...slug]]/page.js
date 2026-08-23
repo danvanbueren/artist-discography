@@ -4,7 +4,6 @@ import { loadArtistData, normalizeSiteUrl } from '@/lib/data/artistData'
 import DiscographyApp from '@/components/discography/DiscographyApp'
 import { slugify, findProjectBySlug, findTrackBySlug } from '@/lib/data/slugs'
 import { formatProjectDate } from '@/lib/data/dateUtils'
-import { ensureAllMediaReadyFallback } from '@/lib/media/mediaWarmer'
 
 const STATIC_ASSET_REGEX =
   /\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|webp|gif|svg|ico|txt|xml|woff|woff2|ttf|eot)$/i
@@ -228,13 +227,6 @@ export default async function Page({ params }) {
     isHealthy: false,
     createdNewFile: false,
     issues: ['Failed to load data'],
-  }
-
-  // Background fallback check: verifies and warms any missing optimized media assets
-  try {
-    ensureAllMediaReadyFallback(data)
-  } catch (err) {
-    console.warn('Fallback media readiness check warning:', err)
   }
 
   return (

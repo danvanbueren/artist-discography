@@ -111,11 +111,36 @@ export default function RawJsonInspectorTab({
     <Accordion
       expanded={isExpanded}
       onChange={handleAccordionChange}
+      disableGutters
+      slotProps={{
+        transition: {
+          timeout: 0,
+        },
+      }}
       sx={{
+
         borderRadius: 2.5,
         backgroundColor: 'rgba(26, 26, 38, 0.75)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
         '&:before': { display: 'none' },
+        ...(isExpanded
+          ? {
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              overflow: 'hidden',
+              '& .MuiCollapse-root, & .MuiCollapse-wrapper, & .MuiCollapse-wrapperInner, & .MuiAccordion-region':
+                {
+                  flexGrow: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  minHeight: 0,
+                },
+            }
+          : {
+              flexShrink: 0,
+            }),
       }}
     >
       <AccordionSummary
@@ -123,6 +148,7 @@ export default function RawJsonInspectorTab({
         sx={{
           px: 2.5,
           minHeight: 56,
+          flexShrink: 0,
           '& .MuiAccordionSummary-content': {
             display: 'flex',
             justifyContent: 'space-between',
@@ -144,8 +170,31 @@ export default function RawJsonInspectorTab({
         </Box>
       </AccordionSummary>
 
-      <AccordionDetails sx={{ px: 2.5, pt: 0, pb: 2.5 }}>
-        <Stack spacing={2.5}>
+      <AccordionDetails
+        sx={{
+          px: 2.5,
+          pt: 0,
+          pb: 2.5,
+          flexGrow: 1,
+          height: '100%',
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            flexGrow: 1,
+            height: '100%',
+            minHeight: 0,
+            gap: 2,
+          }}
+        >
+
+
           {/* Header Action & Tabs Row */}
           <Box
             sx={{
@@ -154,6 +203,7 @@ export default function RawJsonInspectorTab({
               alignItems: 'center',
               flexWrap: 'wrap',
               gap: 2,
+              flexShrink: 0,
             }}
           >
             <Tabs
@@ -238,8 +288,13 @@ export default function RawJsonInspectorTab({
               backgroundColor: '#0d0d12',
               borderColor: 'rgba(255, 255, 255, 0.1)',
               borderRadius: 2.5,
-              maxHeight: 550,
-              overflowY: 'auto',
+              flexGrow: 1,
+              height: '100%',
+              minHeight: 0,
+              overflow: 'auto',
+              userSelect: 'text',
+              WebkitUserSelect: 'text',
+              cursor: 'text',
             }}
           >
             <Typography
@@ -249,14 +304,16 @@ export default function RawJsonInspectorTab({
                 fontSize: '0.85rem',
                 color: '#81d4fa',
                 margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
+                whiteSpace: 'pre',
+                userSelect: 'text',
+                WebkitUserSelect: 'text',
+                cursor: 'text',
               }}
             >
               {JSON.stringify(displayedContent, null, 2)}
             </Typography>
           </Paper>
-        </Stack>
+        </Box>
       </AccordionDetails>
     </Accordion>
   )

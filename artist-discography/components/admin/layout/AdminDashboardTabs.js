@@ -36,12 +36,13 @@ export default function AdminDashboardTabs({
   return (
     <Box
       sx={{
-        p: activeTab === 1 ? 2.5 : { xs: 2, sm: 3 },
+        p: activeTab === 1 || activeTab === 3 ? 2.5 : { xs: 2, sm: 3 },
         flexGrow: 1,
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        overflowY: activeTab === 1 ? 'hidden' : 'auto',
+        overflowY: activeTab === 1 || activeTab === 3 ? 'hidden' : 'auto',
+
       }}
     >
       {/* TAB 0: PROFILE & SETTINGS */}

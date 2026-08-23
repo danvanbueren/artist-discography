@@ -69,7 +69,7 @@ export async function detectInitialAudioQuality() {
 
   if (typeof window === 'undefined') return QUALITY_TIERS.HIGH
 
-  // 1. Check NetworkInformation API if supported
+  // 1. Check NetworkInformation API if supported (instant calculation, zero network cost)
   if (navigator.connection) {
     const conn = navigator.connection
     if (conn.saveData || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g') {
@@ -78,15 +78,22 @@ export async function detectInitialAudioQuality() {
     if (conn.effectiveType === '3g') {
       return QUALITY_TIERS.LOW
     }
+    if (conn.effectiveType === '4g') {
+      const downlink = Number(conn.downlink) || 0
+      const rtt = Number(conn.rtt) || 100
+      if (downlink >= 10 && rtt <= 80) {
+        return QUALITY_TIERS.LOSSLESS
+      }
+      return QUALITY_TIERS.HIGH
+    }
   }
 
-  // 2. Perform a lightweight network probe to measure round-trip latency & speed
+  // 2. Perform a lightweight deferred network probe to measure round-trip latency & speed
   try {
-    const probeUrl = `/api/logo?w=48&fmt=webp&_t=${Date.now()}`
+    const probeUrl = '/api/logo?w=48&fmt=webp'
     const startTime = performance.now()
     const response = await fetch(probeUrl, {
-      cache: 'no-store',
-      priority: 'high',
+      priority: 'low',
     })
     const blob = await response.blob()
     const durationMs = performance.now() - startTime

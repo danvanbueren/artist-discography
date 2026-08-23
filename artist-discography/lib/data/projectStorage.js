@@ -360,13 +360,15 @@ export function saveProjectFile(projectSlug, projectData) {
       return cleanT
     })
 
-    let coverToPersist = projectData.cover || 'art.jpg'
+    let coverToPersist = projectData.cover !== undefined ? projectData.cover : 'art.jpg'
     if (typeof coverToPersist === 'string' && coverToPersist.startsWith('/api/media/')) {
       const parts = coverToPersist
         .replace(/^\/api\/media\//, '')
         .split('?')[0]
         .split('/')
-      coverToPersist = parts[parts.length - 1] || 'art.jpg'
+      coverToPersist = parts[parts.length - 1] || ''
+    } else if (typeof coverToPersist !== 'string') {
+      coverToPersist = ''
     }
 
     const cleanedProject = {

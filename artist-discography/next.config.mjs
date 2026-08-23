@@ -8,8 +8,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/_sys/_admin',
-        destination: '/sys/admin',
+        source: '/_sys/_admin/:path*',
+        destination: '/sys/admin/:path*',
       },
       {
         source: '/manifest.json',
@@ -20,13 +20,13 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/_sys/_dev',
-        destination: '/_sys/_admin',
+        source: '/_sys/_dev/:path*',
+        destination: '/_sys/_admin/:path*',
         permanent: false,
       },
       {
-        source: '/sys/dev',
-        destination: '/_sys/_admin',
+        source: '/sys/dev/:path*',
+        destination: '/_sys/_admin/:path*',
         permanent: false,
       },
     ]

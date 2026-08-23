@@ -31,6 +31,8 @@ export const ProjectSidebarItem = memo(function ProjectSidebarItem({
   return (
     <ListItemButton
       selected={isSelected}
+      data-selected={isSelected ? 'true' : 'false'}
+      data-project-index={idx}
       onClick={() => onSelectProject(idx)}
       sx={{
         borderRadius: 2,
