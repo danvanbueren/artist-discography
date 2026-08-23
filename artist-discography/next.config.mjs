@@ -2,7 +2,7 @@
 const nextConfig = {
   output: 'standalone',
   outputFileTracingExcludes: {
-    '*': ['./data/cache/**/*'],
+    '*': ['./data/**/*', './data/cache/**/*'],
   },
   serverExternalPackages: ['sharp'],
   async rewrites() {

@@ -5,6 +5,7 @@ node_modules
 .gitignore
 plans
 data
+artist-discography/data
 *.log
 .DS_Store
 *.tmp
