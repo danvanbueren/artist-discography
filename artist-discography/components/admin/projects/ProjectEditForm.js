@@ -1,6 +1,6 @@
 'use client'
 
-import { Stack, Paper, Typography, Grid, Divider, Box, Button } from '@mui/material'
+import { Stack, Paper, Typography, Grid, Divider, Box, Button, Tooltip } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import MusicNoteIcon from '@mui/icons-material/MusicNote'
@@ -97,7 +97,16 @@ export default function ProjectEditForm({
           borderColor: 'rgba(255, 255, 255, 0.1)',
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            gap: 1.5,
+            minWidth: 0,
+          }}
+        >
           <Typography
             variant='h6'
             sx={{
@@ -105,20 +114,48 @@ export default function ProjectEditForm({
               display: 'flex',
               alignItems: 'center',
               gap: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            <EditIcon color='primary' /> Editing: {editName || 'Project'}
+            <EditIcon color='primary' sx={{ flexShrink: 0 }} />
+            <Box
+              component='span'
+              sx={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0,
+              }}
+            >
+              Editing: {editName || 'Project'}
+            </Box>
           </Typography>
-          <Button
-            variant='outlined'
-            color='error'
-            size='small'
-            startIcon={<DeleteIcon />}
-            onClick={() => setDeleteConfirmOpen(true)}
-            sx={{ borderRadius: 2 }}
-          >
-            Delete Project
-          </Button>
+          <Tooltip title='Delete Project' arrow>
+            <Button
+              variant='outlined'
+              color='error'
+              size='small'
+              startIcon={<DeleteIcon />}
+              onClick={() => setDeleteConfirmOpen(true)}
+              sx={{
+                borderRadius: 2,
+                flexShrink: 0,
+                minWidth: { xs: 36, sm: 'auto' },
+                px: { xs: 1, sm: 1.5 },
+                '& .MuiButton-startIcon': {
+                  mr: { xs: 0, sm: 1 },
+                  ml: { xs: 0, sm: -0.5 },
+                },
+              }}
+            >
+              <Box component='span' sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                Delete Project
+              </Box>
+            </Button>
+          </Tooltip>
         </Box>
 
         <Grid container spacing={2.5}>
