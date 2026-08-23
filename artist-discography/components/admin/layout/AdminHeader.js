@@ -184,7 +184,7 @@ export default function AdminHeader({
               fontWeight: 600,
             }}
           >
-            Media Queue {mediaJobs?.activeJobs?.length ? `(${mediaJobs.activeJobs.length})` : ''}
+            Media Processing {mediaJobs?.activeJobs?.length ? `(${mediaJobs.activeJobs.length})` : ''}
           </Button>
 
           <Button

@@ -3,10 +3,11 @@
 import { Paper, Typography, Grid, Box, InputAdornment, IconButton, Tooltip } from '@mui/material'
 import LinkIcon from '@mui/icons-material/Link'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AdminTextInput from '../common/AdminTextInput'
 import { PLATFORM_KEYS, SOCIAL_KEYS } from '../adminConstants'
 import { SOCIAL_ICONS } from '@/components/discography/ArtistHero'
-import { buildPlatformSearchUrl } from '../adminUtils'
+import { buildPlatformSearchUrl, openExternalLink } from '../adminUtils'
 
 /**
  * Streaming platforms and social media link profile cards.
@@ -60,13 +61,14 @@ export default function ArtistSocialsCard({
           {PLATFORM_KEYS.map(({ key, label }) => {
             const iconSrc = SOCIAL_ICONS[key]
             const fieldKey = `platform_${key}`
+            const linkVal = artistPlatforms[key] || ''
             return (
               <Grid key={key} size={{ xs: 12, sm: 6 }}>
                 <AdminTextInput
                   label={label}
                   size='small'
                   fullWidth
-                  value={artistPlatforms[key] || ''}
+                  value={linkVal}
                   onChange={(val) => {
                     setArtistPlatforms((prev) => {
                       const next = { ...prev, [key]: val }
@@ -97,23 +99,40 @@ export default function ArtistSocialsCard({
                       ) : null,
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <Tooltip title={`Search for artist on ${label} (or Google)`} arrow>
-                            <IconButton
-                              size='small'
-                              onClick={() => {
-                                const searchUrl = buildPlatformSearchUrl(key, artistName, '', '')
-                                window.open(searchUrl, '_blank', 'noopener,noreferrer')
-                              }}
-                              sx={{
-                                color: 'text.secondary',
-                                p: 0.5,
-                                '&:hover': { color: 'secondary.main' },
-                              }}
-                              aria-label={`Search ${label}`}
-                            >
-                              <AutoAwesomeIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
+                          {linkVal.trim() ? (
+                            <Tooltip title={`Open ${label} in new tab`} arrow>
+                              <IconButton
+                                size='small'
+                                onClick={() => openExternalLink(linkVal)}
+                                sx={{
+                                  color: 'text.secondary',
+                                  p: 0.5,
+                                  '&:hover': { color: 'primary.main' },
+                                }}
+                                aria-label={`Open ${label}`}
+                              >
+                                <OpenInNewIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title={`Search for artist on ${label} (or Google)`} arrow>
+                              <IconButton
+                                size='small'
+                                onClick={() => {
+                                  const searchUrl = buildPlatformSearchUrl(key, artistName, '', '')
+                                  window.open(searchUrl, '_blank', 'noopener,noreferrer')
+                                }}
+                                sx={{
+                                  color: 'text.secondary',
+                                  p: 0.5,
+                                  '&:hover': { color: 'secondary.main' },
+                                }}
+                                aria-label={`Search ${label}`}
+                              >
+                                <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </InputAdornment>
                       ),
                     },
@@ -159,13 +178,14 @@ export default function ArtistSocialsCard({
           {SOCIAL_KEYS.map(({ key, label }) => {
             const iconSrc = SOCIAL_ICONS[key]
             const fieldKey = `social_${key}`
+            const linkVal = artistSocials[key] || ''
             return (
               <Grid key={key} size={{ xs: 12, sm: 6 }}>
                 <AdminTextInput
                   label={label}
                   size='small'
                   fullWidth
-                  value={artistSocials[key] || ''}
+                  value={linkVal}
                   onChange={(val) => {
                     setArtistSocials((prev) => {
                       const next = { ...prev, [key]: val }
@@ -194,6 +214,44 @@ export default function ArtistSocialsCard({
                           />
                         </InputAdornment>
                       ) : null,
+                      endAdornment: (
+                        <InputAdornment position='end'>
+                          {linkVal.trim() ? (
+                            <Tooltip title={`Open ${label} in new tab`} arrow>
+                              <IconButton
+                                size='small'
+                                onClick={() => openExternalLink(linkVal)}
+                                sx={{
+                                  color: 'text.secondary',
+                                  p: 0.5,
+                                  '&:hover': { color: 'primary.main' },
+                                }}
+                                aria-label={`Open ${label}`}
+                              >
+                                <OpenInNewIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Tooltip title={`Search for artist on ${label} (or Google)`} arrow>
+                              <IconButton
+                                size='small'
+                                onClick={() => {
+                                  const searchUrl = buildPlatformSearchUrl(key, artistName, '', '')
+                                  window.open(searchUrl, '_blank', 'noopener,noreferrer')
+                                }}
+                                sx={{
+                                  color: 'text.secondary',
+                                  p: 0.5,
+                                  '&:hover': { color: 'secondary.main' },
+                                }}
+                                aria-label={`Search ${label}`}
+                              >
+                                <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </InputAdornment>
+                      ),
                     },
                   }}
                 />

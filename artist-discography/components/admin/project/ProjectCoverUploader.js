@@ -31,6 +31,14 @@ export default function ProjectCoverUploader({
 }) {
   const hasUploadedCover = Boolean(coverFile)
   const hasExistingCover = Boolean(existingCoverUrl || coverPreview)
+  const hasAnyCover = hasUploadedCover || hasExistingCover
+  const isCoverOptimizing = Boolean(
+    coverJob && (coverJob.status === 'processing' || coverJob.status === 'queued'),
+  )
+
+  const isGreen = isCoverOptimizing || hasUploadedCover
+  const isBlue = hasExistingCover && !isGreen
+  const isYellow = !hasAnyCover && !isCoverOptimizing
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0]
@@ -45,8 +53,6 @@ export default function ProjectCoverUploader({
       : getMediaThumbnailUrl(coverPreview, 160)
     : null
 
-  const hasAnyCover = hasUploadedCover || hasExistingCover
-
   return (
     <Grid size={{ xs: 12 }}>
       <Paper
@@ -54,20 +60,16 @@ export default function ProjectCoverUploader({
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: coverJob
-            ? 'rgba(144, 202, 249, 0.08)'
-            : hasUploadedCover
-              ? 'rgba(102, 187, 106, 0.08)'
-              : hasExistingCover
-                ? 'rgba(144, 202, 249, 0.08)'
-                : 'rgba(255, 179, 0, 0.08)',
-          borderColor: coverJob
-            ? 'primary.main'
-            : hasUploadedCover
-              ? 'success.main'
-              : hasExistingCover
-                ? 'primary.main'
-                : 'warning.main',
+          bgcolor: isGreen
+            ? 'rgba(102, 187, 106, 0.08)'
+            : isBlue
+              ? 'rgba(144, 202, 249, 0.08)'
+              : 'rgba(255, 179, 0, 0.08)',
+          borderColor: isGreen
+            ? 'success.main'
+            : isBlue
+              ? 'primary.main'
+              : 'warning.main',
           transition: 'all 0.2s ease',
         }}
       >
@@ -88,14 +90,22 @@ export default function ProjectCoverUploader({
                 height: 64,
                 aspectRatio: '1 / 1',
                 borderRadius: 2,
-                bgcolor: hasAnyCover ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 179, 0, 0.12)',
+                bgcolor: isGreen
+                  ? 'rgba(102, 187, 106, 0.12)'
+                  : isBlue
+                    ? 'rgba(255, 255, 255, 0.06)'
+                    : 'rgba(255, 179, 0, 0.12)',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
                 border: '1px solid',
-                borderColor: hasAnyCover ? 'rgba(255, 255, 255, 0.15)' : 'warning.main',
+                borderColor: isGreen
+                  ? 'success.main'
+                  : isBlue
+                    ? 'rgba(255, 255, 255, 0.15)'
+                    : 'warning.main',
               }}
             >
               {thumbUrl ? (
@@ -106,7 +116,7 @@ export default function ProjectCoverUploader({
                   sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                <AlbumIcon sx={{ fontSize: 36, color: 'warning.main' }} />
+                <AlbumIcon sx={{ fontSize: 36, color: isGreen ? 'success.main' : 'warning.main' }} />
               )}
             </Box>
 
@@ -119,20 +129,30 @@ export default function ProjectCoverUploader({
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    color: hasUploadedCover
+                    color: isGreen
                       ? 'success.main'
-                      : hasExistingCover
+                      : isBlue
                         ? 'primary.main'
                         : 'warning.main',
                   }}
                 >
-                  {hasUploadedCover
-                    ? `Staged Cover: ${coverFile.name}`
-                    : hasExistingCover
-                      ? `Active Cover: ${formatMediaPath(existingCoverUrl || 'art.jpg')}`
-                      : 'No Album Artwork Uploaded'}
+                  {isCoverOptimizing
+                    ? `Optimizing: ${coverJob?.fileName || coverJob?.target || coverFile?.name || formatMediaPath(existingCoverUrl || 'art.jpg')}`
+                    : hasUploadedCover
+                      ? `Staged Cover: ${coverFile.name}`
+                      : isBlue
+                        ? `Active Cover: ${formatMediaPath(existingCoverUrl || 'art.jpg')}`
+                        : 'No Album Artwork Uploaded'}
                 </Typography>
-                {hasUploadedCover && (
+                {isCoverOptimizing && (
+                  <Chip
+                    label='Optimizing'
+                    size='small'
+                    color='success'
+                    sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800 }}
+                  />
+                )}
+                {!isCoverOptimizing && hasUploadedCover && (
                   <Chip
                     label='Staged'
                     size='small'
@@ -140,7 +160,7 @@ export default function ProjectCoverUploader({
                     sx={{ height: 20, fontSize: '0.7rem', fontWeight: 800 }}
                   />
                 )}
-                {!hasAnyCover && (
+                {isYellow && (
                   <Chip
                     label='Missing Artwork'
                     size='small'
@@ -153,11 +173,13 @@ export default function ProjectCoverUploader({
 
               <Typography
                 variant='caption'
-                sx={{ color: hasAnyCover ? 'text.secondary' : 'warning.light', display: 'block' }}
+                sx={{ color: isYellow ? 'warning.light' : 'text.secondary', display: 'block' }}
               >
-                {coverJob
-                  ? `Optimizing responsive sizes: ${coverJob.phase || 'Generating thumbnails...'}`
-                  : 'Square 1:1 format recommended (JPG, PNG, WebP). Scaled automatically.'}
+                {isCoverOptimizing
+                  ? `Optimizing responsive sizes: ${coverJob.currentStep || coverJob.phase || 'Generating thumbnails...'}`
+                  : hasUploadedCover
+                    ? 'Artwork staged for upload on save.'
+                    : 'Square 1:1 format recommended (JPG, PNG, WebP). Scaled automatically.'}
               </Typography>
             </Box>
           </Box>
@@ -184,7 +206,7 @@ export default function ProjectCoverUploader({
                   component='span'
                   size='medium'
                   sx={{
-                    color: hasUploadedCover || hasExistingCover ? '#ffffff' : 'primary.main',
+                    color: isGreen ? 'success.main' : isBlue ? '#ffffff' : 'warning.main',
                     bgcolor: 'action.hover',
                     '&:hover': { bgcolor: 'action.selected' },
                   }}
@@ -212,10 +234,11 @@ export default function ProjectCoverUploader({
           </Box>
         </Box>
 
-        {coverJob && coverJob.progress !== null && (
+        {isCoverOptimizing && coverJob?.progress !== null && (
           <Box sx={{ width: '100%', mt: 1.5 }}>
             <LinearProgress
               variant='determinate'
+              color='success'
               value={coverJob.progress}
               sx={{ height: 6, borderRadius: 3 }}
             />

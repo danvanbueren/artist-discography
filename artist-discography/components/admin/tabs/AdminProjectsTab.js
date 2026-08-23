@@ -130,13 +130,13 @@ export default function AdminProjectsTab({
             setEditArtist={projects.setEditArtist}
             editArtistRef={projects.editArtistRef}
             editDate={projects.editDate}
-            setDate={projects.setEditDate}
+            setEditDate={projects.setEditDate}
             editDateRef={projects.editDateRef}
             editVisibility={projects.editVisibility}
-            setVisibility={projects.setEditVisibility}
+            setEditVisibility={projects.setEditVisibility}
             editVisibilityRef={projects.editVisibilityRef}
             editCopyright={projects.editCopyright}
-            setCopyright={projects.setEditCopyright}
+            setEditCopyright={projects.setEditCopyright}
             editCopyrightRef={projects.editCopyrightRef}
             editCoverFile={projects.editCoverFile}
             setEditCoverFile={projects.setEditCoverFile}

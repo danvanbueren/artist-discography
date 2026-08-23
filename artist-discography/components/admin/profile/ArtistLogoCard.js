@@ -19,6 +19,10 @@ export default function ArtistLogoCard({
   onResetLogo,
   logoJob = null,
 }) {
+  const isLogoOptimizing = Boolean(
+    logoJob && (logoJob.status === 'processing' || logoJob.status === 'queued'),
+  )
+
   const handleFileChange = (e) => {
     const file = e.target.files?.[0]
     if (file && onUploadLogo) {
@@ -145,7 +149,7 @@ export default function ArtistLogoCard({
         )}
       </Box>
 
-      {logoJob && (
+      {isLogoOptimizing && (
         <Box sx={{ mt: 1.5, width: '100%' }}>
           <Typography
             variant='caption'
@@ -159,7 +163,7 @@ export default function ArtistLogoCard({
             }}
           >
             <AutoFixHighIcon sx={{ fontSize: 14 }} />
-            {logoJob.phase || 'Generating favicons & app icons...'}
+            {logoJob.currentStep || logoJob.phase || 'Generating favicons & app icons...'}
           </Typography>
           <LinearProgress
             variant='determinate'

@@ -6,6 +6,7 @@ import {
   isFfmpegAvailable,
   executeAudioTranscode,
   executeFallbackMp3Transcode,
+  extractCleanFfmpegError,
 } from './ffmpegRunner'
 
 export const AUDIO_CACHE_DIR = path.join(process.cwd(), 'data', 'cache', 'audio')
@@ -228,6 +229,7 @@ export async function getOptimizedAudio(sourceFilePath, options = {}) {
           isFromCache: false,
           size: stat.size,
           mtimeMs: stat.mtimeMs,
+          error: extractCleanFfmpegError(err),
         }
       }
 
@@ -330,6 +332,7 @@ export async function optimizeAndCacheAudio(
       target: targetLabel,
       totalSteps: variants.length,
       details: {
+        ...(jobOptions.details || {}),
         sourcePath: sourceFilePath,
         sourceFormat: ext,
       },
@@ -337,6 +340,7 @@ export async function optimizeAndCacheAudio(
 
     let generated = 0
     let cached = 0
+    const errors = []
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]
@@ -356,9 +360,40 @@ export async function optimizeAndCacheAudio(
       if (isAudioVariantCached(sourceFilePath, variant)) {
         cached++
       } else {
-        await getOptimizedAudio(sourceFilePath, variant)
-        generated++
+        try {
+          const res = await getOptimizedAudio(sourceFilePath, variant)
+          if (res?.error) {
+            errors.push(res.error)
+          } else {
+            generated++
+          }
+        } catch (tierErr) {
+          const cleanMsg = extractCleanFfmpegError(tierErr)
+          errors.push(cleanMsg)
+        }
       }
+    }
+
+    if (errors.length > 0) {
+      const uniqueErrors = Array.from(new Set(errors)).join('; ')
+      if (generated === 0) {
+        failJob(jobId, new Error(uniqueErrors), {
+          summary: `Audio transcode failed: ${uniqueErrors}`,
+          error: uniqueErrors,
+          errors,
+        })
+        return { total: variants.length, generated: 0, cached: 0, error: uniqueErrors }
+      }
+
+      completeJob(jobId, {
+        summary: `Audio transcoded with warnings: ${uniqueErrors} (${generated} generated, ${cached} cached)`,
+        warnings: uniqueErrors,
+        errors,
+        generated,
+        cached,
+        total: variants.length,
+      })
+      return { total: variants.length, generated, cached, warning: uniqueErrors }
     }
 
     completeJob(jobId, {
@@ -370,8 +405,9 @@ export async function optimizeAndCacheAudio(
 
     return { total: variants.length, generated, cached }
   } catch (err) {
-    console.error(`Failed to pre-cache audio variants for ${sourceFilePath}:`, err)
-    failJob(jobId, err)
-    return { total: variants.length, generated: 0, cached: 0 }
+    const cleanErr = extractCleanFfmpegError(err)
+    console.error(`Failed to pre-cache audio variants for ${sourceFilePath}:`, cleanErr)
+    failJob(jobId, new Error(cleanErr), { error: cleanErr })
+    return { total: variants.length, generated: 0, cached: 0, error: cleanErr }
   }
 }

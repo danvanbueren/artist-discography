@@ -15,11 +15,16 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
+  TextField,
+  InputAdornment,
   useTheme,
   useMediaQuery,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import AlbumIcon from '@mui/icons-material/Album'
+import SearchIcon from '@mui/icons-material/Search'
+import ClearIcon from '@mui/icons-material/Clear'
+import SortIcon from '@mui/icons-material/Sort'
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded'
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded'
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded'
@@ -28,10 +33,27 @@ import { ProjectSidebarItem } from '../sidebar/ProjectSidebarItem'
 import { getMediaThumbnailUrl } from '../adminUtils'
 import { formatProjectDate } from '@/lib/data/dateUtils'
 
+function isProjectComplete(project) {
+  if (!project) return false
+  const hasCover = Boolean(project.cover || project.hasCover)
+  const trks = project.tracks ?? []
+  const audioCount = trks.filter((t) => Boolean(t.audioUrl || t.hasAudio || t.audio)).length
+  const hasAllAudio = trks.length > 0 && audioCount === trks.length
+  const linkCount = trks.reduce(
+    (acc, t) =>
+      acc +
+      Object.values(t.links ?? {}).filter((l) => l && typeof l === 'string' && l.trim() !== '')
+        .length,
+    0,
+  )
+  const hasLinks = linkCount > 0
+  return Boolean(hasCover && hasAllAudio && hasLinks)
+}
+
 /**
  * ProjectSidebarList
  * Left navigation sidebar displaying sorted and filterable projects catalog,
- * complete/incomplete checklist badges, and the Create New button.
+ * complete/incomplete checklist badges, search filtering, and the Create New button.
  * On small screens, collapses to a compact single-project view that expands on click
  * and auto-minimizes upon selecting a project.
  */
@@ -50,6 +72,7 @@ export default function ProjectSidebarList({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [mobileExpanded, setMobileExpanded] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [sidebarSortBy, setSidebarSortBy] = useState('date')
   const [sidebarSortAsc, setSidebarSortAsc] = useState(false)
   const listContainerRef = useRef(null)
@@ -93,12 +116,44 @@ export default function ProjectSidebarList({
       : 'No project selected'
 
   const sortedProjectsWithIndex = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
     const indexed = projectsList.map((project, originalIndex) => ({
       project,
       originalIndex,
     }))
 
-    return indexed.sort((a, b) => {
+    const filtered = query
+      ? indexed.filter(({ project }) => {
+          const complete = isProjectComplete(project)
+          const statusMatch =
+            (complete && (query === 'complete' || query === 'done')) ||
+            (!complete && (query === 'incomplete' || query === 'issue' || query === 'issues'))
+          const nameMatch = (project?.name || '').toLowerCase().includes(query)
+          const artistMatch = (project?.artist || '').toLowerCase().includes(query)
+          const typeMatch = (project?.type || '').toLowerCase().includes(query)
+          const dateMatch = (project?.date || '').toLowerCase().includes(query)
+          const trackMatch = (project?.tracks || []).some(
+            (t) =>
+              (t?.name || '').toLowerCase().includes(query) ||
+              (t?.artist || '').toLowerCase().includes(query),
+          )
+          return statusMatch || nameMatch || artistMatch || typeMatch || dateMatch || trackMatch
+        })
+      : indexed
+
+    return filtered.sort((a, b) => {
+      if (sidebarSortBy === 'status') {
+        const completeA = isProjectComplete(a.project) ? 1 : 0
+        const completeB = isProjectComplete(b.project) ? 1 : 0
+        if (completeA !== completeB) {
+          return sidebarSortAsc ? completeA - completeB : completeB - completeA
+        }
+        // Tie-breaker: release date descending
+        const dateA = a.project?.date ? new Date(a.project.date).getTime() || 0 : 0
+        const dateB = b.project?.date ? new Date(b.project.date).getTime() || 0 : 0
+        return dateB - dateA
+      }
+
       if (sidebarSortBy === 'json') {
         return sidebarSortAsc
           ? a.originalIndex - b.originalIndex
@@ -131,7 +186,7 @@ export default function ProjectSidebarList({
 
       return 0
     })
-  }, [projectsList, sidebarSortBy, sidebarSortAsc])
+  }, [projectsList, searchQuery, sidebarSortBy, sidebarSortAsc])
 
   // ----------------------------------------------------
   // Small Screen Minimized Bar
@@ -291,9 +346,13 @@ export default function ProjectSidebarList({
       }}
     >
       {/* Header & Create Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Typography variant='h6' sx={{ fontWeight: 700 }}>
-          Projects ({projectsList.length})
+          Projects (
+          {searchQuery.trim()
+            ? `${sortedProjectsWithIndex.length} of ${projectsList.length}`
+            : projectsList.length}
+          )
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -325,33 +384,100 @@ export default function ProjectSidebarList({
         </Box>
       </Box>
 
+      {/* Search Input Bar */}
+      <TextField
+        fullWidth
+        size='small'
+        placeholder='Search projects or tracks...'
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position='start'>
+                <SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+              </InputAdornment>
+            ),
+            endAdornment: searchQuery ? (
+              <InputAdornment position='end'>
+                <IconButton
+                  size='small'
+                  onClick={() => setSearchQuery('')}
+                  sx={{ p: 0.25, color: 'text.secondary' }}
+                >
+                  <ClearIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
+          },
+        }}
+        sx={{
+          mb: 1.5,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 2,
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            fontSize: '0.82rem',
+            height: 34,
+            '& fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            '&:hover fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: 'primary.main',
+            },
+          },
+        }}
+      />
+
       {/* Sort Controls Bar */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          mb: 2,
+          mb: 1.5,
           pb: 1.5,
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <Typography variant='caption' sx={{ color: 'text.secondary', fontWeight: 600 }}>
-          Sort:
-        </Typography>
         <Select
           size='small'
           value={sidebarSortBy}
           onChange={(e) => setSidebarSortBy(e.target.value)}
+          startAdornment={
+            <InputAdornment position='start' sx={{ mr: 0.5 }}>
+              <SortIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+            </InputAdornment>
+          }
           sx={{
             flexGrow: 1,
-            height: 28,
-            fontSize: '0.78rem',
-            '& .MuiSelect-select': { py: 0.5 },
+            height: 34,
+            borderRadius: 2,
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            fontSize: '0.82rem',
+            '& fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            '&:hover fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: 'primary.main',
+            },
+            '& .MuiSelect-select': {
+              py: 0.75,
+              display: 'flex',
+              alignItems: 'center',
+            },
           }}
         >
           <MenuItem value='date' sx={{ fontSize: '0.8rem' }}>
             Release Date
+          </MenuItem>
+          <MenuItem value='status' sx={{ fontSize: '0.8rem' }}>
+            Status (Complete / Issues)
           </MenuItem>
           <MenuItem value='title' sx={{ fontSize: '0.8rem' }}>
             Title (A-Z)
@@ -366,16 +492,52 @@ export default function ProjectSidebarList({
             Discography Order
           </MenuItem>
         </Select>
-        <Tooltip title={sidebarSortAsc ? 'Ascending (Oldest / A-Z)' : 'Descending (Newest / Z-A)'}>
+
+        <Tooltip
+          title={
+            sidebarSortBy === 'status'
+              ? sidebarSortAsc
+                ? 'Ascending (Incomplete / Issues First)'
+                : 'Descending (Complete First)'
+              : sidebarSortBy === 'date'
+                ? sidebarSortAsc
+                  ? 'Ascending (Oldest First)'
+                  : 'Descending (Newest First)'
+                : sidebarSortBy === 'title'
+                  ? sidebarSortAsc
+                    ? 'Ascending (A-Z)'
+                    : 'Descending (Z-A)'
+                  : sidebarSortBy === 'tracks'
+                    ? sidebarSortAsc
+                      ? 'Ascending (Fewest Tracks)'
+                      : 'Descending (Most Tracks)'
+                    : sidebarSortAsc
+                      ? 'Ascending'
+                      : 'Descending'
+          }
+        >
           <IconButton
             size='small'
             onClick={() => setSidebarSortAsc((prev) => !prev)}
-            sx={{ p: 0.5, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 1 }}
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: 'text.secondary',
+              flexShrink: 0,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'text.primary',
+              },
+            }}
           >
             {sidebarSortAsc ? (
-              <ArrowUpwardRoundedIcon sx={{ fontSize: 16 }} />
+              <ArrowUpwardRoundedIcon sx={{ fontSize: 18 }} />
             ) : (
-              <ArrowDownwardRoundedIcon sx={{ fontSize: 16 }} />
+              <ArrowDownwardRoundedIcon sx={{ fontSize: 18 }} />
             )}
           </IconButton>
         </Tooltip>
@@ -486,6 +648,27 @@ export default function ProjectSidebarList({
               }
             />
           </ListItemButton>
+        )}
+
+        {/* Empty Search Feedback */}
+        {sortedProjectsWithIndex.length === 0 && !isCreatingNew && (
+          <Box
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              borderRadius: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              border: '1px dashed rgba(255, 255, 255, 0.1)',
+              my: 1,
+            }}
+          >
+            <Typography variant='body2' sx={{ color: 'text.secondary', fontWeight: 600, mb: 0.5 }}>
+              No matching projects
+            </Typography>
+            <Typography variant='caption' sx={{ color: 'text.disabled', display: 'block' }}>
+              No projects or tracks match &ldquo;{searchQuery}&rdquo;
+            </Typography>
+          </Box>
         )}
 
         {/* Existing Projects */}

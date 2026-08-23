@@ -175,12 +175,12 @@ export default function ProjectCreateForm({
                 allProjects={projectsList}
                 currentTracks={tracks}
                 isDuplicate={isDup}
-                isDirtyTitle={dirtyFields.has(`new_track_${idx}_title`)}
-                isSavedTitle={savedFields.has(`new_track_${idx}_title`)}
-                isDirtyArtist={dirtyFields.has(`new_track_${idx}_artist`)}
-                isSavedArtist={savedFields.has(`new_track_${idx}_artist`)}
-                isDirtyLink={(key) => dirtyFields.has(`new_track_${idx}_${key}`)}
-                isSavedLink={(key) => savedFields.has(`new_track_${idx}_${key}`)}
+                isDirtyTitle={dirtyFields?.has?.(`new_track_${idx}_title`)}
+                isSavedTitle={savedFields?.has?.(`new_track_${idx}_title`)}
+                isDirtyArtist={dirtyFields?.has?.(`new_track_${idx}_artist`)}
+                isSavedArtist={savedFields?.has?.(`new_track_${idx}_artist`)}
+                isDirtyLink={(key) => dirtyFields?.has?.(`new_track_${idx}_${key}`)}
+                isSavedLink={(key) => savedFields?.has?.(`new_track_${idx}_${key}`)}
                 onUpdateTrackName={(tIdx, val) =>
                   handleUpdateCreateTrackName(tIdx, val, () =>
                     markFieldDirty(`new_track_${tIdx}_title`, executeCreateProject),
@@ -205,8 +205,16 @@ export default function ProjectCreateForm({
                   handleCreateTrackAudioRemove(tIdx)
                   markFieldDirty(`new_track_${tIdx}_audio_remove`, executeCreateProject)
                 }}
-                onMoveUp={(tIdx) => handleMoveCreateTrackUp(tIdx)}
-                onMoveDown={(tIdx) => handleMoveCreateTrackDown(tIdx)}
+                onMoveUp={(tIdx) =>
+                  handleMoveCreateTrackUp(tIdx, () =>
+                    markFieldDirty('new_tracks_order', executeCreateProject),
+                  )
+                }
+                onMoveDown={(tIdx) =>
+                  handleMoveCreateTrackDown(tIdx, () =>
+                    markFieldDirty('new_tracks_order', executeCreateProject),
+                  )
+                }
                 onDeleteTrack={handleDeleteCreateTrack}
               />
             )

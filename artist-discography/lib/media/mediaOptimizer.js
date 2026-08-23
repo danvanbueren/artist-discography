@@ -242,6 +242,7 @@ export async function getOptimizedImage(sourceFilePath, options = {}) {
       buffer: fallbackBuffer,
       mimeType: MIME_MAP[ext] || 'application/octet-stream',
       isFromCache: false,
+      error: err.message,
     }
   }
 }
@@ -359,6 +360,7 @@ export async function optimizeAndCacheImage(
       target: targetLabel,
       totalSteps: variants.length,
       details: {
+        ...(jobOptions.details || {}),
         sourcePath: sourceFilePath,
         format: ext,
       },
@@ -366,6 +368,7 @@ export async function optimizeAndCacheImage(
 
     let generated = 0
     let cached = 0
+    const errors = []
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i]
@@ -382,9 +385,35 @@ export async function optimizeAndCacheImage(
       if (isImageVariantCached(sourceFilePath, variant)) {
         cached++
       } else {
-        await getOptimizedImage(sourceFilePath, variant)
-        generated++
+        const res = await getOptimizedImage(sourceFilePath, variant)
+        if (res.error) {
+          errors.push(res.error)
+        } else {
+          generated++
+        }
       }
+    }
+
+    if (errors.length > 0) {
+      const uniqueErrors = Array.from(new Set(errors)).join('; ')
+      if (generated === 0 && cached === 0) {
+        failJob(jobId, new Error(uniqueErrors), {
+          summary: `Image optimization failed: ${uniqueErrors}`,
+          error: uniqueErrors,
+          errors,
+        })
+        return { total: variants.length, generated: 0, cached: 0, error: uniqueErrors }
+      }
+
+      completeJob(jobId, {
+        summary: `Image optimized with warnings: ${uniqueErrors} (${generated} generated, ${cached} cached)`,
+        warnings: uniqueErrors,
+        errors,
+        generated,
+        cached,
+        total: variants.length,
+      })
+      return { total: variants.length, generated, cached, warning: uniqueErrors }
     }
 
     completeJob(jobId, {
@@ -396,8 +425,8 @@ export async function optimizeAndCacheImage(
 
     return { total: variants.length, generated, cached }
   } catch (err) {
-    console.error(`Failed to pre-cache image variants for ${sourceFilePath}:`, err)
-    failJob(jobId, err)
-    return { total: variants.length, generated: 0, cached: 0 }
+    console.error(`Failed to pre-cache image variants for ${sourceFilePath}:`, err.message)
+    failJob(jobId, err, { error: err.message })
+    return { total: variants.length, generated: 0, cached: 0, error: err.message }
   }
 }

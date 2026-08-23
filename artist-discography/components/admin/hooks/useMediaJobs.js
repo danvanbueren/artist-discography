@@ -244,98 +244,99 @@ export function useMediaJobs() {
   }, [])
 
   // Helper to match an active or completed job for a specific track
-  const getJobForTrack = useCallback(({ projectSlug, trackSlug, trackName, fileName } = {}) => {
-    const pSlug = (projectSlug || '').toLowerCase()
-    const tSlug = (trackSlug || '').toLowerCase()
-    const tName = (trackName || '').toLowerCase()
-    const fName = (fileName || '').toLowerCase()
+  const getJobForTrack = useCallback(
+    ({ projectSlug, trackSlug, trackName, fileName, includeCompleted = false } = {}) => {
+      const pSlug = (projectSlug || '').toLowerCase()
+      const tSlug = (trackSlug || '').toLowerCase()
+      const tName = (trackName || '').toLowerCase()
+      const fName = (fileName || '').toLowerCase()
 
-    if (!pSlug && !tSlug && !tName && !fName) return null
+      if (!pSlug && !tSlug && !tName && !fName) return null
 
-    const matchFn = (j) => {
-      const details = j.details || {}
-      const jProjSlug = (details.projectSlug || '').toLowerCase()
-      const jTrackSlug = (details.trackSlug || '').toLowerCase()
-      const jTrackName = (details.trackName || '').toLowerCase()
-      const jFileName = (details.fileName || j.file || '').toLowerCase()
-      const jTarget = (j.target || '').toLowerCase()
+      const matchFn = (j) => {
+        const details = j.details || {}
+        const jProjSlug = (details.projectSlug || '').toLowerCase()
+        const jTrackSlug = (details.trackSlug || '').toLowerCase()
+        const jTrackName = (details.trackName || '').toLowerCase()
+        const jFileName = (details.fileName || j.file || '').toLowerCase()
+        const jTarget = (j.target || '').toLowerCase()
 
-      // Exact structured match
-      if (pSlug && jProjSlug && pSlug === jProjSlug) {
-        if (tSlug && jTrackSlug && tSlug === jTrackSlug) return true
-        if (tName && jTrackName && tName === jTrackName) return true
-        if (fName && jFileName && fName === jFileName) return true
-        if (tName && jTarget.includes(`"${tName}"`)) return true
-        if (tSlug && jFileName.startsWith(tSlug)) return true
+        // Exact structured match
+        if (pSlug && jProjSlug && pSlug === jProjSlug) {
+          if (tSlug && jTrackSlug && tSlug === jTrackSlug) return true
+          if (tName && jTrackName && tName === jTrackName) return true
+          if (fName && jFileName && fName === jFileName) return true
+          if (tName && jTarget.includes(`"${tName}"`)) return true
+          if (tSlug && jFileName.startsWith(tSlug)) return true
+        }
+
+        // Filename exact match if provided
+        if (fName && (jFileName === fName || j.file?.toLowerCase() === fName)) {
+          return true
+        }
+
+        return false
       }
 
-      // Filename exact match if provided
-      if (fName && (jFileName === fName || j.file?.toLowerCase() === fName)) {
-        return true
+      // Check active jobs first
+      const active = activeJobsRef.current.find(matchFn)
+      if (active) return active
+
+      if (includeCompleted) {
+        return completedJobsRef.current.find(matchFn) || null
       }
 
-      return false
-    }
-
-    // Check active jobs first
-    const active = activeJobsRef.current.find(matchFn)
-    if (active) return active
-
-    // Check completed jobs
-    return completedJobsRef.current.find(matchFn) || null
-  }, [])
+      return null
+    },
+    [],
+  )
 
   // Helper to match an active or completed job for project cover art
-  const getJobForCover = useCallback(({ projectSlug, fileName } = {}) => {
-    const pSlug = (projectSlug || '').toLowerCase()
-    const fName = (fileName || '').toLowerCase()
+  const getJobForCover = useCallback(
+    ({ projectSlug, fileName, includeCompleted = false } = {}) => {
+      const pSlug = (projectSlug || '').toLowerCase()
+      const fName = (fileName || '').toLowerCase()
 
-    if (!pSlug && !fName) return null
+      if (!pSlug && !fName) return null
 
-    const matchFn = (j) => {
-      const details = j.details || {}
-      const jProjSlug = (details.projectSlug || '').toLowerCase()
-      const jFileName = (details.fileName || j.file || '').toLowerCase()
-      const jTarget = (j.target || '').toLowerCase()
+      const matchFn = (j) => {
+        const details = j.details || {}
+        const jProjSlug = (details.projectSlug || '').toLowerCase()
+        const jFileName = (details.fileName || j.file || '').toLowerCase()
+        const jTarget = (j.target || '').toLowerCase()
 
-      if (pSlug && jProjSlug && pSlug === jProjSlug) {
-        if (details.isCover || jTarget.includes('cover art')) return true
-        if (jFileName.startsWith('art.')) return true
+        if (pSlug && jProjSlug && pSlug === jProjSlug) {
+          if (details.isCover || jTarget.includes('cover art')) return true
+          if (jFileName.startsWith('art.')) return true
+        }
+
+        if (fName && (jFileName === fName || j.file?.toLowerCase() === fName)) {
+          return true
+        }
+
+        return false
       }
 
-      if (fName && (jFileName === fName || j.file?.toLowerCase() === fName)) {
-        return true
+      const active = activeJobsRef.current.find(matchFn)
+      if (active) return active
+
+      if (includeCompleted) {
+        return completedJobsRef.current.find(matchFn) || null
       }
 
-      return false
-    }
-
-    const active = activeJobsRef.current.find(matchFn)
-    if (active) return active
-
-    return completedJobsRef.current.find(matchFn) || null
-  }, [])
+      return null
+    },
+    [],
+  )
 
   // Helper to match an active or completed job for a specific file or track slug
-  const getJobForFile = useCallback((filePattern) => {
-    if (!filePattern) return null
-    const patternLower = String(filePattern).toLowerCase()
+  const getJobForFile = useCallback(
+    (filePattern, { includeCompleted = false } = {}) => {
+      if (!filePattern) return null
+      const patternLower = String(filePattern).toLowerCase()
 
-    // Check active jobs first
-    const active = activeJobsRef.current.find((j) => {
-      const fileLower = (j.file || '').toLowerCase()
-      const targetLower = (j.target || '').toLowerCase()
-      return (
-        fileLower === patternLower ||
-        fileLower.includes(patternLower) ||
-        targetLower.includes(patternLower)
-      )
-    })
-    if (active) return active
-
-    // Check completed jobs
-    return (
-      completedJobsRef.current.find((j) => {
+      // Check active jobs first
+      const active = activeJobsRef.current.find((j) => {
         const fileLower = (j.file || '').toLowerCase()
         const targetLower = (j.target || '').toLowerCase()
         return (
@@ -343,9 +344,27 @@ export function useMediaJobs() {
           fileLower.includes(patternLower) ||
           targetLower.includes(patternLower)
         )
-      }) || null
-    )
-  }, [])
+      })
+      if (active) return active
+
+      if (includeCompleted) {
+        return (
+          completedJobsRef.current.find((j) => {
+            const fileLower = (j.file || '').toLowerCase()
+            const targetLower = (j.target || '').toLowerCase()
+            return (
+              fileLower === patternLower ||
+              fileLower.includes(patternLower) ||
+              targetLower.includes(patternLower)
+            )
+          }) || null
+        )
+      }
+
+      return null
+    },
+    [],
+  )
 
   return {
     activeJobs,

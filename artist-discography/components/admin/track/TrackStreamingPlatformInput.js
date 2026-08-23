@@ -3,6 +3,7 @@
 import { memo, useMemo } from 'react'
 import { Grid, Box, Button, InputAdornment, Tooltip, IconButton } from '@mui/material'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AdminTextInput from '../common/AdminTextInput'
 import {
   buildPlatformSearchUrl,
@@ -10,6 +11,8 @@ import {
   isAlbumLevelUrl,
   analyzeYouTubeUrl,
   analyzeSpotifyUrl,
+  analyzeAppleMusicUrl,
+  openExternalLink,
 } from '../adminUtils'
 
 /**
@@ -78,15 +81,28 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
     return analyzeSpotifyUrl(linkVal)
   }, [isPending, platformKey, linkVal])
 
+  const appleAnalysis = useMemo(() => {
+    if (isPending || platformKey !== 'apple' || !linkVal || !linkVal.trim()) {
+      return { isAlbumWithTrack: false, directSongUrl: null }
+    }
+    return analyzeAppleMusicUrl(linkVal)
+  }, [isPending, platformKey, linkVal])
+
   const isWarning = Boolean(
     !isPending &&
-    (dupInfo || isAlbumLink || ytAnalysis.hasPlaylist || spotifyAnalysis.hasTrackingParams),
+    (dupInfo ||
+      isAlbumLink ||
+      ytAnalysis.hasPlaylist ||
+      spotifyAnalysis.hasTrackingParams ||
+      appleAnalysis.isAlbumWithTrack),
   )
 
   let helperMsg = null
   if (!isPending) {
     if (dupInfo) {
       helperMsg = dupInfo.message
+    } else if (appleAnalysis.isAlbumWithTrack) {
+      helperMsg = '⚠️ Detected Apple Music album link with track parameter (?i=...).'
     } else if (isAlbumLink) {
       helperMsg = '⚠️ Detected album-level link. A direct track/song link is strongly recommended.'
     } else if (ytAnalysis.hasPlaylist) {
@@ -122,6 +138,25 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
               }}
             >
               <span>{helperMsg}</span>
+              {appleAnalysis.isAlbumWithTrack && (
+                <Button
+                  size='small'
+                  variant='text'
+                  onClick={() => onUpdateLink?.(index, 'apple', appleAnalysis.directSongUrl)}
+                  sx={{
+                    color: '#fbbf24',
+                    p: 0,
+                    minWidth: 0,
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    textDecoration: 'underline',
+                    '&:hover': { textDecoration: 'none', color: '#f59e0b' },
+                  }}
+                >
+                  Convert to Song URL
+                </Button>
+              )}
               {ytAnalysis.hasPlaylist && (
                 <Button
                   size='small'
@@ -183,28 +218,45 @@ export const TrackStreamingPlatformInput = memo(function TrackStreamingPlatformI
             ) : null,
             endAdornment: (
               <InputAdornment position='end'>
-                <Tooltip title={`Search for this track on ${label} (or Google)`} arrow>
-                  <IconButton
-                    size='small'
-                    onClick={() => {
-                      const searchUrl = buildPlatformSearchUrl(
-                        platformKey,
-                        trackArtist || defaultArtist,
-                        trackName,
-                        projectName,
-                      )
-                      window.open(searchUrl, '_blank', 'noopener,noreferrer')
-                    }}
-                    sx={{
-                      color: 'text.secondary',
-                      p: 0.5,
-                      '&:hover': { color: 'secondary.main' },
-                    }}
-                    aria-label={`Search ${label}`}
-                  >
-                    <AutoAwesomeIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Tooltip>
+                {linkVal && linkVal.trim() ? (
+                  <Tooltip title={`Open ${label} in new tab`} arrow>
+                    <IconButton
+                      size='small'
+                      onClick={() => openExternalLink(linkVal)}
+                      sx={{
+                        color: 'text.secondary',
+                        p: 0.5,
+                        '&:hover': { color: 'primary.main' },
+                      }}
+                      aria-label={`Open ${label}`}
+                    >
+                      <OpenInNewIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title={`Search for this track on ${label} (or Google)`} arrow>
+                    <IconButton
+                      size='small'
+                      onClick={() => {
+                        const searchUrl = buildPlatformSearchUrl(
+                          platformKey,
+                          trackArtist || defaultArtist,
+                          trackName,
+                          projectName,
+                        )
+                        window.open(searchUrl, '_blank', 'noopener,noreferrer')
+                      }}
+                      sx={{
+                        color: 'text.secondary',
+                        p: 0.5,
+                        '&:hover': { color: 'secondary.main' },
+                      }}
+                      aria-label={`Search ${label}`}
+                    >
+                      <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </InputAdornment>
             ),
           },

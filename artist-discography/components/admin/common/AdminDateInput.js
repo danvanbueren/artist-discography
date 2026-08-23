@@ -74,6 +74,15 @@ const AdminDateInput = memo(function AdminDateInput({
       onChange={handleChange}
       format={format}
       slotProps={{
+        field: {
+          openPickerButtonPosition: 'start',
+        },
+        openPickerButton: {
+          sx: {
+            color: 'text.secondary',
+            p: 0.5,
+          },
+        },
         textField: {
           size,
           fullWidth,

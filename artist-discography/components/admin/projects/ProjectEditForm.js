@@ -221,15 +221,17 @@ export default function ProjectEditForm({
                 currentProjectIndex={selectedProjIndex}
                 isPending={isPending}
                 isDuplicate={isDup}
-                isDirtyTitle={dirtyFields.has(`edit_track_${idx}_title`)}
-                isSavedTitle={savedFields.has(`edit_track_${idx}_title`)}
-                isDirtyArtist={dirtyFields.has(`edit_track_${idx}_artist`)}
-                isSavedArtist={savedFields.has(`edit_track_${idx}_artist`)}
-                isDirtyLink={(key) => dirtyFields.has(`edit_track_${idx}_${key}`)}
-                isSavedLink={(key) => savedFields.has(`edit_track_${idx}_${key}`)}
-                isAudioTranscoding={Boolean(audioJob)}
+                isDirtyTitle={dirtyFields?.has?.(`edit_track_${idx}_title`)}
+                isSavedTitle={savedFields?.has?.(`edit_track_${idx}_title`)}
+                isDirtyArtist={dirtyFields?.has?.(`edit_track_${idx}_artist`)}
+                isSavedArtist={savedFields?.has?.(`edit_track_${idx}_artist`)}
+                isDirtyLink={(key) => dirtyFields?.has?.(`edit_track_${idx}_${key}`)}
+                isSavedLink={(key) => savedFields?.has?.(`edit_track_${idx}_${key}`)}
+                isAudioTranscoding={Boolean(
+                  audioJob && (audioJob.status === 'processing' || audioJob.status === 'queued'),
+                )}
                 transcodeProgress={audioJob?.progress ?? null}
-                transcodePhase={audioJob?.phase ?? null}
+                transcodePhase={audioJob?.currentStep || audioJob?.phase || null}
                 onUpdateTrackName={(tIdx, val) =>
                   handleUpdateEditTrackName(tIdx, val, () =>
                     markFieldDirty(`edit_track_${tIdx}_title`, executeUpdateProject),

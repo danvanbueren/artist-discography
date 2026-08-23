@@ -408,3 +408,305 @@ export function deleteProjectDirectory(projectSlug) {
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Scans the data/projects/ directory to sanitize project folder names, remove empty/invalid directories,
+ * reconcile sluggified project folder names with project.json, clean unassociated audio files,
+ * and enforce a single canonical artwork file per project.
+ *
+ * @param {string} [defaultArtistName='Artist']
+ * @returns {Promise<{
+ *   success: boolean,
+ *   actions: Array<string>,
+ *   emptyFoldersRemoved: number,
+ *   foldersRenamed: number,
+ *   projectsRenamed: number,
+ *   extraAudioFilesRemoved: number,
+ *   extraImageFilesRemoved: number,
+ *   totalBytesReclaimed: number,
+ *   validProjectsCount: number,
+ * }>}
+ */
+export async function auditAndSanitizeProjectsDirectory(defaultArtistName = 'Artist') {
+  const projectsDir = getProjectsDirPath()
+  const { formatBytes } = await import('./analyticsUtils')
+
+  const actions = []
+  let emptyFoldersRemoved = 0
+  let foldersRenamed = 0
+  let projectsRenamed = 0
+  let extraAudioFilesRemoved = 0
+  let extraImageFilesRemoved = 0
+  let totalBytesReclaimed = 0
+
+  if (!fs.existsSync(projectsDir)) {
+    return {
+      success: true,
+      actions,
+      emptyFoldersRemoved: 0,
+      foldersRenamed: 0,
+      projectsRenamed: 0,
+      extraAudioFilesRemoved: 0,
+      extraImageFilesRemoved: 0,
+      totalBytesReclaimed: 0,
+      validProjectsCount: 0,
+    }
+  }
+
+  let entries = []
+  try {
+    entries = fs.readdirSync(projectsDir, { withFileTypes: true })
+  } catch (err) {
+    console.error('Error reading projects directory during audit:', err)
+    return { success: false, actions, error: err.message }
+  }
+
+  // Filter valid directory entries (excluding hidden directories)
+  const dirEntries = entries.filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+  let validProjectsCount = 0
+
+  for (const entry of dirEntries) {
+    let currentDirName = entry.name
+    let currentDirPath = path.join(projectsDir, currentDirName)
+
+    if (!fs.existsSync(currentDirPath)) continue
+
+    // 1. Check if folder is completely empty or only contains hidden/junk files
+    let dirFiles = []
+    try {
+      dirFiles = fs.readdirSync(currentDirPath)
+    } catch {
+      continue
+    }
+
+    const nonHiddenFiles = dirFiles.filter((f) => !f.startsWith('.'))
+    if (nonHiddenFiles.length === 0) {
+      try {
+        fs.rmSync(currentDirPath, { recursive: true, force: true })
+        emptyFoldersRemoved++
+        actions.push(`Deleted empty directory: data/projects/${currentDirName}`)
+      } catch (rmErr) {
+        console.warn(`Could not remove empty folder data/projects/${currentDirName}:`, rmErr.message)
+      }
+      continue
+    }
+
+    // 2. Check for project.json
+    const projFilePath = path.join(currentDirPath, 'project.json')
+    if (!fs.existsSync(projFilePath)) {
+      const isOnlyJunk = nonHiddenFiles.every(
+        (f) => f.endsWith('.tmp') || f.includes('.tmp.') || f.startsWith('project.corrupted'),
+      )
+      if (isOnlyJunk) {
+        try {
+          fs.rmSync(currentDirPath, { recursive: true, force: true })
+          emptyFoldersRemoved++
+          actions.push(`Deleted invalid directory without project.json: data/projects/${currentDirName}`)
+        } catch {}
+        continue
+      }
+      actions.push(`Warning: directory data/projects/${currentDirName} is missing project.json (preserved)`)
+      continue
+    }
+
+    // 3. Read and parse project.json
+    let rawJson = ''
+    try {
+      rawJson = fs.readFileSync(projFilePath, 'utf8')
+    } catch {
+      continue
+    }
+
+    let parsedProj = null
+    try {
+      parsedProj = JSON.parse(rawJson)
+    } catch {
+      parsedProj = tryHeuristicJsonRepair(rawJson)
+    }
+
+    if (!parsedProj || typeof parsedProj !== 'object') {
+      archiveMalformedFile(projFilePath, rawJson, `project-${currentDirName}`)
+      actions.push(`Quarantined malformed project.json in data/projects/${currentDirName}`)
+      continue
+    }
+
+    // 4. Ensure valid project name & compute expected slug
+    let projName =
+      typeof parsedProj.name === 'string' && parsedProj.name.trim()
+        ? parsedProj.name.trim()
+        : currentDirName.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+
+    let expectedSlug = slugify(projName) || 'untitled-project'
+
+    // 5. Slug Reconciliation & Collisions
+    if (currentDirName !== expectedSlug) {
+      let targetSlug = expectedSlug
+      let targetPath = path.join(projectsDir, targetSlug)
+
+      // If targetSlug already exists and is a DIFFERENT directory
+      if (fs.existsSync(targetPath) && targetPath.toLowerCase() !== currentDirPath.toLowerCase()) {
+        let counter = 1
+        while (fs.existsSync(path.join(projectsDir, `${expectedSlug}-${counter}`))) {
+          counter++
+        }
+        targetSlug = `${expectedSlug}-${counter}`
+        targetPath = path.join(projectsDir, targetSlug)
+
+        const updatedProjName = `${projName} (${counter})`
+        parsedProj.name = updatedProjName
+        projName = updatedProjName
+        atomicWriteJson(projFilePath, parsedProj)
+        projectsRenamed++
+        actions.push(
+          `Renamed duplicate project title to "${updatedProjName}" in data/projects/${currentDirName}/project.json`,
+        )
+      }
+
+      // Rename directory to targetSlug
+      try {
+        if (currentDirPath.toLowerCase() === targetPath.toLowerCase()) {
+          const tempHop = path.join(
+            projectsDir,
+            `.tmp-rename-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          )
+          fs.renameSync(currentDirPath, tempHop)
+          fs.renameSync(tempHop, targetPath)
+        } else {
+          fs.renameSync(currentDirPath, targetPath)
+        }
+        foldersRenamed++
+        actions.push(`Renamed directory data/projects/${currentDirName} to data/projects/${targetSlug}`)
+        currentDirName = targetSlug
+        currentDirPath = targetPath
+      } catch (renameErr) {
+        console.warn(`Could not rename folder ${currentDirName} to ${targetSlug}:`, renameErr.message)
+      }
+    }
+
+    validProjectsCount++
+
+    // 6. Inspect & sanitize assets inside data/projects/<currentDirName>
+    let filesInDir = []
+    try {
+      filesInDir = fs.readdirSync(currentDirPath)
+    } catch {
+      continue
+    }
+
+    const validTrackSlugs = new Set(
+      (parsedProj.tracks || [])
+        .map((t) => (t && typeof t.name === 'string' ? slugify(t.name) : null))
+        .filter(Boolean),
+    )
+
+    // Audio file sanitization
+    for (const f of filesInDir) {
+      const fPath = path.join(currentDirPath, f)
+      try {
+        const stat = fs.statSync(fPath)
+        if (!stat.isFile()) continue
+
+        const ext = path.extname(f).toLowerCase()
+        if (SUPPORTED_AUDIO_EXTS.includes(ext)) {
+          const baseName = path.basename(f, ext)
+          if (!validTrackSlugs.has(baseName)) {
+            const fSize = stat.size
+            fs.unlinkSync(fPath)
+            extraAudioFilesRemoved++
+            totalBytesReclaimed += fSize
+            actions.push(
+              `Deleted extra unassociated audio file: data/projects/${currentDirName}/${f} (${formatBytes(fSize)})`,
+            )
+          }
+        }
+      } catch (fileErr) {
+        console.warn(`Error processing file ${f} in project ${currentDirName}:`, fileErr.message)
+      }
+    }
+
+    // Artwork sanitization: enforce single canonical art.<ext>
+    try {
+      const recheckedFiles = fs.readdirSync(currentDirPath)
+      const imageFiles = recheckedFiles.filter((f) => {
+        const ext = path.extname(f).toLowerCase()
+        return SUPPORTED_IMAGE_EXTS.includes(ext)
+      })
+
+      if (imageFiles.length > 0) {
+        // Determine canonical artwork file
+        let canonicalArt =
+          imageFiles.find((f) => f.toLowerCase() === 'art.jpg') ||
+          imageFiles.find((f) => f.toLowerCase().startsWith('art.')) ||
+          imageFiles[0]
+
+        // Standardize canonical image name to lowercase art.<ext>
+        const cExt = path.extname(canonicalArt).toLowerCase()
+        const targetArtName = `art${cExt}`
+
+        if (canonicalArt !== targetArtName) {
+          const oldArtPath = path.join(currentDirPath, canonicalArt)
+          const newArtPath = path.join(currentDirPath, targetArtName)
+          try {
+            if (oldArtPath.toLowerCase() === newArtPath.toLowerCase()) {
+              const tempArtHop = path.join(
+                currentDirPath,
+                `.tmp-art-hop-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              )
+              fs.renameSync(oldArtPath, tempArtHop)
+              fs.renameSync(tempArtHop, newArtPath)
+            } else {
+              fs.renameSync(oldArtPath, newArtPath)
+            }
+            actions.push(
+              `Standardized artwork filename to ${targetArtName} in data/projects/${currentDirName}`,
+            )
+            canonicalArt = targetArtName
+            parsedProj.cover = targetArtName
+            atomicWriteJson(path.join(currentDirPath, 'project.json'), parsedProj)
+          } catch (artRenameErr) {
+            console.warn(`Could not standardize artwork filename:`, artRenameErr.message)
+          }
+        }
+
+        // Delete any redundant/extra artwork files
+        const remainingImages = fs.readdirSync(currentDirPath).filter((f) => {
+          const ext = path.extname(f).toLowerCase()
+          return SUPPORTED_IMAGE_EXTS.includes(ext)
+        })
+
+        for (const imgFile of remainingImages) {
+          if (imgFile.toLowerCase() === canonicalArt.toLowerCase()) continue
+          const redundantPath = path.join(currentDirPath, imgFile)
+          try {
+            const stat = fs.statSync(redundantPath)
+            if (stat.isFile()) {
+              const rSize = stat.size
+              fs.unlinkSync(redundantPath)
+              extraImageFilesRemoved++
+              totalBytesReclaimed += rSize
+              actions.push(
+                `Deleted redundant artwork file: data/projects/${currentDirName}/${imgFile} (${formatBytes(rSize)})`,
+              )
+            }
+          } catch (rErr) {
+            console.warn(`Error deleting redundant art ${imgFile}:`, rErr.message)
+          }
+        }
+      }
+    } catch (artErr) {
+      console.warn(`Error sanitizing artwork for project ${currentDirName}:`, artErr.message)
+    }
+  }
+
+  return {
+    success: true,
+    actions,
+    emptyFoldersRemoved,
+    foldersRenamed,
+    projectsRenamed,
+    extraAudioFilesRemoved,
+    extraImageFilesRemoved,
+    totalBytesReclaimed,
+    validProjectsCount,
+  }
+}

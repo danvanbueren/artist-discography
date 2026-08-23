@@ -4,7 +4,7 @@ import { memo } from 'react'
 import { Paper, Box, Typography, IconButton, Tooltip, LinearProgress } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import MusicNoteIcon from '@mui/icons-material/MusicNote'
+import AudioFileIcon from '@mui/icons-material/AudioFile'
 import DeleteIcon from '@mui/icons-material/Delete'
 import GraphicEqIcon from '@mui/icons-material/GraphicEq'
 import { formatMediaPath } from '../adminUtils'
@@ -24,6 +24,10 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
 }) {
   const hasUploadedAudio = Boolean(track.audioFile)
   const hasExistingAudio = Boolean(track.audio || track.hasAudio || track.audioUrl)
+  const isGreen = isAudioTranscoding || hasUploadedAudio
+  const isBlue = hasExistingAudio && !isGreen
+  const isYellow = !hasUploadedAudio && !hasExistingAudio && !isAudioTranscoding
+
   const audioDisplay = track.audioFileName
     ? track.audioFileName
     : track.audio
@@ -46,20 +50,16 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
         p: 1.5,
         mt: 1.5,
         borderRadius: 2,
-        bgcolor: isAudioTranscoding
-          ? 'rgba(144, 202, 249, 0.08)'
-          : hasUploadedAudio
-            ? 'rgba(102, 187, 106, 0.08)'
-            : hasExistingAudio
-              ? 'rgba(144, 202, 249, 0.08)'
-              : 'rgba(255, 179, 0, 0.08)',
-        borderColor: isAudioTranscoding
-          ? 'primary.main'
-          : hasUploadedAudio
-            ? 'success.main'
-            : hasExistingAudio
-              ? 'primary.main'
-              : 'warning.main',
+        bgcolor: isGreen
+          ? 'rgba(102, 187, 106, 0.08)'
+          : isBlue
+            ? 'rgba(144, 202, 249, 0.08)'
+            : 'rgba(255, 179, 0, 0.08)',
+        borderColor: isGreen
+          ? 'success.main'
+          : isBlue
+            ? 'primary.main'
+            : 'warning.main',
         transition: 'all 0.2s ease',
       }}
     >
@@ -76,7 +76,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
           {isAudioTranscoding ? (
             <GraphicEqIcon
               sx={{
-                color: 'primary.main',
+                color: 'success.main',
                 animation: 'pulse 1s infinite ease-in-out',
                 '@keyframes pulse': {
                   '0%, 100%': { opacity: 0.5, transform: 'scale(0.95)' },
@@ -86,10 +86,10 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
             />
           ) : hasUploadedAudio ? (
             <CheckCircleIcon sx={{ color: 'success.main' }} />
-          ) : hasExistingAudio ? (
-            <MusicNoteIcon sx={{ color: 'primary.main' }} />
+          ) : isBlue ? (
+            <AudioFileIcon sx={{ color: 'primary.main' }} />
           ) : (
-            <MusicNoteIcon sx={{ color: 'warning.main' }} />
+            <AudioFileIcon sx={{ color: 'warning.main' }} />
           )}
 
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
@@ -100,9 +100,9 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                color: hasUploadedAudio
+                color: isGreen
                   ? 'success.main'
-                  : hasExistingAudio
+                  : isBlue
                     ? 'primary.main'
                     : 'warning.main',
               }}
@@ -111,7 +111,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                 ? `Optimizing Stream: ${transcodePhase || 'Processing audio tiers...'}`
                 : hasUploadedAudio
                   ? `Staged for Upload: ${track.audioFileName}`
-                  : hasExistingAudio
+                  : isBlue
                     ? `Audio Attached: ${audioDisplay}`
                     : 'No Audio File Attached'}
             </Typography>
@@ -119,15 +119,15 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
             <Typography
               variant='caption'
               sx={{
-                color: hasUploadedAudio || hasExistingAudio ? 'text.secondary' : 'warning.light',
+                color: isYellow ? 'warning.light' : 'text.secondary',
                 display: 'block',
               }}
             >
               {isAudioTranscoding
-                ? 'Generating AAC (320k, 192k, 128k) streaming variants...'
+                ? 'Generating MP3 (320k, 192k, 128k) and FLAC streaming variants...'
                 : hasUploadedAudio
                   ? 'File will be uploaded and transcoded on save.'
-                  : hasExistingAudio
+                  : isBlue
                     ? 'Audio stream is active and configured.'
                     : 'Supported: WAV, FLAC, AIFF, MP3, M4A, OGG'}
             </Typography>
@@ -154,7 +154,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                 component='span'
                 size='small'
                 sx={{
-                  color: hasUploadedAudio || hasExistingAudio ? 'text.secondary' : 'primary.main',
+                  color: isGreen ? 'success.main' : isBlue ? 'text.secondary' : 'warning.main',
                   bgcolor: 'action.hover',
                   '&:hover': { bgcolor: 'action.selected' },
                 }}
@@ -186,6 +186,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
         <Box sx={{ width: '100%', mt: 1.5 }}>
           <LinearProgress
             variant='determinate'
+            color='success'
             value={transcodeProgress}
             sx={{ height: 6, borderRadius: 3 }}
           />

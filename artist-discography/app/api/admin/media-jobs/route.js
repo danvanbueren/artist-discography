@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { loadConfigData } from '@/lib/data/artistData'
 import { getAllJobs, clearCompletedJobs, subscribeToJobs } from '@/lib/api/jobTracker'
-import { warmAllArtistMedia } from '@/lib/media/mediaWarmer'
+import { runCatalogMediaValidationJob } from '@/lib/media/mediaWarmer'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,12 +131,10 @@ export async function POST(request) {
       action === 'optimize-all' ||
       action === 'validate'
     ) {
-      // Trigger media warming and orphaned cache cleanup in background
+      // Trigger media validation job immediately in background
       setTimeout(async () => {
         try {
-          await warmAllArtistMedia()
-          const { pruneUnusedCacheFiles } = await import('@/lib/media/cacheCleaner')
-          await pruneUnusedCacheFiles({ force: true })
+          await runCatalogMediaValidationJob()
         } catch (err) {
           console.error('Background catalog media validation failed:', err)
         }
@@ -144,7 +142,7 @@ export async function POST(request) {
 
       return NextResponse.json({
         success: true,
-        message: 'Catalog media cache validation and orphaned file cleanup started.',
+        message: 'Catalog media cache validation started.',
       })
     }
 

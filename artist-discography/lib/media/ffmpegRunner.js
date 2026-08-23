@@ -115,3 +115,44 @@ export async function executeFallbackMp3Transcode(sourceFilePath, tempOutputPath
     tempOutputPath,
   ])
 }
+
+/**
+ * Extracts a concise, human-readable error description from raw FFmpeg stderr output.
+ *
+ * @param {Error|Object|string} rawError
+ * @returns {string}
+ */
+export function extractCleanFfmpegError(rawError) {
+  if (!rawError) return 'Audio transcoding failed'
+  const text = String(rawError.stderr || rawError.message || rawError)
+  const lines = text
+    .split('\n')
+    .map((l) => l.replace(/\[[^\]]+@\s*0x?[0-9a-fA-F]+\]\s*/g, '').trim())
+    .filter(Boolean)
+
+  const matched = lines.filter(
+    (l) =>
+      /invalid data found/i.test(l) ||
+      /error opening/i.test(l) ||
+      /failed to find/i.test(l) ||
+      /unsupported codec/i.test(l) ||
+      /cannot decode/i.test(l) ||
+      /no such file/i.test(l) ||
+      /conversion failed/i.test(l) ||
+      /invalid argument/i.test(l),
+  )
+
+  const candidates = matched.length > 0 ? matched : lines
+  const unique = Array.from(new Set(candidates))
+
+  const cleanLines = unique.filter(
+    (l) =>
+      !l.startsWith('ffmpeg version') &&
+      !l.startsWith('configuration:') &&
+      !l.startsWith('built with') &&
+      !l.startsWith('lib') &&
+      !l.startsWith('Command failed:'),
+  )
+
+  return cleanLines.slice(-3).join('; ') || 'Audio transcoding failed'
+}

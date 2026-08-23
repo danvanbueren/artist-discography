@@ -31,22 +31,19 @@ export default function MediaProcessingDrawer({
 }) {
   const hasActive = activeJobs.length > 0
   const hasCompleted = completedJobs.length > 0
+  const hasActiveValidation = activeJobs.some(
+    (j) => j.type === 'validation' || j.type === 'cleanup',
+  )
+  const isValidatingOrProcessing = isTriggeringWarm || isProcessing || hasActiveValidation
 
   const [isValidated, setIsValidated] = useState(false)
   const prevProcessingRef = useRef(false)
   const wasTriggeredRef = useRef(false)
 
   const handleValidateClick = async () => {
+    if (isValidatingOrProcessing) return
     wasTriggeredRef.current = true
-    const success = await onTriggerWarmAll?.(adminPassword)
-    if (success) {
-      setTimeout(() => {
-        if (activeJobs.length === 0) {
-          setIsValidated(true)
-          wasTriggeredRef.current = false
-        }
-      }, 600)
-    }
+    await onTriggerWarmAll?.(adminPassword)
   }
 
   useEffect(() => {
@@ -112,7 +109,7 @@ export default function MediaProcessingDrawer({
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
             <Typography variant='h6' sx={{ fontWeight: 800 }}>
-              Media Processing Center
+              Media Processing
             </Typography>
             {hasActive && (
               <Chip
@@ -169,20 +166,23 @@ export default function MediaProcessingDrawer({
         )}
 
         {/* Actions Bar */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
+        <Box sx={{ pt: 0.5 }}>
           <Button
-            size='small'
+            fullWidth
+            size='medium'
             variant={isValidated ? 'contained' : 'outlined'}
             color={isValidated ? 'success' : 'primary'}
             startIcon={isValidated ? <CheckCircleIcon /> : <FactCheckIcon />}
-            disabled={isTriggeringWarm || isProcessing}
+            disabled={isValidatingOrProcessing}
             onClick={handleValidateClick}
             sx={{
-              borderRadius: 2,
+              py: 1.1,
+              px: 2,
+              borderRadius: 2.5,
               textTransform: 'none',
               fontWeight: 700,
-              fontSize: '0.8rem',
-              flexGrow: 1,
+              fontSize: '0.92rem',
+              letterSpacing: 0.2,
               ...(isValidated
                 ? {
                     backgroundColor: 'success.main',
@@ -194,30 +194,12 @@ export default function MediaProcessingDrawer({
                 : {}),
             }}
           >
-            {isTriggeringWarm || isProcessing
+            {isValidatingOrProcessing
               ? 'Validating Cache...'
               : isValidated
                 ? 'Validated Media Cache'
                 : 'Validate Media Cache'}
           </Button>
-
-          {hasCompleted && (
-            <Button
-              size='small'
-              variant='outlined'
-              color='inherit'
-              startIcon={<DeleteSweepIcon />}
-              onClick={() => onClearCompleted?.(adminPassword)}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                color: 'text.secondary',
-                fontSize: '0.8rem',
-              }}
-            >
-              Clear Finished
-            </Button>
-          )}
         </Box>
       </Box>
 
@@ -288,16 +270,45 @@ export default function MediaProcessingDrawer({
           <>
             <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Typography
-                variant='overline'
+              <Box
                 sx={{
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  color: 'text.secondary',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                Recent History ({completedJobs.length})
-              </Typography>
+                <Typography
+                  variant='overline'
+                  sx={{
+                    fontWeight: 800,
+                    letterSpacing: 1.2,
+                    color: 'text.secondary',
+                  }}
+                >
+                  Recent History ({completedJobs.length})
+                </Typography>
+                <Button
+                  size='small'
+                  variant='text'
+                  color='inherit'
+                  startIcon={<DeleteSweepIcon sx={{ fontSize: '16px !important' }} />}
+                  onClick={() => onClearCompleted?.(adminPassword)}
+                  sx={{
+                    textTransform: 'none',
+                    color: 'text.secondary',
+                    fontSize: '0.75rem',
+                    py: 0.25,
+                    px: 1,
+                    borderRadius: 1.5,
+                    '&:hover': {
+                      color: 'text.primary',
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    },
+                  }}
+                >
+                  Clear Finished
+                </Button>
+              </Box>
               {completedJobs.map((job) => (
                 <MediaJobCard key={job.id} job={job} />
               ))}

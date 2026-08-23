@@ -209,14 +209,19 @@ export function getProjectsLinkIndex(allProjects) {
         for (const [key, linkVal] of Object.entries(track.links)) {
           if (!linkVal || typeof linkVal !== 'string') continue
           const norm = normalizeLinkForComparison(linkVal)
-          if (norm && norm.length >= 5 && !index.has(norm)) {
-            index.set(norm, {
+          if (norm && norm.length >= 5) {
+            const entry = {
               projectIndex: pIdx,
               trackIndex: tIdx,
               projectName: project.name || `Project #${pIdx + 1}`,
               trackName: track.name || `Track #${tIdx + 1}`,
               platformKey: key,
-            })
+            }
+            if (!index.has(norm)) {
+              index.set(norm, [entry])
+            } else {
+              index.get(norm).push(entry)
+            }
           }
         }
       }
@@ -246,16 +251,17 @@ export function findDuplicateStreamingLink(url, context = {}, allProjects = []) 
   // 1. PRIMARY SEARCH: O(1) index lookup across all other projects
   if (Array.isArray(allProjects) && allProjects.length > 0) {
     const linkIndex = getProjectsLinkIndex(allProjects)
-    const match = linkIndex.get(normalizedTarget)
-    if (match && match.projectIndex !== currentProjectIndex) {
-      const platformName = getPlatformLabel(match.platformKey)
+    const matches = linkIndex.get(normalizedTarget) || []
+    const otherProjectMatch = matches.find((m) => m.projectIndex !== currentProjectIndex)
+    if (otherProjectMatch) {
+      const platformName = getPlatformLabel(otherProjectMatch.platformKey)
       return {
         isDuplicate: true,
         scope: 'other_project',
-        projectName: match.projectName,
-        trackName: match.trackName,
-        platform: match.platformKey,
-        message: `⚠️ Duplicate link: matches Track '${match.trackName}' in Project '${match.projectName}' (${platformName})`,
+        projectName: otherProjectMatch.projectName,
+        trackName: otherProjectMatch.trackName,
+        platform: otherProjectMatch.platformKey,
+        message: `⚠️ Duplicate link: matches Track '${otherProjectMatch.trackName}' in Project '${otherProjectMatch.projectName}' (${platformName})`,
       }
     }
   }
@@ -317,12 +323,10 @@ export function isAlbumLevelUrl(url) {
   // Spotify: /album/
   if (lower.includes('spotify.com/album/')) return true
 
-  // Apple Music: /album/ without ?i= or &i=
+  // Apple Music: /album/ (both pure album links and album links containing track parameters)
   if (
-    lower.includes('music.apple.com/') &&
-    lower.includes('/album/') &&
-    !lower.includes('?i=') &&
-    !lower.includes('&i=')
+    (lower.includes('music.apple.com/') || lower.includes('itunes.apple.com/')) &&
+    lower.includes('/album/')
   ) {
     return true
   }
@@ -339,6 +343,43 @@ export function isAlbumLevelUrl(url) {
     return true
 
   return false
+}
+
+/**
+ * Analyzes an Apple Music URL to check if it is an album-level link with a track ID parameter (?i=...)
+ * and generates a direct song/track URL.
+ */
+export function analyzeAppleMusicUrl(url) {
+  if (!url || typeof url !== 'string') return { isAlbumWithTrack: false, directSongUrl: null }
+  const trimmed = url.trim()
+  const lower = trimmed.toLowerCase()
+
+  const isAppleMusic = lower.includes('music.apple.com') || lower.includes('itunes.apple.com')
+  if (!isAppleMusic) {
+    return { isAlbumWithTrack: false, directSongUrl: null }
+  }
+
+  // Match https://music.apple.com/<country>/album/<name>/<albumId>?i=<songId>
+  const match = trimmed.match(
+    /https?:\/\/music\.apple\.com\/([a-zA-Z0-9_-]+)\/album\/([^/?#]+)\/\d+\?(?:[^#]*&)?i=(\d+)/i,
+  )
+  if (match) {
+    const [, country, name, songId] = match
+    const directSongUrl = `https://music.apple.com/${country.toLowerCase()}/song/${name}/${songId}`
+    return { isAlbumWithTrack: true, directSongUrl, songId }
+  }
+
+  // Match https://music.apple.com/<country>/album/<albumId>?i=<songId>
+  const shortMatch = trimmed.match(
+    /https?:\/\/music\.apple\.com\/([a-zA-Z0-9_-]+)\/album\/\d+\?(?:[^#]*&)?i=(\d+)/i,
+  )
+  if (shortMatch) {
+    const [, country, songId] = shortMatch
+    const directSongUrl = `https://music.apple.com/${country.toLowerCase()}/song/${songId}`
+    return { isAlbumWithTrack: true, directSongUrl, songId }
+  }
+
+  return { isAlbumWithTrack: false, directSongUrl: null }
 }
 
 /**
@@ -438,3 +479,18 @@ export function analyzeSpotifyUrl(url) {
     cleanedUrl,
   }
 }
+
+/**
+ * Safely launches a user-provided link in a new browser tab with noopener,noreferrer.
+ */
+export function openExternalLink(url) {
+  if (!url || typeof url !== 'string') return
+  const trimmed = url.trim()
+  if (!trimmed) return
+  const formatted =
+    trimmed.startsWith('http://') || trimmed.startsWith('https://')
+      ? trimmed
+      : `https://${trimmed}`
+  window.open(formatted, '_blank', 'noopener,noreferrer')
+}
+

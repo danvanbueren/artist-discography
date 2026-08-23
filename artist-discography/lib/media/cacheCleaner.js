@@ -8,6 +8,7 @@ import {
 } from './mediaOptimizer'
 import { AUDIO_CACHE_DIR, STANDARD_AUDIO_VARIANTS, computeAudioCacheKey } from './audioOptimizer'
 import { collectAllMediaFiles } from './mediaWarmer'
+import { formatBytes } from '../data/analyticsUtils'
 
 const CACHE_PRUNE_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour cooldown for regular background periodic scans
 const IN_FLIGHT_SAFETY_GRACE_PERIOD_MS = 60 * 1000 // 60s protection for in-flight transcodes/writes
@@ -119,6 +120,7 @@ export async function pruneUnusedCacheFiles(options = {}) {
       const { validImageFiles, validImageHashes, validAudioFiles } =
         getActiveValidCacheEntries(artistData)
 
+      const actions = []
       let imagesPruned = 0
       let imagesBytesReclaimed = 0
       let audioPruned = 0
@@ -149,6 +151,9 @@ export async function pruneUnusedCacheFiles(options = {}) {
                 fs.unlinkSync(/*turbopackIgnore: true*/ filePath)
                 imagesPruned++
                 imagesBytesReclaimed += fileSize
+                actions.push(
+                  `Deleted orphaned image cache: data/cache/images/${fileName} (${formatBytes(fileSize)})`,
+                )
               }
             } catch (fileErr) {
               console.warn(`Could not prune image cache file ${fileName}:`, fileErr.message)
@@ -184,6 +189,9 @@ export async function pruneUnusedCacheFiles(options = {}) {
                 fs.unlinkSync(/*turbopackIgnore: true*/ filePath)
                 audioPruned++
                 audioBytesReclaimed += fileSize
+                actions.push(
+                  `Deleted orphaned audio cache: data/cache/audio/${fileName} (${formatBytes(fileSize)})`,
+                )
               }
             } catch (fileErr) {
               console.warn(`Could not prune audio cache file ${fileName}:`, fileErr.message)
@@ -206,6 +214,7 @@ export async function pruneUnusedCacheFiles(options = {}) {
 
       return {
         success: true,
+        actions,
         imagesPruned,
         imagesBytesReclaimed,
         audioPruned,

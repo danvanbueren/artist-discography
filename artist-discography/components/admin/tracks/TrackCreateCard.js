@@ -1,10 +1,12 @@
 'use client'
 
 import { memo } from 'react'
-import { Card, CardContent, Box, Chip, IconButton, Grid, Tooltip } from '@mui/material'
+import { Card, CardContent, Box, Chip, IconButton, Grid, Tooltip, InputAdornment } from '@mui/material'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import DeleteIcon from '@mui/icons-material/Delete'
+import MusicNoteIcon from '@mui/icons-material/MusicNote'
+import PersonIcon from '@mui/icons-material/Person'
 import AdminTextInput from '../common/AdminTextInput'
 import { TrackAudioUploader } from '../track/TrackAudioUploader'
 import { TrackLinksGrid } from '../track/TrackLinksGrid'
@@ -126,11 +128,20 @@ const TrackCreateCard = memo(function TrackCreateCard({
               helperText={isDuplicate ? 'Duplicate title within this project' : undefined}
               isDirty={isDirtyTitle}
               isSaved={isSavedTitle}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <MusicNoteIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
             <AdminTextInput
-              label='Artist (Optional Override)'
+              label='Track Artist'
               size='small'
               fullWidth
               value={track.artist || ''}
@@ -138,6 +149,15 @@ const TrackCreateCard = memo(function TrackCreateCard({
               placeholder={defaultArtist}
               isDirty={isDirtyArtist}
               isSaved={isSavedArtist}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <PersonIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                },
+              }}
             />
           </Grid>
         </Grid>

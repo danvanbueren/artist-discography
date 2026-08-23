@@ -40,6 +40,7 @@ export function createJob({
     status: 'processing',
     progress: 0,
     currentStep: 'Starting optimization...',
+    phase: 'Starting optimization...',
     completedSteps: 0,
     totalSteps: Math.max(1, totalSteps),
     startTime: Date.now(),
@@ -74,6 +75,7 @@ export function updateJobProgress(id, { progress, currentStep, completedSteps, d
   }
   if (currentStep) {
     job.currentStep = currentStep
+    job.phase = currentStep
   }
   if (typeof completedSteps === 'number') {
     job.completedSteps = completedSteps
@@ -104,6 +106,7 @@ export function completeJob(id, finalDetails = {}) {
   job.endTime = Date.now()
   job.durationMs = job.endTime - job.startTime
   job.currentStep = finalDetails.summary || 'Processing complete!'
+  job.phase = job.currentStep
   job.details = { ...job.details, ...finalDetails }
 
   emitJobUpdate(job)
@@ -127,6 +130,7 @@ export function failJob(id, error, finalDetails = {}) {
   job.durationMs = job.endTime - job.startTime
   job.error = errorMsg
   job.currentStep = `Failed: ${errorMsg}`
+  job.phase = job.currentStep
   job.details = { ...job.details, ...finalDetails }
 
   emitJobUpdate(job)

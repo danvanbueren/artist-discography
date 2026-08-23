@@ -9,7 +9,14 @@ import {
   Button,
 } from '@mui/material'
 
-export default function DeleteTrackDialog({ open, onClose, trackName, onConfirmDelete }) {
+export default function DeleteTrackDialog({
+  open,
+  onClose,
+  trackName,
+  onConfirmDelete,
+  onConfirm,
+}) {
+  const handleConfirm = onConfirmDelete || onConfirm
   return (
     <Dialog
       open={open}
@@ -57,7 +64,7 @@ export default function DeleteTrackDialog({ open, onClose, trackName, onConfirmD
         <Button
           variant='contained'
           color='error'
-          onClick={onConfirmDelete}
+          onClick={handleConfirm}
           sx={{ borderRadius: 2 }}
         >
           Confirm Delete
