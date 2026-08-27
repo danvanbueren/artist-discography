@@ -27,27 +27,69 @@ function sortTracksByDiscographyOrder(tracks, discographyList) {
   })
 }
 
-function formatTrackItem(track, parentProj, artistName) {
-  if (!track) return null
+function formatTrackItem(itemOrTrack, parentProj = null, artistName = '', projectsList = []) {
+  if (!itemOrTrack) return null
+  const rawTrack = itemOrTrack.track || itemOrTrack
+
+  // 1. Resolve project object if available
+  let resolvedProj = null
+  if (parentProj && typeof parentProj === 'object') {
+    resolvedProj = parentProj
+  } else if (itemOrTrack.project && typeof itemOrTrack.project === 'object') {
+    resolvedProj = itemOrTrack.project
+  } else if (Array.isArray(projectsList) && projectsList.length > 0) {
+    const projNameTarget =
+      typeof parentProj === 'string' && parentProj
+        ? parentProj
+        : typeof itemOrTrack.project === 'string' && itemOrTrack.project
+          ? itemOrTrack.project
+          : rawTrack.project || ''
+
+    if (projNameTarget) {
+      resolvedProj = projectsList.find(
+        (p) => (p.name || '').toLowerCase() === projNameTarget.toLowerCase(),
+      )
+    }
+
+    if (!resolvedProj && rawTrack.name) {
+      resolvedProj = projectsList.find((p) =>
+        (p.tracks || []).some(
+          (t) => (t.name || '').toLowerCase() === (rawTrack.name || '').toLowerCase(),
+        ),
+      )
+    }
+  }
+
+  // 2. Extract and resolve all project & track fields
   const projName =
-    typeof parentProj === 'string' ? parentProj : parentProj?.name || track.project || ''
-  const projCover =
-    track.cover ||
-    (typeof parentProj === 'object' ? parentProj?.cover || parentProj?.image : '') ||
-    track.projectCover ||
-    ''
-  const projArtist =
-    (typeof parentProj === 'object' ? parentProj?.artist : '') ||
-    track.projectArtist ||
-    artistName ||
+    resolvedProj?.name ||
+    (typeof parentProj === 'string' ? parentProj : '') ||
+    (typeof itemOrTrack.project === 'string' ? itemOrTrack.project : '') ||
+    rawTrack.project ||
     ''
 
+  const projCover =
+    rawTrack.cover ||
+    resolvedProj?.cover ||
+    resolvedProj?.image ||
+    itemOrTrack.projectCover ||
+    rawTrack.projectCover ||
+    ''
+
+  const projArtist =
+    resolvedProj?.artist || itemOrTrack.projectArtist || rawTrack.projectArtist || artistName || ''
+
+  const projType = resolvedProj?.type || itemOrTrack.projectType || rawTrack.projectType || ''
+
+  const trackArtist = rawTrack.artist || projArtist || artistName || ''
+
   return {
-    ...track,
+    ...rawTrack,
     project: projName,
     projectCover: projCover,
     projectArtist: projArtist,
-    artist: track.artist || projArtist,
+    projectType: projType,
+    artist: trackArtist,
   }
 }
 
@@ -114,6 +156,7 @@ export function useDiscographyPlayback({
           project: selectedProject.name,
           projectCover: selectedProject.cover || selectedProject.image || '',
           projectArtist: selectedProject.artist || artist.name || '',
+          projectType: selectedProject.type || '',
         }))
     }
     return displayedDiscographyTracks
@@ -148,16 +191,6 @@ export function useDiscographyPlayback({
         if (showToast) showToast(`No audio available for "${track.name || 'this track'}"`)
         return
       }
-      const parentProj =
-        proj ||
-        selectedProject ||
-        projects.find((p) =>
-          (p.tracks || []).some(
-            (t) => (t.name || '').toLowerCase() === (track.name || '').toLowerCase(),
-          ),
-        )
-      const projName = parentProj?.name || track.project || ''
-      const projCover = track.cover || parentProj?.cover || parentProj?.image || ''
 
       const isSameTrack =
         (playingTrack?.name || '').toLowerCase() === (track.name || '').toLowerCase()
@@ -169,14 +202,8 @@ export function useDiscographyPlayback({
           setIsPlaying(false)
         }
       } else {
-        const trackWithProject = {
-          ...track,
-          project: projName,
-          projectType: parentProj?.type || track.projectType || '',
-          projectArtist: parentProj?.artist || artist.name || '',
-          projectCover: projCover,
-          artist: track.artist || parentProj?.artist || artist.name || '',
-        }
+        const parentProj = proj || selectedProject
+        const trackWithProject = formatTrackItem(track, parentProj, artist.name, projects)
 
         // Determine context pool (single project vs all discography)
         let pool = []
@@ -188,6 +215,7 @@ export function useDiscographyPlayback({
               project: selectedProject.name,
               projectCover: selectedProject.cover || selectedProject.image || '',
               projectArtist: selectedProject.artist || artist.name || '',
+              projectType: selectedProject.type || '',
             }))
         } else {
           pool = displayedDiscographyTracks
@@ -255,9 +283,8 @@ export function useDiscographyPlayback({
         const updatedQueue = manualQueue.slice(validIndex + 1)
         setManualQueue(updatedQueue)
 
-        const nextTrack = nextItem.track || nextItem
         const parentProj = nextItem.project || selectedProject
-        setPlayingTrack(formatTrackItem(nextTrack, parentProj, artist.name))
+        setPlayingTrack(formatTrackItem(nextItem, parentProj, artist.name, projects))
         setIsPlaying(true)
         return
       }
@@ -274,9 +301,8 @@ export function useDiscographyPlayback({
         const updatedAutoplay = autoplayTracks.slice(validIndex + 1)
         setAutoplayTracks(updatedAutoplay)
 
-        const nextTrack = nextItem.track || nextItem
         const parentProj = nextItem.project || selectedProject
-        setPlayingTrack(formatTrackItem(nextTrack, parentProj, artist.name))
+        setPlayingTrack(formatTrackItem(nextItem, parentProj, artist.name, projects))
         setIsPlaying(true)
         return
       }
@@ -292,17 +318,15 @@ export function useDiscographyPlayback({
         if (isShuffle) {
           const shuffledPool = shuffleArray(poolToLoop)
           const firstItem = shuffledPool[0]
-          const firstTrack = firstItem.track || firstItem
-          const parentProj = firstItem.project
-          setPlayingTrack(formatTrackItem(firstTrack, parentProj, artist.name))
+          const parentProj = firstItem.project || selectedProject
+          setPlayingTrack(formatTrackItem(firstItem, parentProj, artist.name, projects))
           setIsPlaying(true)
           setAutoplayTracks(shuffledPool.slice(1))
           return
         } else {
           const firstItem = poolToLoop[0]
-          const firstTrack = firstItem.track || firstItem
-          const parentProj = firstItem.project
-          setPlayingTrack(formatTrackItem(firstTrack, parentProj, artist.name))
+          const parentProj = firstItem.project || selectedProject
+          setPlayingTrack(formatTrackItem(firstItem, parentProj, artist.name, projects))
           setIsPlaying(true)
           setAutoplayTracks(poolToLoop.slice(1))
           return
@@ -319,6 +343,7 @@ export function useDiscographyPlayback({
     currentFallbackPool,
     selectedProject,
     artist.name,
+    projects,
     isShuffle,
   ])
 
@@ -351,22 +376,20 @@ export function useDiscographyPlayback({
       )
       if (currentIndex > 0) {
         const prevItem = pool[currentIndex - 1]
-        const prevTrack = prevItem.track || prevItem
-        const parentProj = prevItem.project
+        const parentProj = prevItem.project || selectedProject
         if (playingTrack) {
           setAutoplayTracks((curr) => [playingTrack, ...curr])
         }
-        setPlayingTrack(formatTrackItem(prevTrack, parentProj, artist.name))
+        setPlayingTrack(formatTrackItem(prevItem, parentProj, artist.name, projects))
         setIsPlaying(true)
       } else if (currentIndex === 0 && repeatMode === 'all' && pool.length > 0) {
         // Wrap to the last track in the active pool
         const lastItem = pool[pool.length - 1]
-        const lastTrack = lastItem.track || lastItem
-        const parentProj = lastItem.project
+        const parentProj = lastItem.project || selectedProject
         if (playingTrack) {
           setAutoplayTracks((curr) => [playingTrack, ...curr])
         }
-        setPlayingTrack(formatTrackItem(lastTrack, parentProj, artist.name))
+        setPlayingTrack(formatTrackItem(lastItem, parentProj, artist.name, projects))
         setIsPlaying(true)
       } else {
         setRestartCount((c) => c + 1)
@@ -381,7 +404,9 @@ export function useDiscographyPlayback({
     currentFallbackPool,
     displayedDiscographyTracks,
     repeatMode,
+    selectedProject,
     artist.name,
+    projects,
   ])
 
   const handleQueueDragDrop = useCallback(
@@ -439,22 +464,10 @@ export function useDiscographyPlayback({
         if (showToast) showToast(`No audio stream available for "${track.name || 'this track'}"`)
         return
       }
-      const parentProj =
-        project ||
-        selectedProject ||
-        projects.find((p) =>
-          (p.tracks || []).some(
-            (t) => (t.name || '').toLowerCase() === (track.name || '').toLowerCase(),
-          ),
-        )
+      const parentProj = project || selectedProject
+      const formattedTrack = formatTrackItem(track, parentProj, artist.name, projects)
       const queueItem = {
-        track: {
-          ...track,
-          project: parentProj?.name || track.project || '',
-          projectCover: track.cover || parentProj?.cover || parentProj?.image || '',
-          projectArtist: parentProj?.artist || artist.name || '',
-          artist: track.artist || parentProj?.artist || artist.name || '',
-        },
+        track: formattedTrack,
         project: parentProj,
       }
       setManualQueue((prev) => [...prev, queueItem])
@@ -482,7 +495,7 @@ export function useDiscographyPlayback({
         setPlaybackHistory((prev) => [...prev, playingTrack])
       }
 
-      setPlayingTrack(formatTrackItem(track, parentProj, artist.name))
+      setPlayingTrack(formatTrackItem(item, parentProj, artist.name, projects))
       setIsPlaying(true)
 
       if (isQueueType) {
@@ -491,7 +504,7 @@ export function useDiscographyPlayback({
         setAutoplayTracks((prev) => prev.slice(index + 1))
       }
     },
-    [playingTrack, selectedProject, artist.name, showToast],
+    [playingTrack, selectedProject, artist.name, projects, showToast],
   )
 
   const handleClosePlayer = useCallback(() => {

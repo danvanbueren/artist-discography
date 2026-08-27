@@ -98,6 +98,7 @@ export function useDiscographyFilterSort({ projects = [] }) {
               project: proj.name,
               projectCover: proj.cover,
               projectArtist: proj.artist,
+              projectType: proj.type,
             })
           }
         }
