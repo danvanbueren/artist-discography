@@ -42,11 +42,18 @@ export async function generateRootMetadata() {
     },
     icons: {
       icon: [
-        { url: `/api/icon?w=32&v=${logoMtime}`, sizes: '32x32', type: 'image/png' },
+        { url: `/favicon.ico?v=${logoMtime}`, sizes: 'any' },
         { url: `/api/icon?w=16&v=${logoMtime}`, sizes: '16x16', type: 'image/png' },
+        { url: `/api/icon?w=32&v=${logoMtime}`, sizes: '32x32', type: 'image/png' },
+        { url: `/api/icon?w=48&v=${logoMtime}`, sizes: '48x48', type: 'image/png' },
+        { url: `/api/icon?w=96&v=${logoMtime}`, sizes: '96x96', type: 'image/png' },
+        { url: `/api/icon?w=192&v=${logoMtime}`, sizes: '192x192', type: 'image/png' },
+        { url: `/api/icon?w=512&v=${logoMtime}`, sizes: '512x512', type: 'image/png' },
       ],
-      shortcut: `/api/icon?w=32&v=${logoMtime}`,
-      apple: [{ url: `/api/icon?w=180&v=${logoMtime}`, sizes: '180x180', type: 'image/png' }],
+      apple: [
+        { url: `/apple-touch-icon.png?v=${logoMtime}`, sizes: '180x180', type: 'image/png' },
+        { url: `/api/icon?w=180&v=${logoMtime}`, sizes: '180x180', type: 'image/png' },
+      ],
     },
     manifest: `/manifest.webmanifest?v=${logoMtime}`,
   }

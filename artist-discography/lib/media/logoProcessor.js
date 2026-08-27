@@ -147,7 +147,11 @@ export async function generateFaviconSuite(source) {
  * @returns {Promise<{ filePath: string, isCustom: boolean, mimeType: string, sizeBytes?: number, mtimeMs?: number }|null>}
  */
 export async function getFaviconPath(requestedSize = 32) {
-  const targetSize = parseInt(requestedSize, 10) || 32
+  const isIcoRequest =
+    requestedSize === 'ico' || requestedSize === 'favicon.ico' || requestedSize === 'any'
+  const isAppleRequest = requestedSize === 'apple' || requestedSize === 'apple-touch-icon'
+  const targetSize = isAppleRequest ? 180 : parseInt(requestedSize, 10) || 32
+
   const dataDir = path.join(process.cwd(), 'data')
   const faviconsCacheDir = path.join(dataDir, 'cache', 'favicons')
   const publicFaviconsDir = path.join(process.cwd(), 'public', 'favicons')
@@ -168,7 +172,7 @@ export async function getFaviconPath(requestedSize = 32) {
         return {
           filePath: cachedFilePath,
           isCustom: true,
-          mimeType: 'image/png',
+          mimeType: isIcoRequest ? 'image/x-icon' : 'image/png',
           sizeBytes: iconStat.size,
           mtimeMs: iconStat.mtimeMs,
         }
@@ -218,7 +222,7 @@ export async function getFaviconPath(requestedSize = 32) {
         return {
           filePath: cachedFilePath,
           isCustom: true,
-          mimeType: 'image/png',
+          mimeType: isIcoRequest ? 'image/x-icon' : 'image/png',
           sizeBytes: iconStat.size,
           mtimeMs: iconStat.mtimeMs,
         }
@@ -239,6 +243,19 @@ export async function getFaviconPath(requestedSize = 32) {
 
   // Fallback to static public/favicons/
   if (fs.existsSync(/*turbopackIgnore: true*/ publicFaviconsDir)) {
+    if (isIcoRequest) {
+      const icoPath = path.join(publicFaviconsDir, 'favicon.ico')
+      if (fs.existsSync(/*turbopackIgnore: true*/ icoPath)) {
+        const s = fs.statSync(/*turbopackIgnore: true*/ icoPath)
+        return {
+          filePath: icoPath,
+          isCustom: false,
+          mimeType: 'image/x-icon',
+          sizeBytes: s.size,
+          mtimeMs: s.mtimeMs,
+        }
+      }
+    }
     if (
       targetSize >= 500 &&
       fs.existsSync(
@@ -272,7 +289,7 @@ export async function getFaviconPath(requestedSize = 32) {
       }
     }
     if (
-      targetSize >= 180 &&
+      (targetSize >= 180 || isAppleRequest) &&
       fs.existsSync(/*turbopackIgnore: true*/ path.join(publicFaviconsDir, 'apple-icon.png'))
     ) {
       const p = path.join(publicFaviconsDir, 'apple-icon.png')

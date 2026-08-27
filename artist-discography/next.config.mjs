@@ -15,6 +15,10 @@ const nextConfig = {
         source: '/manifest.json',
         destination: '/manifest.webmanifest',
       },
+      {
+        source: '/apple-touch-icon-precomposed.png',
+        destination: '/apple-touch-icon.png',
+      },
     ]
   },
   async redirects() {

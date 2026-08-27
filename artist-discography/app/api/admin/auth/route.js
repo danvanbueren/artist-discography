@@ -13,7 +13,11 @@ export async function GET(request) {
 
     if (!adminAccess) {
       return NextResponse.json(
-        { authenticated: false, adminAccess: false, error: 'Admin access is disabled in config.json' },
+        {
+          authenticated: false,
+          adminAccess: false,
+          error: 'Admin access is disabled in config.json',
+        },
         { status: 403 },
       )
     }
@@ -69,7 +73,11 @@ export async function POST(request) {
 
     if (!adminAccess) {
       return NextResponse.json(
-        { authenticated: false, adminAccess: false, error: 'Admin access is disabled in config.json' },
+        {
+          authenticated: false,
+          adminAccess: false,
+          error: 'Admin access is disabled in config.json',
+        },
         { status: 403 },
       )
     }

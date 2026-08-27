@@ -31,13 +31,25 @@ export async function GET() {
         src: `/api/icon?w=192&v=${logoMtime}`,
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'maskable any',
+        purpose: 'any',
+      },
+      {
+        src: `/api/icon?w=192&v=${logoMtime}`,
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
       },
       {
         src: `/api/icon?w=512&v=${logoMtime}`,
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'maskable any',
+        purpose: 'any',
+      },
+      {
+        src: `/api/icon?w=512&v=${logoMtime}`,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   }

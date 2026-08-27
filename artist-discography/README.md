@@ -14,6 +14,7 @@ For full project documentation, technology stack, and comprehensive operator con
   - `app/api/audio/`: HTTP 206 partial content audio streaming endpoint with automated bandwidth tracking.
   - `app/api/media/`: Responsive image and cover artwork server endpoint with bandwidth tracking.
   - `app/api/logo` & `app/api/icon`: Dynamic logo asset and favicon suite streaming endpoints.
+  - `app/favicon.ico` & `app/apple-touch-icon.png`: Dynamic root favicon and mobile touch icon route handlers.
 - **`components/`**: Modular, single-responsibility UI components organized by domain:
   - `components/admin/`: Operator administration dashboard & project manager:
     - `auth/`: Admin login view & password challenge.
