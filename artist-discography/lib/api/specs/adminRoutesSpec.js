@@ -3,6 +3,50 @@
  */
 export const ADMIN_ROUTES_SPEC = [
   {
+    id: 'admin-auth-get',
+    path: '/api/admin/auth',
+    method: 'GET',
+    tag: 'Admin Portal',
+    summary: 'Verify Admin Access & Session Status',
+    description:
+      'Regular/lazy check verifying whether admin access is enabled in config.json and if the active session credentials are valid.',
+    requiresAdminAuth: false,
+    requestFormat: 'none',
+    queryParams: [
+      {
+        name: 'password',
+        example: 'admin123',
+        description: 'Optional admin password override (or pass via x-admin-password header)',
+      },
+    ],
+    responses: [
+      {
+        status: 200,
+        description: 'Session is authorized and admin access is enabled',
+        example: { authenticated: true, adminAccess: true, isPasswordless: false },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized or session expired',
+        example: {
+          authenticated: false,
+          adminAccess: true,
+          isPasswordless: false,
+          error: 'Session expired or password was changed',
+        },
+      },
+      {
+        status: 403,
+        description: 'Admin access is disabled in config.json',
+        example: {
+          authenticated: false,
+          adminAccess: false,
+          error: 'Admin access is disabled in config.json',
+        },
+      },
+    ],
+  },
+  {
     id: 'admin-auth',
     path: '/api/admin/auth',
     method: 'POST',
@@ -14,16 +58,24 @@ export const ADMIN_ROUTES_SPEC = [
     requestFormat: 'json',
     defaultBody: JSON.stringify({ password: 'admin' }, null, 2),
     responses: [
-      { status: 200, description: 'Authentication successful', example: { authenticated: true } },
+      {
+        status: 200,
+        description: 'Authentication successful',
+        example: { authenticated: true, adminAccess: true },
+      },
       {
         status: 401,
         description: 'Incorrect password',
-        example: { authenticated: false, error: 'Incorrect password' },
+        example: { authenticated: false, adminAccess: true, error: 'Incorrect password' },
       },
       {
         status: 403,
         description: 'Admin access disabled',
-        example: { authenticated: false, error: 'Admin access is disabled in config.json' },
+        example: {
+          authenticated: false,
+          adminAccess: false,
+          error: 'Admin access is disabled in config.json',
+        },
       },
     ],
   },

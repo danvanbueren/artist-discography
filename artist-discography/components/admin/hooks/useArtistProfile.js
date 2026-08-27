@@ -8,6 +8,8 @@ export function useArtistProfile(
   setErrorMessage,
   setStatusMessage,
   onAdminPasswordSaved,
+  onAdminAccessSaved,
+  onAuthStatusError,
 ) {
   const [artistData, setArtistData] = useState(() => initialData?.artist ?? {})
 
@@ -112,6 +114,7 @@ export function useArtistProfile(
     async (password) => {
       try {
         const savedAdminPassword = adminPasswordInputRef.current ?? ''
+        const savedAdminAccess = Boolean(adminAccessInputRef.current)
         const res = await fetch('/api/admin/artist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -121,7 +124,7 @@ export function useArtistProfile(
             bio: artistBioInputRef.current?.trim?.() || '',
             platforms: artistPlatformsRef.current,
             socials: artistSocialsRef.current,
-            adminAccess: Boolean(adminAccessInputRef.current),
+            adminAccess: savedAdminAccess,
             adminPassword: savedAdminPassword,
             privateAccessCode: privateAccessCodeInputRef.current?.trim?.() || '',
             siteUrl: siteUrlInputRef.current?.trim?.() || '',
@@ -131,7 +134,11 @@ export function useArtistProfile(
         const result = await res.json().catch(() => ({}))
         if (res.ok && result.success) {
           onAdminPasswordSaved?.(savedAdminPassword)
+          onAdminAccessSaved?.(savedAdminAccess)
           return true
+        }
+        if (res.status === 401 || res.status === 403) {
+          onAuthStatusError?.(res.status, result.error)
         }
         setErrorMessage?.(result.error || 'Failed to save settings & profile.')
         return false
@@ -140,7 +147,7 @@ export function useArtistProfile(
         return false
       }
     },
-    [setErrorMessage, onAdminPasswordSaved],
+    [setErrorMessage, onAdminPasswordSaved, onAdminAccessSaved, onAuthStatusError],
   )
 
   const uploadLogoFile = useCallback(
@@ -166,6 +173,9 @@ export function useArtistProfile(
           setStatusMessage?.(result.message || 'Logo uploaded successfully!')
           return true
         }
+        if (res.status === 401 || res.status === 403) {
+          onAuthStatusError?.(res.status, result.error)
+        }
         setErrorMessage?.(result.error || 'Failed to upload logo.')
         return false
       } catch (err) {
@@ -175,7 +185,7 @@ export function useArtistProfile(
         setIsUploadingLogo(false)
       }
     },
-    [setErrorMessage, setStatusMessage],
+    [setErrorMessage, setStatusMessage, onAuthStatusError],
   )
 
   const resetLogo = useCallback(
@@ -200,6 +210,9 @@ export function useArtistProfile(
           setStatusMessage?.(result.message || 'Logo reset to default.')
           return true
         }
+        if (res.status === 401 || res.status === 403) {
+          onAuthStatusError?.(res.status, result.error)
+        }
         setErrorMessage?.(result.error || 'Failed to reset logo.')
         return false
       } catch (err) {
@@ -209,7 +222,7 @@ export function useArtistProfile(
         setIsResettingLogo(false)
       }
     },
-    [setErrorMessage, setStatusMessage],
+    [setErrorMessage, setStatusMessage, onAuthStatusError],
   )
 
   return {

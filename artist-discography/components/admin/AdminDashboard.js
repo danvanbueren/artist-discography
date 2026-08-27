@@ -34,8 +34,15 @@ export default function AdminDashboard({
   initialData = {},
   initialSlug = [],
 }) {
-  // 1. Authentication hook
-  const auth = useAdminAuth(initialData)
+  // 1. Authentication & Access hook
+  const authInitialData = useMemo(
+    () => ({
+      adminAccess,
+      ...initialData,
+    }),
+    [adminAccess, initialData],
+  )
+  const auth = useAdminAuth(authInitialData)
 
   // 2. Ref to editName for dynamic action labeling in useAutoSave
   const editNameBridgeRef = useRef('')
@@ -53,6 +60,8 @@ export default function AdminDashboard({
     autoSave.setErrorMessage,
     autoSave.setStatusMessage,
     auth.updateSessionPassword,
+    auth.setAdminAccess,
+    auth.handleApiAuthStatus,
   )
 
   // 6. Admin URL routing & history management hook
@@ -188,10 +197,21 @@ export default function AdminDashboard({
     [projects, auth.password],
   )
 
+  const { setActiveTab } = routing
+  const { checkAuthSession } = auth
+
+  const handleTabChange = useCallback(
+    (tabIndex) => {
+      setActiveTab(tabIndex)
+      checkAuthSession()
+    },
+    [setActiveTab, checkAuthSession],
+  )
+
   // ----------------------------------------------------
   // Guard Views: Disabled Access, Loading, Login Screen
   // ----------------------------------------------------
-  if (!adminAccess) {
+  if (!auth.adminAccess) {
     return (
       <ThemeProvider theme={adminTheme}>
         <CssBaseline />
@@ -284,7 +304,7 @@ export default function AdminDashboard({
             errorMessage={autoSave.errorMessage}
             setErrorMessage={autoSave.setErrorMessage}
             activeTab={routing.activeTab}
-            setActiveTab={routing.setActiveTab}
+            setActiveTab={handleTabChange}
             mediaJobs={mediaJobs}
           />
 
