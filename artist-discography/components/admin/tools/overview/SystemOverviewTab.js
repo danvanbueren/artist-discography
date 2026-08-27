@@ -3,9 +3,13 @@
 import { useState } from 'react'
 import { Box, Alert, AlertTitle } from '@mui/material'
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded'
-import RawJsonInspectorTab from '../raw/RawJsonInspectorTab'
+import FormatShareProjectsSection from '../share/FormatShareProjectsSection'
 import { AnalyticsDashboardSection } from '../analytics/AnalyticsDashboardSection'
 
+/**
+ * SystemOverviewTab (Utilities Tab)
+ * Hosts two mutually exclusive accordions: Server Analytics & Format & Share Projects.
+ */
 export default function SystemOverviewTab({
   isArtistNameEmpty = false,
   currentJsonSnapshot = {},
@@ -14,17 +18,16 @@ export default function SystemOverviewTab({
   adminPassword = '',
 }) {
   const activeSnapshot = currentJsonSnapshot || dataState || jsonData || {}
-  const [activeSection, setActiveSection] = useState('analytics') // 'analytics' | 'raw'
+  const [activeSection, setActiveSection] = useState('analytics') // 'analytics' | 'share'
 
   const handleToggle = (section) => (_, isExpanded) => {
     if (isExpanded) {
       setActiveSection(section)
     } else {
       // Closing the active accordion switches directly to the other accordion
-      setActiveSection(section === 'analytics' ? 'raw' : 'analytics')
+      setActiveSection(section === 'analytics' ? 'share' : 'analytics')
     }
   }
-
 
   const isAnalyticsActive = activeSection === 'analytics'
 
@@ -37,12 +40,14 @@ export default function SystemOverviewTab({
     />
   )
 
-  const rawJsonSection = (
-    <RawJsonInspectorTab
-      key='raw'
-      dataState={activeSnapshot}
+  const shareSection = (
+    <FormatShareProjectsSection
+      key='share'
+      projects={activeSnapshot?.projects || []}
+      siteArtist={activeSnapshot?.artist?.name || 'Polybit'}
+      siteUrl={activeSnapshot?.siteUrl || 'https://polybitmusic.com'}
       expanded={!isAnalyticsActive}
-      onToggle={handleToggle('raw')}
+      onToggle={handleToggle('share')}
     />
   )
 
@@ -72,16 +77,15 @@ export default function SystemOverviewTab({
       {/* Always render closed accordion on top, open accordion below */}
       {isAnalyticsActive ? (
         <>
-          {rawJsonSection}
+          {shareSection}
           {analyticsSection}
         </>
       ) : (
         <>
           {analyticsSection}
-          {rawJsonSection}
+          {shareSection}
         </>
       )}
     </Box>
   )
 }
-

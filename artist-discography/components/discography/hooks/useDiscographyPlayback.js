@@ -125,7 +125,8 @@ export function useDiscographyPlayback({
       if (nextShuffle) {
         setAutoplayTracks((current) => shuffleArray(current))
       } else {
-        const pool = currentFallbackPool.length > 0 ? currentFallbackPool : displayedDiscographyTracks
+        const pool =
+          currentFallbackPool.length > 0 ? currentFallbackPool : displayedDiscographyTracks
         setAutoplayTracks((current) => sortTracksByDiscographyOrder(current, pool))
       }
       return nextShuffle

@@ -5,8 +5,6 @@ import { formatBytes, getTodayDateString, buildTimelineBuckets } from './analyti
 
 export { formatBytes, getTodayDateString, buildTimelineBuckets }
 
-
-
 const ANALYTICS_DIR_NAME = 'analytics'
 const MAX_RECENT_EVENTS = 200
 
@@ -365,7 +363,6 @@ export function getAnalyticsSummary({ range = '30d' } = {}) {
       }
     }
   }
-
 
   // Project Breakdown
   const projectBreakdown = Object.entries(rangeProjects)

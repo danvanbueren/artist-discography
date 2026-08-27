@@ -488,9 +488,6 @@ export function openExternalLink(url) {
   const trimmed = url.trim()
   if (!trimmed) return
   const formatted =
-    trimmed.startsWith('http://') || trimmed.startsWith('https://')
-      ? trimmed
-      : `https://${trimmed}`
+    trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`
   window.open(formatted, '_blank', 'noopener,noreferrer')
 }
-

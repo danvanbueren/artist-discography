@@ -1,14 +1,6 @@
 'use client'
 
-import {
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  InputAdornment,
-  Box,
-} from '@mui/material'
+import { Grid, FormControl, InputLabel, Select, MenuItem, InputAdornment, Box } from '@mui/material'
 import AlbumIcon from '@mui/icons-material/Album'
 import PersonIcon from '@mui/icons-material/Person'
 import CategoryIcon from '@mui/icons-material/Category'

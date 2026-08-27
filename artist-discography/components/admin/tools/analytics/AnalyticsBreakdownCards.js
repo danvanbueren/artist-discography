@@ -27,10 +27,7 @@ export const AnalyticsBreakdownCards = memo(function AnalyticsBreakdownCards({
 
       {/* 2. Top Streamed Tracks & Top Visited Pages */}
       <Grid size={{ xs: 12, md: 4 }}>
-        <AnalyticsTopRankingsCard
-          trackBreakdown={trackBreakdown}
-          pageBreakdown={pageBreakdown}
-        />
+        <AnalyticsTopRankingsCard trackBreakdown={trackBreakdown} pageBreakdown={pageBreakdown} />
       </Grid>
 
       {/* 3. Recent Activity Log */}

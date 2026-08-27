@@ -61,12 +61,7 @@ export default function DeleteProjectDialog({
         <Button variant='outlined' onClick={onClose} sx={{ borderRadius: 2 }}>
           Cancel
         </Button>
-        <Button
-          variant='contained'
-          color='error'
-          onClick={handleConfirm}
-          sx={{ borderRadius: 2 }}
-        >
+        <Button variant='contained' color='error' onClick={handleConfirm} sx={{ borderRadius: 2 }}>
           Confirm Delete
         </Button>
       </DialogActions>

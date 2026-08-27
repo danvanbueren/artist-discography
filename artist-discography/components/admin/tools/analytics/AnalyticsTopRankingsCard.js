@@ -94,11 +94,7 @@ export const AnalyticsTopRankingsCard = memo(function AnalyticsTopRankingsCard({
             <Typography variant='caption'>No track streams recorded yet</Typography>
           </Box>
         ) : (
-          <List
-            dense
-            disablePadding
-            sx={{ maxHeight: 280, overflowY: 'auto', pr: 0.5 }}
-          >
+          <List dense disablePadding sx={{ maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
             {trackBreakdown.map((trk, i) => (
               <ListItem
                 key={trk.name || i}
@@ -164,11 +160,7 @@ export const AnalyticsTopRankingsCard = memo(function AnalyticsTopRankingsCard({
           <Typography variant='caption'>No page views recorded yet</Typography>
         </Box>
       ) : (
-        <List
-          dense
-          disablePadding
-          sx={{ maxHeight: 280, overflowY: 'auto', pr: 0.5 }}
-        >
+        <List dense disablePadding sx={{ maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
           {pageBreakdown.map((p, i) => (
             <ListItem
               key={p.path || i}

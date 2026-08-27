@@ -69,7 +69,6 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
         },
       }}
       sx={{
-
         borderRadius: 2.5,
         backgroundColor: 'rgba(26, 26, 38, 0.75)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -94,7 +93,6 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
             }),
       }}
     >
-
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
         sx={{
@@ -113,7 +111,7 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
           <InsightsRoundedIcon sx={{ color: 'primary.main', fontSize: 24 }} />
           <Box>
             <Typography variant='subtitle1' sx={{ fontWeight: 700 }}>
-              Catalog Analytics &amp; Insights
+              Server Analytics
             </Typography>
             <Typography variant='caption' sx={{ color: 'text.secondary' }}>
               Simple JSON-backed metrics on project streams, page visits, and bandwidth usage
@@ -136,8 +134,9 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
         )}
       </AccordionSummary>
 
-      <AccordionDetails sx={{ px: 2.5, pt: 0, pb: 2.5, flexGrow: 1, minHeight: 0, overflowY: 'auto' }}>
-
+      <AccordionDetails
+        sx={{ px: 2.5, pt: 0, pb: 2.5, flexGrow: 1, minHeight: 0, overflowY: 'auto' }}
+      >
         <Stack spacing={2.5}>
           {/* Header Action Controls */}
           <Box
@@ -273,7 +272,6 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
                   onMetricModeChange={setMetricMode}
                 />
 
-
                 {/* 3. Breakdowns & Live Activity Grid */}
                 <AnalyticsBreakdownCards
                   projectBreakdown={analyticsData.projectBreakdown || []}
@@ -282,7 +280,6 @@ export const AnalyticsDashboardSection = memo(function AnalyticsDashboardSection
                   recentEvents={analyticsData.recentEvents || []}
                 />
               </>
-
             )
           )}
 

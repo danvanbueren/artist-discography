@@ -11,7 +11,11 @@ import {
 import { slugify, isSlugReserved } from '@/lib/data/slugs'
 import { warmMediaFiles } from '@/lib/media/mediaWarmer'
 import { scheduleAutomatedCachePrune } from '@/lib/media/cacheCleaner'
-import { syncProjectTrackFiles, safeRenameSync, safeUnlinkSync } from '@/lib/api/projectRouteHelpers'
+import {
+  syncProjectTrackFiles,
+  safeRenameSync,
+  safeUnlinkSync,
+} from '@/lib/api/projectRouteHelpers'
 
 /**
  * POST /api/admin/project

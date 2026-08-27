@@ -1,14 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import {
-  Paper,
-  Box,
-  Typography,
-  Chip,
-  List,
-  ListItem,
-} from '@mui/material'
+import { Paper, Box, Typography, Chip, List, ListItem } from '@mui/material'
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded'
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
@@ -72,11 +65,7 @@ export const AnalyticsRecentActivityCard = memo(function AnalyticsRecentActivity
           <Typography variant='caption'>No recent activity recorded yet</Typography>
         </Box>
       ) : (
-        <List
-          dense
-          disablePadding
-          sx={{ maxHeight: 280, overflowY: 'auto', pr: 0.5 }}
-        >
+        <List dense disablePadding sx={{ maxHeight: 280, overflowY: 'auto', pr: 0.5 }}>
           {recentEvents.map((evt) => {
             const isStream = evt.type === 'stream'
             return (

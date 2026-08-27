@@ -486,7 +486,10 @@ export async function auditAndSanitizeProjectsDirectory(defaultArtistName = 'Art
         emptyFoldersRemoved++
         actions.push(`Deleted empty directory: data/projects/${currentDirName}`)
       } catch (rmErr) {
-        console.warn(`Could not remove empty folder data/projects/${currentDirName}:`, rmErr.message)
+        console.warn(
+          `Could not remove empty folder data/projects/${currentDirName}:`,
+          rmErr.message,
+        )
       }
       continue
     }
@@ -501,11 +504,15 @@ export async function auditAndSanitizeProjectsDirectory(defaultArtistName = 'Art
         try {
           fs.rmSync(currentDirPath, { recursive: true, force: true })
           emptyFoldersRemoved++
-          actions.push(`Deleted invalid directory without project.json: data/projects/${currentDirName}`)
+          actions.push(
+            `Deleted invalid directory without project.json: data/projects/${currentDirName}`,
+          )
         } catch {}
         continue
       }
-      actions.push(`Warning: directory data/projects/${currentDirName} is missing project.json (preserved)`)
+      actions.push(
+        `Warning: directory data/projects/${currentDirName} is missing project.json (preserved)`,
+      )
       continue
     }
 
@@ -575,11 +582,16 @@ export async function auditAndSanitizeProjectsDirectory(defaultArtistName = 'Art
           fs.renameSync(currentDirPath, targetPath)
         }
         foldersRenamed++
-        actions.push(`Renamed directory data/projects/${currentDirName} to data/projects/${targetSlug}`)
+        actions.push(
+          `Renamed directory data/projects/${currentDirName} to data/projects/${targetSlug}`,
+        )
         currentDirName = targetSlug
         currentDirPath = targetPath
       } catch (renameErr) {
-        console.warn(`Could not rename folder ${currentDirName} to ${targetSlug}:`, renameErr.message)
+        console.warn(
+          `Could not rename folder ${currentDirName} to ${targetSlug}:`,
+          renameErr.message,
+        )
       }
     }
 

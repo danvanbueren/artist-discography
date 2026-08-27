@@ -65,11 +65,7 @@ export default function ProjectCoverUploader({
             : isBlue
               ? 'rgba(144, 202, 249, 0.08)'
               : 'rgba(255, 179, 0, 0.08)',
-          borderColor: isGreen
-            ? 'success.main'
-            : isBlue
-              ? 'primary.main'
-              : 'warning.main',
+          borderColor: isGreen ? 'success.main' : isBlue ? 'primary.main' : 'warning.main',
           transition: 'all 0.2s ease',
         }}
       >
@@ -116,7 +112,9 @@ export default function ProjectCoverUploader({
                   sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                <AlbumIcon sx={{ fontSize: 36, color: isGreen ? 'success.main' : 'warning.main' }} />
+                <AlbumIcon
+                  sx={{ fontSize: 36, color: isGreen ? 'success.main' : 'warning.main' }}
+                />
               )}
             </Box>
 
@@ -130,11 +128,7 @@ export default function ProjectCoverUploader({
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     minWidth: 0,
-                    color: isGreen
-                      ? 'success.main'
-                      : isBlue
-                        ? 'primary.main'
-                        : 'warning.main',
+                    color: isGreen ? 'success.main' : isBlue ? 'primary.main' : 'warning.main',
                   }}
                 >
                   {isCoverOptimizing

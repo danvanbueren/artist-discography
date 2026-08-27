@@ -67,7 +67,6 @@ const ApiResponseViewer = memo(function ApiResponseViewer({ response }) {
       >
         {response.body || ''}
       </Typography>
-
     </Paper>
   )
 })

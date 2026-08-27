@@ -118,7 +118,6 @@ export default function RawJsonInspectorTab({
         },
       }}
       sx={{
-
         borderRadius: 2.5,
         backgroundColor: 'rgba(26, 26, 38, 0.75)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -161,7 +160,7 @@ export default function RawJsonInspectorTab({
           <CodeRoundedIcon color='primary' sx={{ fontSize: 22 }} />
           <Box>
             <Typography variant='subtitle1' sx={{ fontWeight: 700 }}>
-              Raw Configuration &amp; Projects Inspector
+              Database Inspector
             </Typography>
             <Typography variant='caption' sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
               {currentFilePath}
@@ -193,8 +192,6 @@ export default function RawJsonInspectorTab({
             gap: 2,
           }}
         >
-
-
           {/* Header Action & Tabs Row */}
           <Box
             sx={{

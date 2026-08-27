@@ -292,79 +292,73 @@ export function useMediaJobs() {
   )
 
   // Helper to match an active or completed job for project cover art
-  const getJobForCover = useCallback(
-    ({ projectSlug, fileName, includeCompleted = false } = {}) => {
-      const pSlug = (projectSlug || '').toLowerCase()
-      const fName = (fileName || '').toLowerCase()
+  const getJobForCover = useCallback(({ projectSlug, fileName, includeCompleted = false } = {}) => {
+    const pSlug = (projectSlug || '').toLowerCase()
+    const fName = (fileName || '').toLowerCase()
 
-      if (!pSlug && !fName) return null
+    if (!pSlug && !fName) return null
 
-      const matchFn = (j) => {
-        const details = j.details || {}
-        const jProjSlug = (details.projectSlug || '').toLowerCase()
-        const jFileName = (details.fileName || j.file || '').toLowerCase()
-        const jTarget = (j.target || '').toLowerCase()
+    const matchFn = (j) => {
+      const details = j.details || {}
+      const jProjSlug = (details.projectSlug || '').toLowerCase()
+      const jFileName = (details.fileName || j.file || '').toLowerCase()
+      const jTarget = (j.target || '').toLowerCase()
 
-        if (pSlug && jProjSlug && pSlug === jProjSlug) {
-          if (details.isCover || jTarget.includes('cover art')) return true
-          if (jFileName.startsWith('art.')) return true
-        }
-
-        if (fName && (jFileName === fName || j.file?.toLowerCase() === fName)) {
-          return true
-        }
-
-        return false
+      if (pSlug && jProjSlug && pSlug === jProjSlug) {
+        if (details.isCover || jTarget.includes('cover art')) return true
+        if (jFileName.startsWith('art.')) return true
       }
 
-      const active = activeJobsRef.current.find(matchFn)
-      if (active) return active
-
-      if (includeCompleted) {
-        return completedJobsRef.current.find(matchFn) || null
+      if (fName && (jFileName === fName || j.file?.toLowerCase() === fName)) {
+        return true
       }
 
-      return null
-    },
-    [],
-  )
+      return false
+    }
+
+    const active = activeJobsRef.current.find(matchFn)
+    if (active) return active
+
+    if (includeCompleted) {
+      return completedJobsRef.current.find(matchFn) || null
+    }
+
+    return null
+  }, [])
 
   // Helper to match an active or completed job for a specific file or track slug
-  const getJobForFile = useCallback(
-    (filePattern, { includeCompleted = false } = {}) => {
-      if (!filePattern) return null
-      const patternLower = String(filePattern).toLowerCase()
+  const getJobForFile = useCallback((filePattern, { includeCompleted = false } = {}) => {
+    if (!filePattern) return null
+    const patternLower = String(filePattern).toLowerCase()
 
-      // Check active jobs first
-      const active = activeJobsRef.current.find((j) => {
-        const fileLower = (j.file || '').toLowerCase()
-        const targetLower = (j.target || '').toLowerCase()
-        return (
-          fileLower === patternLower ||
-          fileLower.includes(patternLower) ||
-          targetLower.includes(patternLower)
-        )
-      })
-      if (active) return active
+    // Check active jobs first
+    const active = activeJobsRef.current.find((j) => {
+      const fileLower = (j.file || '').toLowerCase()
+      const targetLower = (j.target || '').toLowerCase()
+      return (
+        fileLower === patternLower ||
+        fileLower.includes(patternLower) ||
+        targetLower.includes(patternLower)
+      )
+    })
+    if (active) return active
 
-      if (includeCompleted) {
-        return (
-          completedJobsRef.current.find((j) => {
-            const fileLower = (j.file || '').toLowerCase()
-            const targetLower = (j.target || '').toLowerCase()
-            return (
-              fileLower === patternLower ||
-              fileLower.includes(patternLower) ||
-              targetLower.includes(patternLower)
-            )
-          }) || null
-        )
-      }
+    if (includeCompleted) {
+      return (
+        completedJobsRef.current.find((j) => {
+          const fileLower = (j.file || '').toLowerCase()
+          const targetLower = (j.target || '').toLowerCase()
+          return (
+            fileLower === patternLower ||
+            fileLower.includes(patternLower) ||
+            targetLower.includes(patternLower)
+          )
+        }) || null
+      )
+    }
 
-      return null
-    },
-    [],
-  )
+    return null
+  }, [])
 
   return {
     activeJobs,

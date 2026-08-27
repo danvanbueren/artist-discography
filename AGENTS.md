@@ -244,7 +244,7 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Client/Server Module Boundary Separation**: Keep pure mathematical calculations, date parsing, and byte formatting in isomorphic, client-safe utilities (`lib/data/analyticsUtils.js`). Never import server-only storage modules (`lib/data/analyticsStorage.js` with `fs`/`path`) into client components (`'use client'`).
 
 ### Mutually Exclusive Dashboard Accordions
-- **Standard**: When grouping dense developer, telemetry, or management views (such as Catalog Analytics vs Raw Configuration Inspector on the Utilities tab), use controlled, mutually exclusive Accordions.
+- **Standard**: When grouping dense developer, telemetry, or management views (such as Server Analytics vs Format & Share Projects on the Utilities tab, or Database Inspector vs API Endpoints on the API tab), use controlled, mutually exclusive Accordions.
 - **Persistence & Viewport Integrity**: Enforce that opening one accordion smoothly closes the other, while clicking the already-expanded header does not collapse it (`if (isExpanded) setActiveSection(...)`), preventing empty viewport states.
 
 ### Playback History, Reverse Shuffle & Repeat Contexts

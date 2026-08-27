@@ -68,8 +68,8 @@ export default function CopyTrackDialog({
       </DialogTitle>
       <DialogContent sx={{ pt: 1 }}>
         <Typography variant='body2' sx={{ color: 'text.secondary', mb: 2 }}>
-          Copying track <strong>&quot;{displayTrackName}&quot;</strong>{' '}
-          into a destination project. Any audio file will also be duplicated as an independent copy.
+          Copying track <strong>&quot;{displayTrackName}&quot;</strong> into a destination project.
+          Any audio file will also be duplicated as an independent copy.
         </Typography>
 
         <FormControl fullWidth size='small' sx={{ mt: 1 }}>
@@ -82,8 +82,7 @@ export default function CopyTrackDialog({
           >
             {projectsList.map((p, idx) => (
               <MenuItem key={idx} value={idx}>
-                {p.name || `Project #${idx + 1}`}{' '}
-                {idx === sourceProjIdx ? '(Current Project)' : ''}
+                {p.name || `Project #${idx + 1}`} {idx === sourceProjIdx ? '(Current Project)' : ''}
               </MenuItem>
             ))}
           </Select>
@@ -98,9 +97,7 @@ export default function CopyTrackDialog({
           color='primary'
           onClick={handleConfirm}
           disabled={copying || projectsList.length === 0}
-          startIcon={
-            copying ? <CircularProgress size={16} color='inherit' /> : <ContentCopyIcon />
-          }
+          startIcon={copying ? <CircularProgress size={16} color='inherit' /> : <ContentCopyIcon />}
           sx={{ borderRadius: 2 }}
         >
           {copying ? 'Copying…' : 'Copy Track'}

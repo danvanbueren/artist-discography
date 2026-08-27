@@ -24,6 +24,8 @@ import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import { API_TAGS, API_ROUTES_SPEC } from '@/lib/api/apiSpec'
 import ApiExplorerErrorBoundary from './ApiExplorerErrorBoundary'
 import ApiEndpointAccordion from './ApiEndpointAccordion'
+import RawJsonInspectorTab from '../raw/RawJsonInspectorTab'
+import { ApiEndpointsSection } from './ApiEndpointsSection'
 
 function buildTargetUrl(route, pathParams = {}, queryParams = {}) {
   try {
@@ -99,7 +101,7 @@ function generateCurlCommand(route, state = {}, adminPassword = '') {
   }
 }
 
-function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) {
+export function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState('ALL')
   const [expandedId, setExpandedId] = useState(false)
@@ -522,12 +524,71 @@ function DevApiExplorerInner({ adminPassword: initialAdminPassword = 'admin' }) 
   )
 }
 
-function ApiExplorerTab(props) {
+function ApiExplorerTabComponent({
+  currentJsonSnapshot = {},
+  jsonData,
+  dataState,
+  adminPassword = '',
+}) {
+  const activeSnapshot = currentJsonSnapshot || dataState || jsonData || {}
+  const [activeSection, setActiveSection] = useState('endpoints') // 'database' | 'endpoints'
+
+  const handleToggle = (section) => (_, isExpanded) => {
+    if (isExpanded) {
+      setActiveSection(section)
+    } else {
+      // Closing active switches to the other
+      setActiveSection(section === 'database' ? 'endpoints' : 'database')
+    }
+  }
+
+  const isDatabaseActive = activeSection === 'database'
+
+  const databaseSection = (
+    <RawJsonInspectorTab
+      key='database'
+      dataState={activeSnapshot}
+      expanded={isDatabaseActive}
+      onToggle={handleToggle('database')}
+    />
+  )
+
+  const endpointsSection = (
+    <ApiEndpointsSection
+      key='endpoints'
+      adminPassword={adminPassword}
+      expanded={!isDatabaseActive}
+      onToggle={handleToggle('endpoints')}
+    />
+  )
+
   return (
     <ApiExplorerErrorBoundary>
-      <DevApiExplorerInner {...props} />
+      <Box
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          height: '100%',
+          gap: 2,
+        }}
+      >
+        {/* Always render closed accordion on top, open accordion below */}
+        {isDatabaseActive ? (
+          <>
+            {endpointsSection}
+            {databaseSection}
+          </>
+        ) : (
+          <>
+            {databaseSection}
+            {endpointsSection}
+          </>
+        )}
+      </Box>
     </ApiExplorerErrorBoundary>
   )
 }
 
-export default memo(ApiExplorerTab)
+export default memo(ApiExplorerTabComponent)

@@ -80,11 +80,7 @@ export const AnalyticsProjectStreamsCard = memo(function AnalyticsProjectStreams
                   mb: 0.5,
                 }}
               >
-                <Typography
-                  variant='body2'
-                  sx={{ fontWeight: 600, color: 'text.primary' }}
-                  noWrap
-                >
+                <Typography variant='body2' sx={{ fontWeight: 600, color: 'text.primary' }} noWrap>
                   {item.name || item.slug}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

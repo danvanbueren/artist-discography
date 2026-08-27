@@ -295,12 +295,16 @@ export default function ProjectEditForm({
                 }}
                 onMoveUp={(tIdx) =>
                   handleMoveEditTrackUp(tIdx, (newTracksList) =>
-                    markFieldDirty('edit_tracks_order', (pwd) => executeUpdateProject(pwd, newTracksList)),
+                    markFieldDirty('edit_tracks_order', (pwd) =>
+                      executeUpdateProject(pwd, newTracksList),
+                    ),
                   )
                 }
                 onMoveDown={(tIdx) =>
                   handleMoveEditTrackDown(tIdx, (newTracksList) =>
-                    markFieldDirty('edit_tracks_order', (pwd) => executeUpdateProject(pwd, newTracksList)),
+                    markFieldDirty('edit_tracks_order', (pwd) =>
+                      executeUpdateProject(pwd, newTracksList),
+                    ),
                   )
                 }
                 onDeleteTrack={handleDeleteEditTrack}

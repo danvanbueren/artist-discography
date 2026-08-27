@@ -36,13 +36,12 @@ export default function AdminDashboardTabs({
   return (
     <Box
       sx={{
-        p: activeTab === 1 || activeTab === 3 ? 2.5 : { xs: 2, sm: 3 },
+        p: activeTab === 1 || activeTab === 3 || activeTab === 4 ? 2.5 : { xs: 2, sm: 3 },
         flexGrow: 1,
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        overflowY: activeTab === 1 || activeTab === 3 ? 'hidden' : 'auto',
-
+        overflowY: activeTab === 1 || activeTab === 3 || activeTab === 4 ? 'hidden' : 'auto',
       }}
     >
       {/* TAB 0: PROFILE & SETTINGS */}
@@ -128,7 +127,9 @@ export default function AdminDashboardTabs({
       )}
 
       {/* TAB 4: API EXPLORER */}
-      {activeTab === 4 && <ApiExplorerTab />}
+      {activeTab === 4 && (
+        <ApiExplorerTab currentJsonSnapshot={currentJsonSnapshot} adminPassword={adminPassword} />
+      )}
     </Box>
   )
 }

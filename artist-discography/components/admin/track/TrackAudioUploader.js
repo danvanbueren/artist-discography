@@ -55,11 +55,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
           : isBlue
             ? 'rgba(144, 202, 249, 0.08)'
             : 'rgba(255, 179, 0, 0.08)',
-        borderColor: isGreen
-          ? 'success.main'
-          : isBlue
-            ? 'primary.main'
-            : 'warning.main',
+        borderColor: isGreen ? 'success.main' : isBlue ? 'primary.main' : 'warning.main',
         transition: 'all 0.2s ease',
       }}
     >
@@ -102,11 +98,7 @@ export const TrackAudioUploader = memo(function TrackAudioUploader({
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 minWidth: 0,
-                color: isGreen
-                  ? 'success.main'
-                  : isBlue
-                    ? 'primary.main'
-                    : 'warning.main',
+                color: isGreen ? 'success.main' : isBlue ? 'primary.main' : 'warning.main',
               }}
             >
               {isAudioTranscoding

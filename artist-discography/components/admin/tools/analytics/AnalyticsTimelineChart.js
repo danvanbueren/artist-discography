@@ -1,14 +1,7 @@
 'use client'
 
 import { memo, useState } from 'react'
-import {
-  Paper,
-  Box,
-  Typography,
-  ToggleButtonGroup,
-  ToggleButton,
-  Chip,
-} from '@mui/material'
+import { Paper, Box, Typography, ToggleButtonGroup, ToggleButton, Chip } from '@mui/material'
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded'
 import DataUsageRoundedIcon from '@mui/icons-material/DataUsageRounded'
 import { formatBytes } from '@/lib/data/analyticsUtils'
@@ -29,10 +22,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
     5,
   )
 
-  const maxBandwidthVal = Math.max(
-    ...timeline.map((d) => d.bandwidthBytes || 0),
-    1024 * 1024,
-  )
+  const maxBandwidthVal = Math.max(...timeline.map((d) => d.bandwidthBytes || 0), 1024 * 1024)
 
   const chartHeight = 180
   const svgPaddingTop = 20
@@ -182,7 +172,9 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
             color: 'text.secondary',
           }}
         >
-          <Typography variant='caption'>No timeline metrics available for this timeframe</Typography>
+          <Typography variant='caption'>
+            No timeline metrics available for this timeframe
+          </Typography>
         </Box>
       ) : (
         <Box
@@ -193,11 +185,7 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
             pt: 1,
           }}
         >
-          <svg
-            width='100%'
-            height={chartHeight}
-            style={{ overflow: 'visible', display: 'block' }}
-          >
+          <svg width='100%' height={chartHeight} style={{ overflow: 'visible', display: 'block' }}>
             {/* Horizontal Grid lines */}
             {[0, 0.5, 1].map((ratio, i) => {
               const y = svgPaddingTop + (1 - ratio) * availableHeight
@@ -370,7 +358,15 @@ export const AnalyticsTimelineChart = memo(function AnalyticsTimelineChart({
           </>
         ) : (
           <Typography variant='caption' sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-            Hover over any {activeFidelity === 'year' ? 'year' : activeFidelity === 'month' ? 'month' : activeFidelity === 'week' ? 'week' : 'day'} bar to view detailed metrics
+            Hover over any{' '}
+            {activeFidelity === 'year'
+              ? 'year'
+              : activeFidelity === 'month'
+                ? 'month'
+                : activeFidelity === 'week'
+                  ? 'week'
+                  : 'day'}{' '}
+            bar to view detailed metrics
           </Typography>
         )}
       </Box>

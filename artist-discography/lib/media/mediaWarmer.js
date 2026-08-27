@@ -287,188 +287,188 @@ export async function runCatalogMediaValidationJob(artistData = null) {
       const allActions = []
       const { formatBytes } = await import('../data/analyticsUtils')
 
-    // Step 1: Audit and sanitize projects directory (empty folders, slug alignment, extra audio/art files)
-    updateJobProgress(validationJob.id, {
-      progress: 10,
-      currentStep: 'Auditing projects directory structure and asset integrity...',
-    })
-    const { auditAndSanitizeProjectsDirectory } = await import('../data/projectStorage')
-    const projectAuditResult = await auditAndSanitizeProjectsDirectory(artistData?.name)
-    if (Array.isArray(projectAuditResult.actions)) {
-      allActions.push(...projectAuditResult.actions)
-    }
-
-    // Step 2: Discover all catalog media files
-    updateJobProgress(validationJob.id, {
-      progress: 25,
-      currentStep: 'Discovering all catalog tracks, covers, and logos...',
-    })
-    const { images, audio } = collectAllMediaFiles(artistData)
-
-    // Step 3: Audit cache coverage for images and audio
-    updateJobProgress(validationJob.id, {
-      progress: 45,
-      currentStep: 'Auditing image and audio cache integrity...',
-    })
-    const uncachedImages = images.filter((img) => !isImageFullyCached(img))
-    const uncachedAudio = audio.filter((aud) => !isAudioFullyCached(aud))
-
-    // Step 4: Scan disk and prune orphaned / stale cache files
-    updateJobProgress(validationJob.id, {
-      progress: 60,
-      currentStep: 'Scanning disk for orphaned or stale cache files...',
-    })
-    const { pruneUnusedCacheFiles } = await import('./cacheCleaner')
-    const pruneResult = await pruneUnusedCacheFiles({ force: true, artistData })
-    if (Array.isArray(pruneResult.actions)) {
-      allActions.push(...pruneResult.actions)
-    }
-
-    const imagesPruned = pruneResult.imagesPruned || 0
-    const audioPruned = pruneResult.audioPruned || 0
-    const totalOrphans = imagesPruned + audioPruned
-    const totalReclaimedBytes =
-      (pruneResult.imagesBytesReclaimed || 0) +
-      (pruneResult.audioBytesReclaimed || 0) +
-      (projectAuditResult.totalBytesReclaimed || 0)
-
-    // If actions were taken, also log a dedicated completed cleanup record into recent history
-    if (allActions.length > 0) {
-      const cleanupJob = createJob({
-        id: `cleanup-cache-${Date.now()}`,
-        type: 'cleanup',
-        file: `${allActions.length} action${allActions.length === 1 ? '' : 's'} performed`,
-        target: 'Catalog Asset Cleanup',
-        totalSteps: 1,
-      })
-      completeJob(cleanupJob.id, {
-        summary: `Performed ${allActions.length} cleanup action${allActions.length === 1 ? '' : 's'} (${formatBytes(totalReclaimedBytes)} reclaimed)`,
-        actions: allActions,
-        bytesReclaimed: totalReclaimedBytes,
-      })
-    }
-
-    // Step 5: Warm any missing media variants with standard active jobs
-    const totalToWarm = uncachedImages.length + uncachedAudio.length
-    let imagesWarmed = 0
-    let audioWarmed = 0
-    const mediaWarnings = []
-
-    if (totalToWarm > 0) {
+      // Step 1: Audit and sanitize projects directory (empty folders, slug alignment, extra audio/art files)
       updateJobProgress(validationJob.id, {
-        progress: 80,
-        currentStep: `Generating ${totalToWarm} missing media variant${totalToWarm === 1 ? '' : 's'} in background...`,
+        progress: 10,
+        currentStep: 'Auditing projects directory structure and asset integrity...',
       })
+      const { auditAndSanitizeProjectsDirectory } = await import('../data/projectStorage')
+      const projectAuditResult = await auditAndSanitizeProjectsDirectory(artistData?.name)
+      if (Array.isArray(projectAuditResult.actions)) {
+        allActions.push(...projectAuditResult.actions)
+      }
 
-      if (uncachedImages.length > 0) {
-        await asyncPool(uncachedImages, 4, async (imgPath) => {
-          const fileName = path.basename(imgPath)
-          const targetLabel = fileName.toLowerCase().startsWith('logo')
-            ? 'Artist Logo'
-            : fileName
-          try {
-            const res = await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel })
-            if (res.error) {
-              allActions.push(`Warning: Image optimization failed for ${fileName} (${res.error})`)
-              mediaWarnings.push(`${fileName}: ${res.error}`)
-            } else if (res.warning) {
-              allActions.push(`Notice: Image optimization warning for ${fileName} (${res.warning})`)
-              imagesWarmed++
-            } else {
-              imagesWarmed++
-            }
-          } catch (err) {
-            allActions.push(`Warning: Image optimization failed for ${fileName} (${err.message})`)
-            mediaWarnings.push(`${fileName}: ${err.message}`)
-          }
+      // Step 2: Discover all catalog media files
+      updateJobProgress(validationJob.id, {
+        progress: 25,
+        currentStep: 'Discovering all catalog tracks, covers, and logos...',
+      })
+      const { images, audio } = collectAllMediaFiles(artistData)
+
+      // Step 3: Audit cache coverage for images and audio
+      updateJobProgress(validationJob.id, {
+        progress: 45,
+        currentStep: 'Auditing image and audio cache integrity...',
+      })
+      const uncachedImages = images.filter((img) => !isImageFullyCached(img))
+      const uncachedAudio = audio.filter((aud) => !isAudioFullyCached(aud))
+
+      // Step 4: Scan disk and prune orphaned / stale cache files
+      updateJobProgress(validationJob.id, {
+        progress: 60,
+        currentStep: 'Scanning disk for orphaned or stale cache files...',
+      })
+      const { pruneUnusedCacheFiles } = await import('./cacheCleaner')
+      const pruneResult = await pruneUnusedCacheFiles({ force: true, artistData })
+      if (Array.isArray(pruneResult.actions)) {
+        allActions.push(...pruneResult.actions)
+      }
+
+      const imagesPruned = pruneResult.imagesPruned || 0
+      const audioPruned = pruneResult.audioPruned || 0
+      const totalOrphans = imagesPruned + audioPruned
+      const totalReclaimedBytes =
+        (pruneResult.imagesBytesReclaimed || 0) +
+        (pruneResult.audioBytesReclaimed || 0) +
+        (projectAuditResult.totalBytesReclaimed || 0)
+
+      // If actions were taken, also log a dedicated completed cleanup record into recent history
+      if (allActions.length > 0) {
+        const cleanupJob = createJob({
+          id: `cleanup-cache-${Date.now()}`,
+          type: 'cleanup',
+          file: `${allActions.length} action${allActions.length === 1 ? '' : 's'} performed`,
+          target: 'Catalog Asset Cleanup',
+          totalSteps: 1,
+        })
+        completeJob(cleanupJob.id, {
+          summary: `Performed ${allActions.length} cleanup action${allActions.length === 1 ? '' : 's'} (${formatBytes(totalReclaimedBytes)} reclaimed)`,
+          actions: allActions,
+          bytesReclaimed: totalReclaimedBytes,
         })
       }
 
-      if (uncachedAudio.length > 0) {
-        await asyncPool(uncachedAudio, 2, async (audioPath) => {
-          const fileName = path.basename(audioPath)
-          try {
-            const res = await optimizeAndCacheAudio(audioPath, undefined, { target: fileName })
-            if (res.error) {
-              allActions.push(`Warning: Audio transcode failed for ${fileName} (${res.error})`)
-              mediaWarnings.push(`${fileName}: ${res.error}`)
-            } else if (res.warning) {
-              allActions.push(`Notice: Audio transcode warning for ${fileName} (${res.warning})`)
-              audioWarmed++
-            } else {
-              audioWarmed++
-            }
-          } catch (err) {
-            allActions.push(`Warning: Audio transcode failed for ${fileName} (${err.message})`)
-            mediaWarnings.push(`${fileName}: ${err.message}`)
-          }
-        })
-      }
-    }
+      // Step 5: Warm any missing media variants with standard active jobs
+      const totalToWarm = uncachedImages.length + uncachedAudio.length
+      let imagesWarmed = 0
+      let audioWarmed = 0
+      const mediaWarnings = []
 
-    // Prime favicon suite if custom logo exists
-    try {
-      const dataDir = path.join(process.cwd(), 'data')
-      const { findLogoFile, generateFaviconSuite } = await import('./logoUtils')
-      const customLogo = findLogoFile(dataDir)
-      if (customLogo) {
-        const faviconsDir = path.join(dataDir, 'cache', 'favicons')
-        if (!fs.existsSync(faviconsDir) || fs.readdirSync(faviconsDir).length === 0) {
-          await generateFaviconSuite(customLogo)
+      if (totalToWarm > 0) {
+        updateJobProgress(validationJob.id, {
+          progress: 80,
+          currentStep: `Generating ${totalToWarm} missing media variant${totalToWarm === 1 ? '' : 's'} in background...`,
+        })
+
+        if (uncachedImages.length > 0) {
+          await asyncPool(uncachedImages, 4, async (imgPath) => {
+            const fileName = path.basename(imgPath)
+            const targetLabel = fileName.toLowerCase().startsWith('logo') ? 'Artist Logo' : fileName
+            try {
+              const res = await optimizeAndCacheImage(imgPath, undefined, { target: targetLabel })
+              if (res.error) {
+                allActions.push(`Warning: Image optimization failed for ${fileName} (${res.error})`)
+                mediaWarnings.push(`${fileName}: ${res.error}`)
+              } else if (res.warning) {
+                allActions.push(
+                  `Notice: Image optimization warning for ${fileName} (${res.warning})`,
+                )
+                imagesWarmed++
+              } else {
+                imagesWarmed++
+              }
+            } catch (err) {
+              allActions.push(`Warning: Image optimization failed for ${fileName} (${err.message})`)
+              mediaWarnings.push(`${fileName}: ${err.message}`)
+            }
+          })
+        }
+
+        if (uncachedAudio.length > 0) {
+          await asyncPool(uncachedAudio, 2, async (audioPath) => {
+            const fileName = path.basename(audioPath)
+            try {
+              const res = await optimizeAndCacheAudio(audioPath, undefined, { target: fileName })
+              if (res.error) {
+                allActions.push(`Warning: Audio transcode failed for ${fileName} (${res.error})`)
+                mediaWarnings.push(`${fileName}: ${res.error}`)
+              } else if (res.warning) {
+                allActions.push(`Notice: Audio transcode warning for ${fileName} (${res.warning})`)
+                audioWarmed++
+              } else {
+                audioWarmed++
+              }
+            } catch (err) {
+              allActions.push(`Warning: Audio transcode failed for ${fileName} (${err.message})`)
+              mediaWarnings.push(`${fileName}: ${err.message}`)
+            }
+          })
         }
       }
-    } catch (favErr) {
-      console.warn('Notice: Favicon priming during media warming:', favErr.message)
-    }
 
-    // Step 6: Construct complete summary and finish the validation job
-    const totalWarmed = imagesWarmed + audioWarmed
-    let summaryText = ''
+      // Prime favicon suite if custom logo exists
+      try {
+        const dataDir = path.join(process.cwd(), 'data')
+        const { findLogoFile, generateFaviconSuite } = await import('./logoUtils')
+        const customLogo = findLogoFile(dataDir)
+        if (customLogo) {
+          const faviconsDir = path.join(dataDir, 'cache', 'favicons')
+          if (!fs.existsSync(faviconsDir) || fs.readdirSync(faviconsDir).length === 0) {
+            await generateFaviconSuite(customLogo)
+          }
+        }
+      } catch (favErr) {
+        console.warn('Notice: Favicon priming during media warming:', favErr.message)
+      }
 
-    if (totalToWarm === 0 && allActions.length === 0) {
-      summaryText =
-        'All files checked — everything is up to date and no orphaned files were detected.'
-    } else if (totalWarmed > 0 && allActions.length === 0) {
-      summaryText = `Validation complete: generated ${totalWarmed} new media variant${totalWarmed === 1 ? '' : 's'}.`
-    } else if (totalWarmed === 0 && allActions.length > 0) {
-      summaryText = `Validation complete: performed ${allActions.length} action${allActions.length === 1 ? '' : 's'} (${formatBytes(totalReclaimedBytes)} reclaimed).`
-    } else {
-      summaryText = `Validation complete: generated ${totalWarmed} new media variant${totalWarmed === 1 ? '' : 's'} and performed ${allActions.length} action${allActions.length === 1 ? '' : 's'} (${formatBytes(totalReclaimedBytes)} reclaimed).`
-    }
+      // Step 6: Construct complete summary and finish the validation job
+      const totalWarmed = imagesWarmed + audioWarmed
+      let summaryText = ''
 
-    if (mediaWarnings.length > 0) {
-      summaryText += ` Encountered ${mediaWarnings.length} media issue${mediaWarnings.length === 1 ? '' : 's'} (see actions log).`
-    }
+      if (totalToWarm === 0 && allActions.length === 0) {
+        summaryText =
+          'All files checked — everything is up to date and no orphaned files were detected.'
+      } else if (totalWarmed > 0 && allActions.length === 0) {
+        summaryText = `Validation complete: generated ${totalWarmed} new media variant${totalWarmed === 1 ? '' : 's'}.`
+      } else if (totalWarmed === 0 && allActions.length > 0) {
+        summaryText = `Validation complete: performed ${allActions.length} action${allActions.length === 1 ? '' : 's'} (${formatBytes(totalReclaimedBytes)} reclaimed).`
+      } else {
+        summaryText = `Validation complete: generated ${totalWarmed} new media variant${totalWarmed === 1 ? '' : 's'} and performed ${allActions.length} action${allActions.length === 1 ? '' : 's'} (${formatBytes(totalReclaimedBytes)} reclaimed).`
+      }
 
-    completeJob(validationJob.id, {
-      summary: summaryText,
-      actions: allActions,
-      warnings: mediaWarnings.length > 0 ? mediaWarnings : undefined,
-      imagesChecked: images.length,
-      imagesWarmed,
-      audioChecked: audio.length,
-      audioWarmed,
-      orphanedFilesRemoved: totalOrphans,
-      bytesReclaimed: totalReclaimedBytes,
-    })
+      if (mediaWarnings.length > 0) {
+        summaryText += ` Encountered ${mediaWarnings.length} media issue${mediaWarnings.length === 1 ? '' : 's'} (see actions log).`
+      }
 
-    return {
-      success: true,
-      actions: allActions,
-      imagesChecked: images.length,
-      imagesWarmed,
-      audioChecked: audio.length,
-      audioWarmed,
-      orphanedFilesRemoved: totalOrphans,
-      bytesReclaimed: totalReclaimedBytes,
+      completeJob(validationJob.id, {
+        summary: summaryText,
+        actions: allActions,
+        warnings: mediaWarnings.length > 0 ? mediaWarnings : undefined,
+        imagesChecked: images.length,
+        imagesWarmed,
+        audioChecked: audio.length,
+        audioWarmed,
+        orphanedFilesRemoved: totalOrphans,
+        bytesReclaimed: totalReclaimedBytes,
+      })
+
+      return {
+        success: true,
+        actions: allActions,
+        imagesChecked: images.length,
+        imagesWarmed,
+        audioChecked: audio.length,
+        audioWarmed,
+        orphanedFilesRemoved: totalOrphans,
+        bytesReclaimed: totalReclaimedBytes,
+      }
+    } catch (err) {
+      failJob(validationJob.id, err)
+      return {
+        success: false,
+        error: err.message,
+      }
     }
-  } catch (err) {
-    failJob(validationJob.id, err)
-    return {
-      success: false,
-      error: err.message,
-    }
-  }
   })().finally(() => {
     activeValidationPromise = null
   })

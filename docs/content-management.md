@@ -185,7 +185,9 @@ The Admin Portal provides a graphical interface for managing content without man
    - Use the **Auto-Search** button (`AutoAwesomeIcon`) on streaming fields to quickly locate track URLs on Spotify/YouTube.
    - Duplicate tracks between releases using the Copy Track tool (`/api/admin/copy-track`).
 5. **Tab 3 (Catalog Audit)**: Review audio coverage, missing streaming links, and cover artwork dimensions across all releases.
-6. **Tab 4 (Utilities & Analytics)**:
-   - **Catalog Analytics & Insights**: Live timeline charts, stream counts, page visits, bandwidth usage, project distribution bars, top tracks, and recent events.
-   - **Raw Configuration Inspector**: Collapsible inspector for viewing and copying formatted `config.json`, `project.json`, and assembled discography states.
-7. **Tab 5 (OpenAPI Explorer)**: Interactive OpenAPI 3.1 live sandbox and cURL generator.
+6. **Tab 4 (Utilities)**:
+   - **Server Analytics**: Live timeline charts, stream counts, page visits, bandwidth usage, project distribution bars, top tracks, and recent events.
+   - **Format & Share Projects**: Customizable post templates, token builder, and batch release announcements for social media.
+7. **Tab 5 (API & Database)**:
+   - **API Endpoints**: Interactive OpenAPI 3.1 live sandbox and cURL generator.
+   - **Database Inspector**: Collapsible inspector for viewing and copying formatted `config.json`, `project.json`, and assembled discography states.

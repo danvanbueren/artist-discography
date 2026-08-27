@@ -307,8 +307,7 @@ export default function MediaJobCard({ job }) {
       </Box>
 
       {/* Error Details Box if Job Failed */}
-      {(job.error ||
-        (Array.isArray(job.details?.errors) && job.details.errors.length > 0)) && (
+      {(job.error || (Array.isArray(job.details?.errors) && job.details.errors.length > 0)) && (
         <Box
           sx={{
             mt: 0.5,

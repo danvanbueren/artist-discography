@@ -51,11 +51,7 @@ export function getAdminBasePrefix() {
  * @param {boolean} [params.hasArtistName=true]
  * @returns {{ tab: number, isCreatingNew: boolean, projectIndex: number }}
  */
-export function resolveAdminRoute({
-  initialSlug = [],
-  projectsList = [],
-  hasArtistName = true,
-}) {
+export function resolveAdminRoute({ initialSlug = [], projectsList = [], hasArtistName = true }) {
   let segments = Array.isArray(initialSlug) ? initialSlug : []
   let search = ''
 
@@ -90,7 +86,12 @@ export function resolveAdminRoute({
       const matchedProj = findProjectBySlug(projectsList, targetSlug)
       if (matchedProj) {
         const pIdx = projectsList.findIndex((p) => p === matchedProj)
-        return { tab: 1, isCreatingNew: false, projectIndex: pIdx >= 0 ? pIdx : 0, isInvalidSlug: false }
+        return {
+          tab: 1,
+          isCreatingNew: false,
+          projectIndex: pIdx >= 0 ? pIdx : 0,
+          isInvalidSlug: false,
+        }
       } else {
         return { tab: 1, isCreatingNew: false, projectIndex: 0, isInvalidSlug: true }
       }
@@ -116,11 +117,7 @@ export function resolveAdminRoute({
  * Custom hook orchestrating Admin Dashboard URL routing, browser history,
  * deep linking to tabs and projects, and real-time popstate synchronization.
  */
-export function useAdminRouting({
-  initialSlug = [],
-  projectsList = [],
-  hasArtistName = true,
-}) {
+export function useAdminRouting({ initialSlug = [], projectsList = [], hasArtistName = true }) {
   const initialResolved = useMemo(() => {
     return resolveAdminRoute({ initialSlug, projectsList, hasArtistName })
   }, [initialSlug, projectsList, hasArtistName])

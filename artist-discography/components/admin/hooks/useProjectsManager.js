@@ -140,7 +140,14 @@ export function useProjectsManager({
         editForm.populateEditForm(proj)
       }
     }
-  }, [initialSelectedProjIndex, initialIsCreatingNew, projectsList, createForm, editForm, clearPendingAutoSave])
+  }, [
+    initialSelectedProjIndex,
+    initialIsCreatingNew,
+    projectsList,
+    createForm,
+    editForm,
+    clearPendingAutoSave,
+  ])
 
   const lastLoadedProjIndexRef = useRef(-1)
 
