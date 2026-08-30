@@ -43,6 +43,22 @@ export function useArtistProfile(
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [isResettingLogo, setIsResettingLogo] = useState(false)
 
+  // Background State
+  const [backgroundInfo, setBackgroundInfo] = useState(
+    () =>
+      initialData?.backgroundInfo ?? {
+        exists: false,
+        filename: null,
+        url: null,
+      },
+  )
+  const [backgroundTimestamp, setBackgroundTimestamp] = useState(() => Date.now())
+  const [backgroundPreview, setBackgroundPreview] = useState(
+    () => `/api/background?t=${Date.now()}`,
+  )
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false)
+  const [isResettingBackground, setIsResettingBackground] = useState(false)
+
   const artistNameInputRef = useRef(artistNameInput)
   const artistBioInputRef = useRef(artistBioInput)
   const artistPlatformsRef = useRef(artistPlatforms)
@@ -107,6 +123,9 @@ export function useArtistProfile(
     }
     if (initialData?.logoInfo) {
       setLogoInfo(initialData.logoInfo)
+    }
+    if (initialData?.backgroundInfo) {
+      setBackgroundInfo(initialData.backgroundInfo)
     }
   }, [initialData, defaultArtistName])
 
@@ -225,6 +244,81 @@ export function useArtistProfile(
     [setErrorMessage, setStatusMessage, onAuthStatusError],
   )
 
+  const uploadBackgroundFile = useCallback(
+    async (file, password) => {
+      if (!file) return false
+      setIsUploadingBackground(true)
+      try {
+        const formData = new FormData()
+        formData.append('password', password || '')
+        formData.append('backgroundFile', file)
+
+        const res = await fetch('/api/admin/background', {
+          method: 'POST',
+          body: formData,
+          signal: AbortSignal.timeout(30000),
+        })
+        const result = await res.json().catch(() => ({}))
+        if (res.ok && result.success) {
+          const now = Date.now()
+          setBackgroundInfo(result.background || {})
+          setBackgroundTimestamp(now)
+          setBackgroundPreview(`/api/background?t=${now}`)
+          setStatusMessage?.(result.message || 'Background uploaded successfully!')
+          return true
+        }
+        if (res.status === 401 || res.status === 403) {
+          onAuthStatusError?.(res.status, result.error)
+        }
+        setErrorMessage?.(result.error || 'Failed to upload background.')
+        return false
+      } catch (err) {
+        setErrorMessage?.(`Background upload error: ${err.message}`)
+        return false
+      } finally {
+        setIsUploadingBackground(false)
+      }
+    },
+    [setErrorMessage, setStatusMessage, onAuthStatusError],
+  )
+
+  const resetBackground = useCallback(
+    async (password) => {
+      setIsResettingBackground(true)
+      try {
+        const res = await fetch('/api/admin/background', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            password: password || '',
+            action: 'delete',
+          }),
+          signal: AbortSignal.timeout(20000),
+        })
+        const result = await res.json().catch(() => ({}))
+        if (res.ok && result.success) {
+          const now = Date.now()
+          setBackgroundInfo(result.background || {})
+          setBackgroundTimestamp(now)
+          setBackgroundPreview(`/api/background?t=${now}`)
+          setStatusMessage?.(result.message || 'Background reset to default.')
+          return true
+        }
+        if (res.status === 401 || res.status === 403) {
+          onAuthStatusError?.(res.status, result.error)
+        }
+        setErrorMessage?.(result.error || 'Failed to reset background.')
+        return false
+      } catch (err) {
+        setErrorMessage?.(`Background reset error: ${err.message}`)
+        return false
+      } finally {
+        setIsResettingBackground(false)
+      }
+    },
+    [setErrorMessage, setStatusMessage, onAuthStatusError],
+  )
+
   return {
     artistData,
     setArtistData,
@@ -260,6 +354,14 @@ export function useArtistProfile(
     isResettingLogo,
     uploadLogoFile,
     resetLogo,
+    backgroundInfo,
+    setBackgroundInfo,
+    backgroundPreview,
+    backgroundTimestamp,
+    isUploadingBackground,
+    isResettingBackground,
+    uploadBackgroundFile,
+    resetBackground,
     executeSaveArtist,
   }
 }

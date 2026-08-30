@@ -143,4 +143,42 @@ export const MEDIA_ROUTES_SPEC = [
       { status: 404, description: 'Icon not found' },
     ],
   },
+  {
+    id: 'media-background',
+    path: '/api/background',
+    method: 'GET',
+    tag: 'Media & Streaming',
+    summary: 'Stream Custom Default Ambient Background Asset',
+    description:
+      'Streams custom default ambient background image with on-the-fly Sharp resizing and Gaussian blur optimization.',
+    requiresAdminAuth: false,
+    requestFormat: 'none',
+    queryParams: [
+      {
+        name: 'w',
+        example: '600',
+        description: 'Target pixel width',
+      },
+      {
+        name: 'q',
+        example: '80',
+        description: 'Target image quality (1-100)',
+      },
+      {
+        name: 'fmt',
+        example: 'webp',
+        description: 'Target format: webp, avif, jpeg, png, original',
+      },
+      {
+        name: 'blur',
+        example: '8',
+        description: 'Gaussian blur radius for placeholder rendering',
+      },
+    ],
+    responses: [
+      { status: 200, description: 'Background image stream' },
+      { status: 304, description: 'Not Modified (ETag match)' },
+      { status: 404, description: 'Custom background not found' },
+    ],
+  },
 ]

@@ -248,6 +248,110 @@ export const ADMIN_ROUTES_SPEC = [
     ],
   },
   {
+    id: 'admin-background-get',
+    path: '/api/admin/background',
+    method: 'GET',
+    tag: 'Admin Portal',
+    summary: 'Get Custom Background Status & Details',
+    description: 'Returns the current active custom background metadata.',
+    requiresAdminAuth: false,
+    requestFormat: 'none',
+    responses: [
+      {
+        status: 200,
+        description: 'Background metadata returned',
+        example: {
+          success: true,
+          background: {
+            exists: true,
+            filename: 'background.jpg',
+            url: '/api/background',
+            mimeType: 'image/jpeg',
+            sizeBytes: 254120,
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'admin-background-post',
+    path: '/api/admin/background',
+    method: 'POST',
+    tag: 'Admin Portal',
+    summary: 'Upload Custom Default Background',
+    description:
+      'Uploads a custom image to serve as the default ambient background when the audio player is idle.',
+    requiresAdminAuth: true,
+    requestFormat: 'formdata',
+    defaultParams: [
+      {
+        key: 'password',
+        value: 'admin',
+        type: 'text',
+        description: 'Admin authentication password (Required)',
+      },
+      {
+        key: 'action',
+        value: 'upload',
+        type: 'text',
+        description: 'Action: "upload" or "delete"/"reset"',
+      },
+      {
+        key: 'backgroundFile',
+        value: null,
+        type: 'file',
+        description: 'Background image file (PNG, JPG, WebP, AVIF) (Required for upload)',
+      },
+    ],
+    responses: [
+      {
+        status: 200,
+        description: 'Background uploaded successfully',
+        example: {
+          success: true,
+          message: 'Custom background (background.jpg) uploaded successfully!',
+        },
+      },
+      {
+        status: 400,
+        description: 'Missing file',
+        example: { success: false, error: 'No background image file was provided.' },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
+    ],
+  },
+  {
+    id: 'admin-background-delete',
+    path: '/api/admin/background',
+    method: 'DELETE',
+    tag: 'Admin Portal',
+    summary: 'Delete Custom Background (Revert to Fallback)',
+    description:
+      'Removes the custom background image, reverting the ambient backdrop to use the newest release artwork.',
+    requiresAdminAuth: true,
+    requestFormat: 'json',
+    defaultBody: JSON.stringify({ password: 'admin' }, null, 2),
+    responses: [
+      {
+        status: 200,
+        description: 'Background deleted and reset to release artwork fallback',
+        example: {
+          success: true,
+          message: 'Custom background removed. Reverted to newest release artwork fallback.',
+        },
+      },
+      {
+        status: 401,
+        description: 'Unauthorized',
+        example: { success: false, error: 'Unauthorized: Invalid admin password' },
+      },
+    ],
+  },
+  {
     id: 'admin-upload-post',
     path: '/api/admin/upload',
     method: 'POST',

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { loadArtistData } from '@/lib/data/artistData'
 import { getLogoDetails } from '@/lib/media/logoUtils'
+import { getBackgroundDetails } from '@/lib/media/backgroundUtils'
 import AdminDashboard from '@/components/admin/AdminDashboard'
 
 export async function generateMetadata() {
@@ -39,6 +40,7 @@ export default async function AdminPage({ params }) {
     adminAccess = data?.adminAccess !== false
     artistName = data?.artist?.name?.trim() || 'Artist'
     data.logoInfo = getLogoDetails()
+    data.backgroundInfo = getBackgroundDetails()
   } catch (err) {
     console.error('Error loading artist data for admin page:', err)
   }

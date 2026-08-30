@@ -20,6 +20,9 @@ export default function AdminDashboardTabs({
   handleSaveArtist,
   handleUploadLogo,
   handleResetLogo,
+  handleUploadBackground,
+  handleResetBackground,
+  newestProjectCover,
   handleSaveCreateProject,
   handleSaveUpdateProject,
   audioPreview,
@@ -81,6 +84,13 @@ export default function AdminDashboardTabs({
           isResettingLogo={profile.isResettingLogo}
           onUploadLogo={handleUploadLogo}
           onResetLogo={handleResetLogo}
+          backgroundInfo={profile.backgroundInfo}
+          backgroundPreview={profile.backgroundPreview}
+          isUploadingBackground={profile.isUploadingBackground}
+          isResettingBackground={profile.isResettingBackground}
+          onUploadBackground={handleUploadBackground}
+          onResetBackground={handleResetBackground}
+          newestProjectCover={newestProjectCover}
           mediaJobs={mediaJobs}
         />
       )}

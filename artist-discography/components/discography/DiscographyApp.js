@@ -258,9 +258,20 @@ export default function MainDiscographyApp({
     if (currentView === 'SINGLE_PROJECT' && selectedProject) {
       return selectedProject.cover || selectedProject.image || null
     }
+    if (data?.backgroundInfo?.exists && data?.backgroundInfo?.url) {
+      return data.backgroundInfo.url
+    }
     const newestProject = filteredProjects[0] || projects[0]
     return newestProject?.cover || newestProject?.image || null
-  }, [playingTrack, currentView, selectedProject, filteredProjects, projects])
+  }, [
+    playingTrack,
+    currentView,
+    selectedProject,
+    data?.backgroundInfo?.exists,
+    data?.backgroundInfo?.url,
+    filteredProjects,
+    projects,
+  ])
 
   // 8. Platforms Preference & Modal
   const [selectedPlatform, setSelectedPlatform] = useState('youtube')

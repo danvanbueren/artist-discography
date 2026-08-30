@@ -7,7 +7,11 @@ import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
 
 function getLowResUrl(src) {
   if (!src || typeof src !== 'string') return ''
-  if (src.startsWith('/api/media') || src.startsWith('/api/logo')) {
+  if (
+    src.startsWith('/api/media') ||
+    src.startsWith('/api/logo') ||
+    src.startsWith('/api/background')
+  ) {
     const separator = src.includes('?') ? '&' : '?'
     return `${src}${separator}w=48&q=20&blur=8&fmt=webp`
   }
@@ -16,7 +20,11 @@ function getLowResUrl(src) {
 
 function getHighResUrl(src) {
   if (!src || typeof src !== 'string') return ''
-  if (src.startsWith('/api/media') || src.startsWith('/api/logo')) {
+  if (
+    src.startsWith('/api/media') ||
+    src.startsWith('/api/logo') ||
+    src.startsWith('/api/background')
+  ) {
     if (src.includes('w=')) return src
     const separator = src.includes('?') ? '&' : '?'
     return `${src}${separator}w=600&q=80&fmt=webp`

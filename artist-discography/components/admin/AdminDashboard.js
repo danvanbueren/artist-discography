@@ -186,6 +186,17 @@ export default function AdminDashboard({
     return profile.resetLogo(auth.password)
   }, [profile, auth.password])
 
+  const handleUploadBackground = useCallback(
+    (file) => {
+      return profile.uploadBackgroundFile(file, auth.password)
+    },
+    [profile, auth.password],
+  )
+
+  const handleResetBackground = useCallback(() => {
+    return profile.resetBackground(auth.password)
+  }, [profile, auth.password])
+
   const handleSaveCreateProject = useCallback(() => {
     return projects.executeCreateProject(auth.password)
   }, [projects, auth.password])
@@ -333,6 +344,9 @@ export default function AdminDashboard({
               handleSaveArtist={handleSaveArtist}
               handleUploadLogo={handleUploadLogo}
               handleResetLogo={handleResetLogo}
+              handleUploadBackground={handleUploadBackground}
+              handleResetBackground={handleResetBackground}
+              newestProjectCover={projects.projectsList?.[0]?.cover || null}
               handleSaveCreateProject={handleSaveCreateProject}
               handleSaveUpdateProject={handleSaveUpdateProject}
               audioPreview={audioPreview}

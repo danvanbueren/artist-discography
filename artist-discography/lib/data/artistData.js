@@ -26,6 +26,7 @@ import {
   deleteProjectDirectory,
 } from './projectStorage'
 import { normalizeSiteUrl, normalizeArtistDataUrls } from './urlNormalization'
+import { getBackgroundDetails } from '@/lib/media/backgroundUtils'
 
 export const DEFAULT_DATA_SCAFFOLD = {
   ...DEFAULT_CONFIG_SCAFFOLD,
@@ -226,6 +227,7 @@ export class ArtistDataManager {
     const unifiedData = {
       ...configData,
       projects,
+      backgroundInfo: getBackgroundDetails(),
     }
 
     return {

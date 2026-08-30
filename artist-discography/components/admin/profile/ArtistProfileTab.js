@@ -3,6 +3,7 @@
 import { Box, Grid, Paper, Typography, Stack } from '@mui/material'
 import PersonIcon from '@mui/icons-material/Person'
 import ServerSecurityCard from './ServerSecurityCard'
+import PersonalizationCard from './PersonalizationCard'
 import ArtistLogoCard from './ArtistLogoCard'
 import ArtistBioCard from './ArtistBioCard'
 import ArtistSocialsCard from './ArtistSocialsCard'
@@ -47,6 +48,13 @@ export default function ArtistProfileTab({
   isResettingLogo,
   onUploadLogo,
   onResetLogo,
+  backgroundInfo,
+  backgroundPreview,
+  isUploadingBackground,
+  isResettingBackground,
+  onUploadBackground,
+  onResetBackground,
+  newestProjectCover,
   mediaJobs,
 }) {
   const logoJob = mediaJobs?.getJobForFile?.('logo') || null
@@ -80,6 +88,16 @@ export default function ArtistProfileTab({
               savedFields={savedFields}
               markFieldDirty={markFieldDirty}
               executeSaveArtist={executeSaveArtist}
+            />
+
+            <PersonalizationCard
+              backgroundInfo={backgroundInfo}
+              backgroundPreview={backgroundPreview}
+              isUploadingBackground={isUploadingBackground}
+              isResettingBackground={isResettingBackground}
+              onUploadBackground={onUploadBackground}
+              onResetBackground={onResetBackground}
+              newestProjectCover={newestProjectCover}
             />
           </Stack>
         </Grid>
