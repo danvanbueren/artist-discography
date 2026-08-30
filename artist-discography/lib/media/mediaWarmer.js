@@ -280,7 +280,7 @@ export async function runCatalogMediaValidationJob(artistData = null) {
       type: 'validation',
       file: 'All Catalog Media & Cache',
       target: 'Media Cache Audit',
-      totalSteps: 5,
+      totalSteps: 6,
     })
 
     try {
@@ -421,8 +421,22 @@ export async function runCatalogMediaValidationJob(artistData = null) {
         console.warn('Notice: Favicon priming during media warming:', favErr.message)
       }
 
-      // Step 6: Construct complete summary and finish the validation job
-      const totalWarmed = imagesWarmed + audioWarmed
+      // Step 6: Validate and warm all Open Graph preview cards & metadata sidecars
+      updateJobProgress(validationJob.id, {
+        progress: 88,
+        currentStep: 'Validating Open Graph preview cards and metadata sidecars...',
+      })
+      let ogWarmed = 0
+      try {
+        const { validateAndWarmAllOgCards } = await import('./og/ogCacheManager')
+        const ogResult = await validateAndWarmAllOgCards({ target: 'Open Graph Preview Cards' })
+        ogWarmed = ogResult?.generated || 0
+      } catch (ogErr) {
+        console.warn('Notice: Open Graph card validation warning:', ogErr.message)
+      }
+
+      // Step 7: Construct complete summary and finish the validation job
+      const totalWarmed = imagesWarmed + audioWarmed + ogWarmed
       let summaryText = ''
 
       if (totalToWarm === 0 && allActions.length === 0) {

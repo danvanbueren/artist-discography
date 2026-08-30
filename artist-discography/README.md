@@ -13,6 +13,7 @@ For full project documentation, technology stack, and comprehensive operator con
   - `app/api/dev/`: Developer utilities (`openapi`).
   - `app/api/audio/`: HTTP 206 partial content audio streaming endpoint with automated bandwidth tracking.
   - `app/api/media/`: Responsive image and cover artwork server endpoint with bandwidth tracking.
+  - `app/api/og/`: Dynamic 1200×630 Open Graph and Discord link preview card rendering endpoint.
   - `app/api/logo` & `app/api/icon`: Dynamic logo asset and favicon suite streaming endpoints.
   - `app/favicon.ico` & `app/apple-touch-icon.png`: Dynamic root favicon and mobile touch icon route handlers.
 - **`components/`**: Modular, single-responsibility UI components organized by domain:
@@ -52,11 +53,11 @@ For full project documentation, technology stack, and comprehensive operator con
   - `components/ui/`: Shared primitives (`ProgressiveImage`, `SubduedText`).
 - **`lib/`**: Business logic, algorithms, and domain-grouped utilities:
   - `lib/data/`: Data storage and persistence (`analyticsStorage.js`, `atomicStorage.js`, `artistConfig.js`, `projectStorage.js`, `artistData.js`, `slugs.js`, `cookies.js`, `dateUtils.js`, `urlNormalization.js`).
-  - `lib/media/`: Image/audio processing and caching (`ffmpegRunner.js`, `audioOptimizer.js`, `logoConstants.js`, `logoProcessor.js`, `logoUtils.js`, `mediaOptimizer.js`, `mediaWarmer.js`, `cacheCleaner.js`, `mediaPreloader.js`, `metadata.js`).
+  - `lib/media/`: Image/audio processing, OG rendering, and caching (`ffmpegRunner.js`, `audioOptimizer.js`, `logoConstants.js`, `logoProcessor.js`, `logoUtils.js`, `mediaOptimizer.js`, `mediaWarmer.js`, `cacheCleaner.js`, `mediaPreloader.js`, `metadata.js`, `og/`).
   - `lib/api/`: API routing specifications and SSE background job tracker (`apiSpec.js`, `projectRouteHelpers.js`, `jobTracker.js`, `specs/adminRoutesSpec.js`, `specs/mediaRoutesSpec.js`, `specs/utilityRoutesSpec.js`).
   - `lib/network/`: Dynamic network tier detection and audio quality probing (`networkProbe.js`).
   - `lib/hooks/`: Reusable React interaction hooks (`useAnalyticsTracker.js`, `usePictureInPicture.js`, `useRemotePlayback.js`, `useMediaCastAndPip.js`, `useFitTextWidth.js`, `useDragScroll.js`, `useDynamicThemeGradients.js`, `useLogoAnalysis.js`, `useMediaSession.js`, `useTouchDevice.js`).
-- **`data/`**: Operator content directory containing `config.json`, `analytics/` (`daily.json`, `events.json`, `totals.json`), project folders with `project.json` metadata, project covers, track audio files, and cached media variants (`data/cache/images/`, `data/cache/audio/`, `data/cache/favicons/`). All media files uploaded via admin are immediately pre-compressed and cached on disk, verified via an automatic fallback check when users load the site, and kept lean by an automated background pruning system that purges unused/orphaned cache files from deleted or replaced projects. Automatic timestamped snapshots are saved to `data/backups/` to guarantee zero data loss.
+- **`data/`**: Operator content directory containing `config.json`, `analytics/` (`daily.json`, `events.json`, `totals.json`), project folders with `project.json` metadata, project covers, track audio files, and cached media variants (`data/cache/images/`, `data/cache/audio/`, `data/cache/favicons/`, `data/cache/og/`). All media files uploaded via admin are immediately pre-compressed and cached on disk, verified via an automatic fallback check when users load the site, and kept lean by an automated background pruning system that purges unused/orphaned cache files from deleted or replaced projects. Automatic timestamped snapshots are saved to `data/backups/` to guarantee zero data loss.
 
 ## 🔐 System Routes
 

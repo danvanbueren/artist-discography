@@ -252,6 +252,12 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Bi-Directional Queue Integrity**: When moving backwards via `handleSkipPrev`, prepend the vacated `playingTrack` to `autoplayTracks` so that immediately pressing `handleSkipNext` traverses back forward smoothly.
 - **Scoped Playback Pools for Project Repeat**: When initiating playback inside single project views, scope the active playback pool to that project so that `repeatMode = 'all'` loops that specific release rather than defaulting to the global discography list.
 
+### Dynamic Open Graph & Discord Link Previews
+- **1200×630 Satori & Sharp Pipeline**: Render high-contrast 1200×630 preview cards dynamically for all routes (General `/`, Projects `/[slug]`, Tracks `/[slug]/[track]`) using Next.js `ImageResponse` with Sharp-assisted ambient blurred backgrounds.
+- **Explicit Dimension Tags to Prevent Distortion**: Always attach `og:image:width: 1200`, `og:image:height: 630`, `og:image:type: 'image/png'`, and `twitter:card: 'summary_large_image'` to HTML responses to prevent crawlers from stretching or cropping card images.
+- **Sidecar JSON Fingerprints & Rapid Validation**: Store rendered PNG cards with adjacent `.json` sidecar files in `data/cache/og/` containing source mtime/size fingerprints, rendered image hashes, and sampled `themeColorHex` values for sub-millisecond `generateMetadata` reads and rapid background cache validation during media warming jobs.
+- **Dynamic Discord Theme Color**: Dynamically set `<meta name="theme-color" content="...">` to the dominant sampled color of the release so Discord's left embed stripe matches the preview card palette.
+
 ---
 
 ## Project Workflows & Processes

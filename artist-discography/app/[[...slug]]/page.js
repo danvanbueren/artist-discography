@@ -4,6 +4,11 @@ import { loadArtistData, normalizeSiteUrl } from '@/lib/data/artistData'
 import DiscographyApp from '@/components/discography/DiscographyApp'
 import { slugify, findProjectBySlug, findTrackBySlug } from '@/lib/data/slugs'
 import { formatProjectDate } from '@/lib/data/dateUtils'
+import {
+  resolveGeneralOgContext,
+  resolveProjectOgContext,
+  resolveTrackOgContext,
+} from '@/lib/media/og/ogEntityResolver'
 
 const STATIC_ASSET_REGEX =
   /\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|webp|gif|svg|ico|txt|xml|woff|woff2|ttf|eot)$/i
@@ -39,11 +44,6 @@ export async function generateMetadata({ params }) {
   const rawSiteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || data?.siteUrl || data?.artist?.siteUrl || ''
   const baseUrl = normalizeSiteUrl(rawSiteUrl)
-  const getAbsoluteUrl = (path) => {
-    if (!path) return `${baseUrl}/api/logo?w=1200&fmt=png`
-    if (/^https?:\/\//i.test(path)) return path
-    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`
-  }
 
   // 1. TRACK URL: /[project-slug]/[track-slug]
   if (slug.length >= 2) {
@@ -64,14 +64,16 @@ export async function generateMetadata({ params }) {
 
         const description = `Listen to "${trackTitle}" by ${trackArtist} on ${projectName || 'Discography'}. Direct streaming links and in-site audio player.`
 
-        let rawCover = track.cover || project.cover || ''
-        let coverWithParams = rawCover
-        if (rawCover && rawCover.startsWith('/api/media')) {
-          coverWithParams = rawCover.includes('?')
-            ? `${rawCover}&w=1200&q=90&fmt=jpg`
-            : `${rawCover}?w=1200&q=90&fmt=jpg`
+        let trackContext = null
+        try {
+          trackContext = await resolveTrackOgContext(projSlug, trkSlug)
+        } catch (ogErr) {
+          console.warn('Error resolving track OG context:', ogErr.message)
         }
-        const coverArtUrl = getAbsoluteUrl(coverWithParams)
+
+        const ogVersion = trackContext?.hash ? `&v=${trackContext.hash}` : ''
+        const ogImageUrl = `${baseUrl}/api/og?proj=${encodeURIComponent(projSlug)}&track=${encodeURIComponent(trkSlug)}${ogVersion}`
+        const themeColorHex = trackContext?.palette?.themeColorHex || '#5865F2'
 
         return {
           title: { absolute: title },
@@ -84,9 +86,10 @@ export async function generateMetadata({ params }) {
             siteName: `${artistName} - Artist Discography`,
             images: [
               {
-                url: coverArtUrl,
+                url: ogImageUrl,
                 width: 1200,
-                height: 1200,
+                height: 630,
+                type: 'image/png',
                 alt: `${trackTitle} Artwork`,
               },
             ],
@@ -95,7 +98,10 @@ export async function generateMetadata({ params }) {
             card: 'summary_large_image',
             title,
             description,
-            images: [coverArtUrl],
+            images: [ogImageUrl],
+          },
+          other: {
+            'theme-color': themeColorHex,
           },
         }
       }
@@ -114,14 +120,16 @@ export async function generateMetadata({ params }) {
       const formattedDate = formatProjectDate(project.date)
       const description = `Listen to ${projectName} by ${projectArtist}.${formattedDate ? ` Released ${formattedDate}.` : ''} Stream on Spotify, Apple Music, YouTube, and all major platforms.`
 
-      let rawCover = project.cover || ''
-      let coverWithParams = rawCover
-      if (rawCover && rawCover.startsWith('/api/media')) {
-        coverWithParams = rawCover.includes('?')
-          ? `${rawCover}&w=1200&q=90&fmt=jpg`
-          : `${rawCover}?w=1200&q=90&fmt=jpg`
+      let projContext = null
+      try {
+        projContext = await resolveProjectOgContext(projSlug)
+      } catch (ogErr) {
+        console.warn('Error resolving project OG context:', ogErr.message)
       }
-      const coverArtUrl = getAbsoluteUrl(coverWithParams)
+
+      const ogVersion = projContext?.hash ? `&v=${projContext.hash}` : ''
+      const ogImageUrl = `${baseUrl}/api/og?proj=${encodeURIComponent(projSlug)}${ogVersion}`
+      const themeColorHex = projContext?.palette?.themeColorHex || '#5865F2'
 
       return {
         title: { absolute: title },
@@ -134,9 +142,10 @@ export async function generateMetadata({ params }) {
           siteName: `${artistName} - Artist Discography`,
           images: [
             {
-              url: coverArtUrl,
+              url: ogImageUrl,
               width: 1200,
-              height: 1200,
+              height: 630,
+              type: 'image/png',
               alt: `${projectName} Cover Art`,
             },
           ],
@@ -145,7 +154,10 @@ export async function generateMetadata({ params }) {
           card: 'summary_large_image',
           title,
           description,
-          images: [coverArtUrl],
+          images: [ogImageUrl],
+        },
+        other: {
+          'theme-color': themeColorHex,
         },
       }
     }
@@ -167,7 +179,16 @@ export async function generateMetadata({ params }) {
     description = `All music by ${artistName}, in one place. Links to your favorite platforms with just one click.`
   }
 
-  const logoImageUrl = getAbsoluteUrl('/api/logo?w=1200&fmt=png')
+  let generalContext = null
+  try {
+    generalContext = await resolveGeneralOgContext()
+  } catch (ogErr) {
+    console.warn('Error resolving general OG context:', ogErr.message)
+  }
+
+  const ogVersion = generalContext?.hash ? `?v=${generalContext.hash}` : ''
+  const ogImageUrl = `${baseUrl}/api/og${ogVersion}`
+  const themeColorHex = generalContext?.palette?.themeColorHex || '#5865F2'
 
   return {
     title: { absolute: title },
@@ -180,9 +201,10 @@ export async function generateMetadata({ params }) {
       siteName: `${artistName} - Artist Discography`,
       images: [
         {
-          url: logoImageUrl,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
+          type: 'image/png',
           alt: `${artistName} Logo`,
         },
       ],
@@ -191,7 +213,10 @@ export async function generateMetadata({ params }) {
       card: 'summary_large_image',
       title,
       description,
-      images: [logoImageUrl],
+      images: [ogImageUrl],
+    },
+    other: {
+      'theme-color': themeColorHex,
     },
   }
 }
