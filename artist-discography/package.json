@@ -20,7 +20,7 @@
     "@mui/material-nextjs": "^9.3.0",
     "@mui/x-date-pickers": "^9.11.0",
     "dayjs": "^1.11.23",
-    "next": "16.4.2",
+    "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
@@ -37,7 +37,7 @@
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^10.0.0",
     "eslint": "^10.0.0",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.3",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.6"
   }
