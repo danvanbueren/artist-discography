@@ -27,6 +27,7 @@ Welcome! This document outlines the core guidelines, architectural rules, coding
    - [Date Picking with MUI X Date Pickers & Dayjs](#date-picking-with-mui-x-date-pickers--dayjs)
    - [Horizontal Drag & Mouse Wheel Scrolling (`useDragScroll`)](#horizontal-drag--mouse-wheel-scrolling-usedragscroll)
    - [Absolute URL Normalization for Social Embeds & Metadata](#absolute-url-normalization-for-social-embeds--metadata)
+   - [Hardware Acceleration Detection, Pre-Blurred Media & Fast-Path SSR](#hardware-acceleration-detection-pre-blurred-media--fast-path-ssr)
 4. [Project Workflows & Processes](#project-workflows--processes)
    - [Pull Requests (Keep Scope Unified)](#pull-requests)
    - [Documentation](#documentation)
@@ -257,6 +258,11 @@ Design all systems to fail gracefully. Never assume that input values from `loca
 - **Explicit Dimension Tags to Prevent Distortion**: Always attach `og:image:width: 1200`, `og:image:height: 630`, `og:image:type: 'image/png'`, and `twitter:card: 'summary_large_image'` to HTML responses to prevent crawlers from stretching or cropping card images.
 - **Sidecar JSON Fingerprints & Rapid Validation**: Store rendered PNG cards with adjacent `.json` sidecar files in `data/cache/og/` containing source mtime/size fingerprints, rendered image hashes, and sampled `themeColorHex` values for sub-millisecond `generateMetadata` reads and rapid background cache validation during media warming jobs.
 - **Dynamic Discord Theme Color**: Dynamically set `<meta name="theme-color" content="...">` to the dominant sampled color of the release so Discord's left embed stripe matches the preview card palette.
+
+### Hardware Acceleration Detection, Pre-Blurred Media & Fast-Path SSR
+- **Hardware Acceleration Detection (`PerformanceModeContext`)**: Use `detectHardwareAcceleration()` (`lib/performance/performanceDetector.js`) and `PerformanceModeProvider` / `usePerformanceMode()` (`lib/performance/PerformanceModeContext.js`) to detect software rasterizers (WebGL renderer regex, `failIfMajorPerformanceCaveat: true`, low core/RAM hints) and `prefers-reduced-motion`. Sync `document.documentElement.dataset.perfMode` (`[data-perf-mode='lite']` disables `backdrop-filter` globally) and gate expensive blur/animation surfaces while allowing user overrides (`'auto' | 'high' | 'lite'`).
+- **Server Pre-Blurred Thumbnails**: Never stack large client-side CSS `filter: blur(...)` or `backdropFilter` layers behind full-screen or ambient artwork when software rasterization may be active. Serve tiny pre-blurred thumbnails from `/api/media/` (`?w=64&q=25&blur=20&fmt=webp` or `?w=64&q=30&blur=20&fmt=webp` in `AmbientBackground`, `ProjectCard`, and `FullScreenPlayerModal`) and pair long catalog lists with `React.memo`, CSS hover selectors, and `contentVisibility: 'auto'`.
+- **Fast-Path OG Metadata & Stat-Validated Data Caching**: Server `generateMetadata` calls must use `resolveOgMetadataFast()` (`lib/media/og/ogEntityResolver.js`) to read cached OG sidecar metadata (`OG_CACHE_DIR`) or extract color palettes without triggering Sharp blur composition or `ffprobe`. Keep `loadConfigFile()` and `ArtistDataManager.loadData()` backed by stat-validated in-memory caches (`invalidateConfigCache()`, `invalidateArtistDataCache()`), and resolve per-project assets via a single directory listing inside `validateAndResolveProject()`.
 
 ---
 

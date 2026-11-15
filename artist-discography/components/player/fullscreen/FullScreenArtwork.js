@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box } from '@mui/material'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import ProgressiveImage from '@/components/ui/ProgressiveImage'
@@ -11,7 +12,7 @@ import ProgressiveImage from '@/components/ui/ProgressiveImage'
  * @param {string|null} props.coverArt - Cover image URL
  * @param {string} [props.trackName] - Track name for alt text
  */
-export default function FullScreenArtwork({ coverArt, trackName = 'Cover' }) {
+function FullScreenArtwork({ coverArt, trackName = 'Cover' }) {
   return (
     <Box
       sx={{
@@ -75,3 +76,5 @@ export default function FullScreenArtwork({ coverArt, trackName = 'Cover' }) {
     </Box>
   )
 }
+
+export default memo(FullScreenArtwork)

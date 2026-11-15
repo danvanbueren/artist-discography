@@ -29,6 +29,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 export default function AdminHeader({
   isAutoSaving,
@@ -47,6 +48,7 @@ export default function AdminHeader({
   setActiveTab,
   mediaJobs,
 }) {
+  const { isLiteMode } = usePerformanceMode()
   const isCompact = useMediaQuery((theme) => theme.breakpoints.down('md'))
   const [isErrorCopied, setIsErrorCopied] = useState(false)
 
@@ -60,8 +62,9 @@ export default function AdminHeader({
           mb: 2,
           flexShrink: 0,
           borderRadius: 3,
-          backgroundColor: 'rgba(25, 25, 35, 0.85)',
-          backdropFilter: 'blur(12px)',
+          backgroundColor: isLiteMode ? 'rgba(18, 18, 26, 0.95)' : 'rgba(25, 25, 35, 0.85)',
+          backdropFilter: isLiteMode ? 'none' : 'blur(12px)',
+          WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(12px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           justifyContent: 'space-between',

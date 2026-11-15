@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Box, Stack, Typography, IconButton } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded'
@@ -72,7 +72,7 @@ function getResolvedTrackLink(links = {}, selectedPlatform = '') {
   return cleanLinks[cleanKeys[0]]
 }
 
-export default function TrackRow({
+const TrackRow = memo(function TrackRow({
   track,
   index,
   project,
@@ -89,7 +89,6 @@ export default function TrackRow({
   onSelectTrackTitle,
   selectedPlatform,
 }) {
-  const [hovered, setHovered] = useState(false)
   const [copied, setCopied] = useState(false)
   const isTouch = useTouchDevice()
 
@@ -108,16 +107,16 @@ export default function TrackRow({
         }
       } else {
         if (onSelectTrackTitle) {
-          onSelectTrackTitle(track)
+          onSelectTrackTitle(track, project)
         } else if (onSelectTrack) {
-          onSelectTrack(track)
+          onSelectTrack(track, project)
         }
       }
     } else {
       if (onSelectTrackTitle) {
-        onSelectTrackTitle(track)
+        onSelectTrackTitle(track, project)
       } else if (onSelectTrack) {
-        onSelectTrack(track)
+        onSelectTrack(track, project)
       }
     }
   }
@@ -130,26 +129,30 @@ export default function TrackRow({
         }
       } else {
         if (onSelectTrackRow) {
-          onSelectTrackRow(track)
+          onSelectTrackRow(track, project)
         } else if (onSelectTrack) {
-          onSelectTrack(track)
+          onSelectTrack(track, project)
         }
       }
     } else {
       if (onSelectTrackRow) {
-        onSelectTrackRow(track)
+        onSelectTrackRow(track, project)
       } else if (onSelectTrack) {
-        onSelectTrack(track)
+        onSelectTrack(track, project)
       }
     }
   }
 
   const isActivelyPlaying = isPlaying && isPlayingThisTrack
+  const alwaysShowPlayButton = isPlayingThisTrack || isTouch
+  const rowHighlightBg = isHighlighted
+    ? 'rgba(144, 202, 249, 0.14)'
+    : isPlayingThisTrack
+      ? 'rgba(144, 202, 249, 0.08)'
+      : 'transparent'
 
   return (
     <Box
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onClick={handleRowClick}
       sx={{
         display: 'grid',
@@ -160,16 +163,35 @@ export default function TrackRow({
         borderRadius: 2,
         cursor:
           (isTouch && track?.hasAudio) || onSelectTrackRow || onSelectTrack ? 'pointer' : 'default',
-        bgcolor: isHighlighted
-          ? 'rgba(144, 202, 249, 0.14)'
-          : isPlayingThisTrack
-            ? 'rgba(144, 202, 249, 0.08)'
-            : hovered
-              ? 'action.hover'
-              : 'transparent',
+        bgcolor: rowHighlightBg,
         borderLeft: isHighlighted ? '3px solid' : '3px solid transparent',
         borderColor: isHighlighted ? 'primary.main' : 'transparent',
         transition: 'background-color 0.2s ease, border-color 0.2s ease',
+        '& .track-hover-play': {
+          display: 'none',
+        },
+        '& .track-row-action': {
+          opacity: 0.65,
+        },
+        '& .track-row-link-action': {
+          opacity: 0.8,
+        },
+        '&:hover': {
+          bgcolor:
+            rowHighlightBg === 'transparent' ? 'action.hover' : rowHighlightBg,
+          '& .track-hover-play': {
+            display: 'inline-flex',
+          },
+          '& .track-index-num': {
+            display: 'none',
+          },
+          '& .track-row-action': {
+            opacity: 1,
+          },
+          '& .track-row-link-action': {
+            opacity: 1,
+          },
+        },
       }}
     >
       {/* Col 1: Track Number / Play Indicator & Queue Button */}
@@ -200,31 +222,48 @@ export default function TrackRow({
             >
               <PauseRoundedIcon sx={{ fontSize: 20 }} />
             </IconButton>
-          ) : track?.hasAudio && (hovered || isPlayingThisTrack || isTouch) ? (
-            <IconButton
-              size='small'
-              color={isPlayingThisTrack ? 'primary' : 'default'}
-              onClick={(e) => {
-                e.stopPropagation()
-                if (isTouch) {
-                  if (onPlayTrack) onPlayTrack(track, project, { touchMode: true })
-                } else {
-                  if (onPlayTrack) onPlayTrack(track, project)
-                }
-              }}
-              sx={{
-                p: 0.85,
-                borderRadius: 1.5,
-                transition: 'transform 0.18s ease, opacity 0.18s ease',
-                '&:hover': {
-                  transform: 'scale(1.18)',
-                  bgcolor: 'rgba(255,255,255,0.12)',
-                  color: 'primary.main',
-                },
-              }}
-            >
-              <PlayArrowRoundedIcon sx={{ fontSize: 20 }} />
-            </IconButton>
+          ) : track?.hasAudio ? (
+            <>
+              <IconButton
+                size='small'
+                color={isPlayingThisTrack ? 'primary' : 'default'}
+                className={alwaysShowPlayButton ? undefined : 'track-hover-play'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (isTouch) {
+                    if (onPlayTrack) onPlayTrack(track, project, { touchMode: true })
+                  } else {
+                    if (onPlayTrack) onPlayTrack(track, project)
+                  }
+                }}
+                sx={{
+                  p: 0.85,
+                  borderRadius: 1.5,
+                  transition: 'transform 0.18s ease, opacity 0.18s ease',
+                  '&:hover': {
+                    transform: 'scale(1.18)',
+                    bgcolor: 'rgba(255,255,255,0.12)',
+                    color: 'primary.main',
+                  },
+                }}
+              >
+                <PlayArrowRoundedIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+              {!alwaysShowPlayButton && (
+                <Typography
+                  variant='body2'
+                  className='track-index-num'
+                  sx={{
+                    fontWeight: isHighlighted ? 700 : 500,
+                    color: isHighlighted ? 'primary.main' : 'text.secondary',
+                    fontSize: '0.9rem',
+                    opacity: 1,
+                  }}
+                >
+                  {index + 1}
+                </Typography>
+              )}
+            </>
           ) : (
             <Typography
               variant='body2'
@@ -232,7 +271,7 @@ export default function TrackRow({
                 fontWeight: isHighlighted ? 700 : 500,
                 color: isHighlighted ? 'primary.main' : 'text.secondary',
                 fontSize: '0.9rem',
-                opacity: track?.hasAudio ? 1 : 0.6,
+                opacity: 0.6,
               }}
             >
               {index + 1}
@@ -244,6 +283,7 @@ export default function TrackRow({
         {track?.hasAudio && isPlayerActive && (
           <IconButton
             size='small'
+            className='track-row-action'
             onClick={(e) => {
               e.stopPropagation()
               if (onAddToQueue) onAddToQueue(track, project)
@@ -251,7 +291,6 @@ export default function TrackRow({
             sx={{
               p: 0.85,
               borderRadius: 1.5,
-              opacity: hovered ? 1 : 0.65,
               transition: 'transform 0.18s ease, opacity 0.18s ease',
               '&:hover': {
                 transform: 'scale(1.18)',
@@ -322,6 +361,7 @@ export default function TrackRow({
           rel={resolvedLink ? 'noopener noreferrer' : undefined}
           disabled={!resolvedLink}
           size='small'
+          className={resolvedLink ? 'track-row-link-action' : undefined}
           onClick={(e) => e.stopPropagation()}
           sx={{
             p: 0.85,
@@ -330,7 +370,7 @@ export default function TrackRow({
             border: resolvedLink ? '1px solid' : '1px solid transparent',
             borderColor: resolvedLink ? 'rgba(255,255,255,0.12)' : 'transparent',
             bgcolor: 'transparent',
-            opacity: resolvedLink ? (hovered ? 1 : 0.8) : 0.3,
+            ...(resolvedLink ? {} : { opacity: 0.3 }),
             transition:
               'transform 0.18s ease, opacity 0.18s ease, background-color 0.18s ease, border-color 0.18s ease',
             '&:hover': resolvedLink
@@ -362,6 +402,7 @@ export default function TrackRow({
         {/* Share Track Link Button */}
         <IconButton
           size='small'
+          className={copied ? undefined : 'track-row-action'}
           onClick={(e) => {
             e.stopPropagation()
             const pSlug = slugify(project?.name || '')
@@ -375,7 +416,7 @@ export default function TrackRow({
           sx={{
             p: 0.85,
             borderRadius: 1.5,
-            opacity: copied || hovered ? 1 : 0.65,
+            ...(copied ? { opacity: 1 } : {}),
             color: copied ? 'success.main' : 'inherit',
             transition: 'transform 0.18s ease, opacity 0.18s ease',
             '&:hover': {
@@ -395,4 +436,6 @@ export default function TrackRow({
       </Stack>
     </Box>
   )
-}
+})
+
+export default TrackRow

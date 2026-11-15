@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useMemo, useCallback } from 'react'
-import { Box, Container, Paper, useTheme, Collapse } from '@mui/material'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Box, Container, Paper, useTheme, useMediaQuery, Collapse } from '@mui/material'
 import { slugify } from '@/lib/data/slugs'
 import { mediaPreloader } from '@/lib/media/mediaPreloader'
 import { useVibrantColors } from '@/lib/hooks/useVibrantColors'
@@ -48,12 +48,18 @@ export default function AudioPlayerBar({
   onStutterChange,
 }) {
   const theme = useTheme()
+  const isSmUp = useMediaQuery(theme.breakpoints.up('sm'))
   const isTouch = useTouchDevice()
   const [localRepeatMode, setLocalRepeatMode] = useState('off') // 'off' | 'all' | 'one'
   const repeatMode = propsRepeatMode !== undefined ? propsRepeatMode : localRepeatMode
   const [copiedShare, setCopiedShare] = useState(false)
   const [queueOpen, setQueueOpen] = useState(false)
   const [mobileFullScreenOpen, setMobileFullScreenOpen] = useState(false)
+
+  const handleOpenQueue = useCallback(() => setQueueOpen(true), [])
+  const handleCloseQueue = useCallback(() => setQueueOpen(false), [])
+  const handleOpenFullScreen = useCallback(() => setMobileFullScreenOpen(true), [])
+  const handleCloseFullScreen = useCallback(() => setMobileFullScreenOpen(false), [])
 
   const activeTier = audioQuality || '320k'
   const trackKey = playingTrack?.audioUrl || playingTrack?.name || ''
@@ -72,6 +78,10 @@ export default function AudioPlayerBar({
     audioQuality: activeTier,
     trackKey,
   })
+
+  useEffect(() => {
+    onStutterChange?.(Boolean(isStuttering && playingTrack))
+  }, [isStuttering, playingTrack, onStutterChange])
 
   // 2. Volume and mute persistence hook
   const {
@@ -271,54 +281,55 @@ export default function AudioPlayerBar({
                 transition: 'background-color 0.4s ease, border-color 0.4s ease',
               }}
             >
-              {/* Mobile Mini Player Row */}
-              <MobileMiniPlayer
-                playingTrack={playingTrack}
-                coverArt={coverArt}
-                isPlaying={isPlaying}
-                copiedShare={copiedShare}
-                currentTime={currentTime}
-                duration={duration}
-                audioQualityLabel={audioQualityLabel}
-                isStuttering={isStuttering}
-                onOpenFullScreen={() => setMobileFullScreenOpen(true)}
-                onShareTrack={handleShareTrack}
-                onDirectTogglePlay={handleDirectTogglePlay}
-              />
-
-              {/* Desktop / Tablet Player Bar */}
-              <DesktopPlayerBar
-                playingTrack={playingTrack}
-                coverArt={coverArt}
-                isPlaying={isPlaying}
-                currentTime={currentTime}
-                duration={duration}
-                formatTime={formatTime}
-                audioQualityLabel={audioQualityLabel}
-                isStuttering={isStuttering}
-                isShuffle={isShuffle}
-                repeatMode={repeatMode}
-                effectiveVolume={effectiveVolume}
-                isMuted={isMuted}
-                copiedShare={copiedShare}
-                manualQueue={manualQueue}
-                autoplayTracks={autoplayTracks}
-                onNavigateToCurrentTrack={onNavigateToCurrentTrack}
-                onOpenQualityModal={onOpenQualityModal}
-                onToggleShuffle={onToggleShuffle}
-                onSkipPrev={onSkipPrev}
-                onSkipNext={onSkipNext}
-                onDirectTogglePlay={handleDirectTogglePlay}
-                onCycleRepeat={handleCycleRepeat}
-                onSeek={handleSeek}
-                onShareTrack={handleShareTrack}
-                onOpenQueue={() => setQueueOpen(true)}
-                onOpenFullScreen={() => setMobileFullScreenOpen(true)}
-                onClosePlayer={handleClosePlayer}
-                onToggleMute={handleToggleMute}
-                onVolumeChange={handleVolumeChange}
-                VolumeIconComponent={VolumeIconComponent}
-              />
+              {/* Render only the active viewport player bar */}
+              {!isSmUp ? (
+                <MobileMiniPlayer
+                  playingTrack={playingTrack}
+                  coverArt={coverArt}
+                  isPlaying={isPlaying}
+                  copiedShare={copiedShare}
+                  currentTime={currentTime}
+                  duration={duration}
+                  audioQualityLabel={audioQualityLabel}
+                  isStuttering={isStuttering}
+                  onOpenFullScreen={handleOpenFullScreen}
+                  onShareTrack={handleShareTrack}
+                  onDirectTogglePlay={handleDirectTogglePlay}
+                />
+              ) : (
+                <DesktopPlayerBar
+                  playingTrack={playingTrack}
+                  coverArt={coverArt}
+                  isPlaying={isPlaying}
+                  currentTime={currentTime}
+                  duration={duration}
+                  formatTime={formatTime}
+                  audioQualityLabel={audioQualityLabel}
+                  isStuttering={isStuttering}
+                  isShuffle={isShuffle}
+                  repeatMode={repeatMode}
+                  effectiveVolume={effectiveVolume}
+                  isMuted={isMuted}
+                  copiedShare={copiedShare}
+                  manualQueue={manualQueue}
+                  autoplayTracks={autoplayTracks}
+                  onNavigateToCurrentTrack={onNavigateToCurrentTrack}
+                  onOpenQualityModal={onOpenQualityModal}
+                  onToggleShuffle={onToggleShuffle}
+                  onSkipPrev={onSkipPrev}
+                  onSkipNext={onSkipNext}
+                  onDirectTogglePlay={handleDirectTogglePlay}
+                  onCycleRepeat={handleCycleRepeat}
+                  onSeek={handleSeek}
+                  onShareTrack={handleShareTrack}
+                  onOpenQueue={handleOpenQueue}
+                  onOpenFullScreen={handleOpenFullScreen}
+                  onClosePlayer={handleClosePlayer}
+                  onToggleMute={handleToggleMute}
+                  onVolumeChange={handleVolumeChange}
+                  VolumeIconComponent={VolumeIconComponent}
+                />
+              )}
 
               {/* Hidden HTML5 Audio Element */}
               <audio
@@ -389,7 +400,7 @@ export default function AudioPlayerBar({
       {/* Playback Queue Dialog */}
       <PlaybackQueueDialog
         open={queueOpen}
-        onClose={() => setQueueOpen(false)}
+        onClose={handleCloseQueue}
         manualQueue={manualQueue}
         autoplayTracks={autoplayTracks}
         onQueueDragDrop={onQueueDragDrop}
@@ -401,7 +412,7 @@ export default function AudioPlayerBar({
       {/* Full-Screen Audio Player Modal */}
       <FullScreenPlayerModal
         open={Boolean(mobileFullScreenOpen && playingTrack)}
-        onClose={() => setMobileFullScreenOpen(false)}
+        onClose={handleCloseFullScreen}
         playingTrack={playingTrack}
         coverArt={coverArt}
         playerBgColor={playerBgColor}
@@ -423,7 +434,7 @@ export default function AudioPlayerBar({
         onNavigateToCurrentTrack={onNavigateToCurrentTrack}
         onOpenQualityModal={onOpenQualityModal}
         onShareTrack={handleShareTrack}
-        onOpenQueue={() => setQueueOpen(true)}
+        onOpenQueue={handleOpenQueue}
         onToggleMute={handleToggleMute}
         onVolumeChange={handleVolumeChange}
         onToggleShuffle={onToggleShuffle}

@@ -1,10 +1,11 @@
 'use client'
 
+import { memo } from 'react'
 import { Paper, Box } from '@mui/material'
 import ProjectHeader from './ProjectHeader'
 import TrackList from './TrackList'
 
-export default function ProjectCard({
+const ProjectCard = memo(function ProjectCard({
   project,
   artistName,
   onSelectProject,
@@ -25,7 +26,7 @@ export default function ProjectCard({
   const cover = project?.cover ?? project?.image ?? ''
   const ambientCover =
     cover && typeof cover === 'string' && cover.startsWith('/api/media')
-      ? `${cover}${cover.includes('?') ? '&' : '?'}w=48&q=20&blur=8`
+      ? `${cover}${cover.includes('?') ? '&' : '?'}w=64&q=25&blur=20&fmt=webp`
       : cover
 
   return (
@@ -39,6 +40,8 @@ export default function ProjectCard({
         border: '1px solid',
         borderColor: 'divider',
         position: 'relative',
+        contentVisibility: isSingleView ? 'visible' : 'auto',
+        containIntrinsicSize: isSingleView ? 'none' : '0 320px',
         transition: 'transform 0.25s ease, box-shadow 0.25s ease',
         '&:hover': !isSingleView
           ? {
@@ -47,7 +50,7 @@ export default function ProjectCard({
           : {},
       }}
     >
-      {/* Blurred album art ambient background */}
+      {/* Server-blurred album art ambient background (zero client blur filter) */}
       {ambientCover && (
         <Box
           aria-hidden
@@ -57,9 +60,7 @@ export default function ProjectCard({
             backgroundImage: `url(${ambientCover})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            filter: 'blur(40px) saturate(1.4)',
-            opacity: 0.08,
-            transform: 'scale(1.15)',
+            opacity: 0.1,
             pointerEvents: 'none',
             zIndex: 0,
           }}
@@ -95,4 +96,6 @@ export default function ProjectCard({
       </Box>
     </Paper>
   )
-}
+})
+
+export default ProjectCard

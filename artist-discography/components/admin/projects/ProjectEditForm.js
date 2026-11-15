@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Stack, Paper, Typography, Grid, Divider, Box, Button, Tooltip } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -76,6 +77,66 @@ export default function ProjectEditForm({
     }) ||
     mediaJobs?.getJobForFile?.(editCoverFile?.name) ||
     null
+
+  const handleTrackNameChange = useCallback(
+    (tIdx, val) =>
+      handleUpdateEditTrackName(tIdx, val, () =>
+        markFieldDirty(`edit_track_${tIdx}_title`, executeUpdateProject),
+      ),
+    [handleUpdateEditTrackName, markFieldDirty, executeUpdateProject],
+  )
+
+  const handleTrackArtistChange = useCallback(
+    (tIdx, val) =>
+      handleUpdateEditTrackArtist(tIdx, val, () =>
+        markFieldDirty(`edit_track_${tIdx}_artist`, executeUpdateProject),
+      ),
+    [handleUpdateEditTrackArtist, markFieldDirty, executeUpdateProject],
+  )
+
+  const handleTrackLinkChange = useCallback(
+    (tIdx, key, val) =>
+      handleUpdateEditTrackLink(tIdx, key, val, () =>
+        markFieldDirty(`edit_track_${tIdx}_${key}`, executeUpdateProject),
+      ),
+    [handleUpdateEditTrackLink, markFieldDirty, executeUpdateProject],
+  )
+
+  const handleTrackAudioUpload = useCallback(
+    (tIdx, file) =>
+      handleEditTrackAudioUpload(tIdx, file, () =>
+        markFieldDirty(`edit_track_${tIdx}_audio`, executeUpdateProject),
+      ),
+    [handleEditTrackAudioUpload, markFieldDirty, executeUpdateProject],
+  )
+
+  const handleTrackAudioRemove = useCallback(
+    (tIdx) => {
+      handleEditTrackAudioRemove(tIdx)
+      markFieldDirty(`edit_track_${tIdx}_audio_remove`, executeUpdateProject)
+    },
+    [handleEditTrackAudioRemove, markFieldDirty, executeUpdateProject],
+  )
+
+  const handleTrackMoveUp = useCallback(
+    (tIdx) =>
+      handleMoveEditTrackUp(tIdx, (newTracksList) =>
+        markFieldDirty('edit_tracks_order', (pwd) =>
+          executeUpdateProject(pwd, newTracksList),
+        ),
+      ),
+    [handleMoveEditTrackUp, markFieldDirty, executeUpdateProject],
+  )
+
+  const handleTrackMoveDown = useCallback(
+    (tIdx) =>
+      handleMoveEditTrackDown(tIdx, (newTracksList) =>
+        markFieldDirty('edit_tracks_order', (pwd) =>
+          executeUpdateProject(pwd, newTracksList),
+        ),
+      ),
+    [handleMoveEditTrackDown, markFieldDirty, executeUpdateProject],
+  )
 
   return (
     <Stack
@@ -269,44 +330,13 @@ export default function ProjectEditForm({
                 )}
                 transcodeProgress={audioJob?.progress ?? null}
                 transcodePhase={audioJob?.currentStep || audioJob?.phase || null}
-                onUpdateTrackName={(tIdx, val) =>
-                  handleUpdateEditTrackName(tIdx, val, () =>
-                    markFieldDirty(`edit_track_${tIdx}_title`, executeUpdateProject),
-                  )
-                }
-                onUpdateTrackArtist={(tIdx, val) =>
-                  handleUpdateEditTrackArtist(tIdx, val, () =>
-                    markFieldDirty(`edit_track_${tIdx}_artist`, executeUpdateProject),
-                  )
-                }
-                onUpdateTrackLink={(tIdx, key, val) =>
-                  handleUpdateEditTrackLink(tIdx, key, val, () =>
-                    markFieldDirty(`edit_track_${tIdx}_${key}`, executeUpdateProject),
-                  )
-                }
-                onAudioUpload={(tIdx, file) =>
-                  handleEditTrackAudioUpload(tIdx, file, () =>
-                    markFieldDirty(`edit_track_${tIdx}_audio`, executeUpdateProject),
-                  )
-                }
-                onAudioRemove={(tIdx) => {
-                  handleEditTrackAudioRemove(tIdx)
-                  markFieldDirty(`edit_track_${tIdx}_audio_remove`, executeUpdateProject)
-                }}
-                onMoveUp={(tIdx) =>
-                  handleMoveEditTrackUp(tIdx, (newTracksList) =>
-                    markFieldDirty('edit_tracks_order', (pwd) =>
-                      executeUpdateProject(pwd, newTracksList),
-                    ),
-                  )
-                }
-                onMoveDown={(tIdx) =>
-                  handleMoveEditTrackDown(tIdx, (newTracksList) =>
-                    markFieldDirty('edit_tracks_order', (pwd) =>
-                      executeUpdateProject(pwd, newTracksList),
-                    ),
-                  )
-                }
+                onUpdateTrackName={handleTrackNameChange}
+                onUpdateTrackArtist={handleTrackArtistChange}
+                onUpdateTrackLink={handleTrackLinkChange}
+                onAudioUpload={handleTrackAudioUpload}
+                onAudioRemove={handleTrackAudioRemove}
+                onMoveUp={handleTrackMoveUp}
+                onMoveDown={handleTrackMoveDown}
                 onDeleteTrack={handleDeleteEditTrack}
                 onCopyTrack={handleCopyEditTrack}
               />

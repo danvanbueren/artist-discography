@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, ListItem, ListItemText, Typography, IconButton, Stack } from '@mui/material'
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
@@ -60,7 +61,7 @@ function InsertionIndicator() {
  * @param {Function} props.onDrop - HTML5 drop handler
  * @param {Function} props.onDragEnd - HTML5 drag end handler
  */
-export default function QueueTrackRow({
+const QueueTrackRow = memo(function QueueTrackRow({
   item,
   index,
   listType,
@@ -265,4 +266,6 @@ export default function QueueTrackRow({
       />
     </ListItem>
   )
-}
+})
+
+export default QueueTrackRow

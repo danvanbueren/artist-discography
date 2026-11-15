@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useVibrantColors } from './useVibrantColors'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 function parseHsl(hslStr) {
   const match = hslStr ? hslStr.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i) : null
@@ -14,11 +15,12 @@ function parseHsl(hslStr) {
 }
 
 /**
- * Custom hook to generate dynamic animated text and logo gradient styles
+ * Custom hook to generate dynamic static text and logo gradient styles
  * derived directly from the artwork image's sampled color palette.
  * Lightness is adaptively adjusted for dark/light themes to guarantee AAA contrast.
  */
 export function useDynamicThemeGradients(imageSrc, isDarkMode) {
+  const { isLiteMode } = usePerformanceMode()
   const { colors, isMonochrome, isLoaded } = useVibrantColors(imageSrc)
 
   return useMemo(() => {
@@ -78,35 +80,22 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
     return {
       primaryTextSx: {
         background: primaryGradient,
-        backgroundSize: '250% 250%',
+        backgroundSize: '100% 100%',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        transition: isLoaded ? 'background 1.2s ease-in-out' : 'none',
-        animation: 'headingGradientShift 14s ease infinite alternate',
-        '@keyframes headingGradientShift': {
-          '0%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-          '100%': { backgroundPosition: '0% 50%' },
-        },
+        transition: isLoaded && !isLiteMode ? 'background 0.8s ease-in-out' : 'none',
       },
       secondaryTextSx: {
         background: secondaryGradient,
-        backgroundSize: '250% 250%',
+        backgroundSize: '100% 100%',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        transition: isLoaded ? 'background 1.2s ease-in-out' : 'none',
-        animation: 'bioGradientShift 18s ease infinite alternate',
-        '@keyframes bioGradientShift': {
-          '0%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-          '100%': { backgroundPosition: '0% 50%' },
-        },
+        transition: isLoaded && !isLiteMode ? 'background 0.8s ease-in-out' : 'none',
       },
       logoGradientSx: {
         background: primaryGradient,
-        backgroundSize: '250% 250%',
-        transition: isLoaded ? 'background 1.2s ease-in-out' : 'none',
-        animation: 'logoGradientShift 14s ease infinite alternate',
+        backgroundSize: '100% 100%',
+        transition: isLoaded && !isLiteMode ? 'background 0.8s ease-in-out' : 'none',
         WebkitMaskImage: 'url(/api/logo?w=640&fmt=webp)',
         maskImage: 'url(/api/logo?w=640&fmt=webp)',
         WebkitMaskSize: 'contain',
@@ -115,31 +104,23 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
         maskRepeat: 'no-repeat',
         WebkitMaskPosition: 'center',
         maskPosition: 'center',
-        '@keyframes logoGradientShift': {
-          '0%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-          '100%': { backgroundPosition: '0% 50%' },
-        },
       },
-      getLogoFilter: (baseFilter = '') => {
+      getLogoFilter: (baseFilter = '', options = {}) => {
         const cleanBase = baseFilter === 'none' ? '' : baseFilter
+        if (isLiteMode) {
+          const fallbackFilter = options?.isLowContrast
+            ? `drop-shadow(0px 1px 4px ${glowColors[0]})`
+            : cleanBase.replace(/drop-shadow\([^)]*\)\s*/g, '').trim()
+          return {
+            filter: fallbackFilter || 'none',
+            transition: 'opacity 0.3s ease',
+          }
+        }
         return {
-          filter: cleanBase || 'none',
-          animation: 'logoGlowPulse 10s ease-in-out infinite alternate',
-          '@keyframes logoGlowPulse': {
-            '0%': {
-              filter: `drop-shadow(0px 6px 20px ${glowColors[0]}) ${cleanBase}`.trim(),
-            },
-            '50%': {
-              filter: `drop-shadow(0px 6px 20px ${glowColors[1]}) ${cleanBase}`.trim(),
-            },
-            '100%': {
-              filter: `drop-shadow(0px 6px 20px ${glowColors[2]}) ${cleanBase}`.trim(),
-            },
-          },
+          filter: `drop-shadow(0px 6px 20px ${glowColors[0]}) ${cleanBase}`.trim(),
         }
       },
       isMonochrome,
     }
-  }, [colors, isMonochrome, isLoaded, isDarkMode])
+  }, [colors, isMonochrome, isLoaded, isDarkMode, isLiteMode])
 }

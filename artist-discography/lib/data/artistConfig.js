@@ -7,6 +7,20 @@ import {
   tryHeuristicJsonRepair,
 } from './atomicStorage'
 
+const CONFIG_CACHE_VERSION_KEY = '__configCacheVersion'
+const GLOBAL_DATA_MUTATION_KEY = '__artistDataMutationVersion'
+let cachedConfigEntry = null
+
+/**
+ * Invalidates the in-memory config.json cache and bumps the shared
+ * data mutation counter so unified data caches refresh cleanly.
+ */
+export function invalidateConfigCache() {
+  cachedConfigEntry = null
+  globalThis[CONFIG_CACHE_VERSION_KEY] = (globalThis[CONFIG_CACHE_VERSION_KEY] || 0) + 1
+  globalThis[GLOBAL_DATA_MUTATION_KEY] = (globalThis[GLOBAL_DATA_MUTATION_KEY] || 0) + 1
+}
+
 export const DEFAULT_CONFIG_SCAFFOLD = {
   adminAccess: true,
   adminPassword: 'admin123',
@@ -173,8 +187,27 @@ export function loadConfigFile() {
 
   try {
     const filePath = getConfigFilePath()
+    const currentVersion = globalThis[CONFIG_CACHE_VERSION_KEY] || 0
 
-    if (!fs.existsSync(filePath)) {
+    let initialStats = null
+    try {
+      initialStats = fs.statSync(filePath)
+    } catch {
+      initialStats = null
+    }
+
+    if (
+      initialStats &&
+      initialStats.isFile() &&
+      cachedConfigEntry &&
+      cachedConfigEntry.mtimeMs === initialStats.mtimeMs &&
+      cachedConfigEntry.size === initialStats.size &&
+      cachedConfigEntry.version === currentVersion
+    ) {
+      return structuredClone(cachedConfigEntry.result)
+    }
+
+    if (!initialStats) {
       const dirPath = path.dirname(filePath)
       if (!fs.existsSync(dirPath)) {
         fs.mkdirSync(dirPath, { recursive: true })
@@ -182,10 +215,20 @@ export function loadConfigFile() {
       atomicWriteJson(filePath, DEFAULT_CONFIG_SCAFFOLD)
       createdNewFile = true
       issues.push('Config file did not exist. Created new scaffold at data/config.json.')
-      return {
+      const scaffoldResult = {
         data: { ...DEFAULT_CONFIG_SCAFFOLD },
         health: { isHealthy: true, createdNewFile, issues },
       }
+      try {
+        const newStats = fs.statSync(filePath)
+        cachedConfigEntry = {
+          mtimeMs: newStats.mtimeMs,
+          size: newStats.size,
+          version: globalThis[CONFIG_CACHE_VERSION_KEY] || 0,
+          result: structuredClone(scaffoldResult),
+        }
+      } catch {}
+      return scaffoldResult
     }
 
     let rawContent = ''
@@ -216,6 +259,7 @@ export function loadConfigFile() {
           `Invalid JSON syntax in config.json: ${parseErr.message}. Archived to ${path.basename(corruptedPath || '')}.`,
         )
         atomicWriteJson(filePath, DEFAULT_CONFIG_SCAFFOLD)
+        invalidateConfigCache()
         return {
           data: { ...DEFAULT_CONFIG_SCAFFOLD },
           health: { isHealthy: false, createdNewFile: false, issues },
@@ -225,17 +269,19 @@ export function loadConfigFile() {
 
     const { data: repairedData, repaired } = validateAndRepairConfig(parsedData, issues)
 
+    let latestStats = initialStats
     if (repaired || wasHeuristicallyRepaired) {
       try {
         createRollingBackup(filePath, 'config')
         atomicWriteJson(filePath, repairedData)
         issues.push('Structural schema issues auto-repaired in config.json.')
+        latestStats = fs.statSync(filePath)
       } catch (err) {
         issues.push(`Failed to auto-save repaired config.json: ${err.message}`)
       }
     }
 
-    return {
+    const result = {
       data: JSON.parse(JSON.stringify(repairedData)),
       health: {
         isHealthy: issues.length === 0,
@@ -243,6 +289,17 @@ export function loadConfigFile() {
         issues,
       },
     }
+
+    if (latestStats && latestStats.isFile()) {
+      cachedConfigEntry = {
+        mtimeMs: latestStats.mtimeMs,
+        size: latestStats.size,
+        version: globalThis[CONFIG_CACHE_VERSION_KEY] || 0,
+        result: structuredClone(result),
+      }
+    }
+
+    return result
   } catch (err) {
     return {
       data: { ...DEFAULT_CONFIG_SCAFFOLD },
@@ -269,6 +326,7 @@ export function saveConfigFile(configData) {
     const issues = []
     const { data: sanitizedConfig } = validateAndRepairConfig(configData, issues)
     atomicWriteJson(filePath, sanitizedConfig)
+    invalidateConfigCache()
 
     return { success: true, issues }
   } catch (err) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   Paper,
   Box,
@@ -91,6 +91,14 @@ export default function ProjectSidebarList({
       }
     }
   }, [selectedProjIndex, isCreatingNew])
+
+  const handleSelectSidebarProject = useCallback(
+    (idx) => {
+      handleSelectProject(idx)
+      if (isMobile) setMobileExpanded(false)
+    },
+    [handleSelectProject, isMobile],
+  )
 
   const selectedProject =
     !isCreatingNew && selectedProjIndex !== null && selectedProjIndex >= 0
@@ -678,10 +686,7 @@ export default function ProjectSidebarList({
             project={project}
             index={originalIndex}
             isSelected={!isCreatingNew && selectedProjIndex === originalIndex}
-            onSelectProject={(idx) => {
-              handleSelectProject(idx)
-              if (isMobile) setMobileExpanded(false)
-            }}
+            onSelectProject={handleSelectSidebarProject}
           />
         ))}
       </List>

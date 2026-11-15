@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, Stack, IconButton, Slider, Badge } from '@mui/material'
 import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded'
@@ -21,7 +22,7 @@ import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
  * @param {React.ComponentType<any>} props.VolumeIconComponent - Dynamic volume icon
  * @param {boolean} [props.isDesktop=false] - Desktop grid mode styling
  */
-export default function FullScreenVolumeAndActions({
+function FullScreenVolumeAndActions({
   copiedShare,
   onShareTrack,
   onOpenQueue,
@@ -153,3 +154,5 @@ export default function FullScreenVolumeAndActions({
     </Stack>
   )
 }
+
+export default memo(FullScreenVolumeAndActions)

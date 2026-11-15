@@ -4,6 +4,8 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { Box, Container, Paper, CircularProgress, Typography } from '@mui/material'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 import { adminTheme } from './adminTheme'
 import { useAdminAuth } from './hooks/useAdminAuth'
@@ -275,7 +277,8 @@ export default function AdminDashboard({
   return (
     <ThemeProvider theme={adminTheme}>
       <CssBaseline />
-      <Box
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <Box
         sx={{
           minHeight: '100vh',
           height: { md: '100vh' },
@@ -420,7 +423,8 @@ export default function AdminDashboard({
           isTriggeringWarm={mediaJobs.isTriggeringWarm}
           adminPassword={auth.password}
         />
-      </Box>
+        </Box>
+      </LocalizationProvider>
     </ThemeProvider>
   )
 }

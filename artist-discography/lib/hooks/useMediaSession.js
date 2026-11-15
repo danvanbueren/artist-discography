@@ -118,24 +118,56 @@ export function useMediaSession({
     }
   }, [isPlaying, hasTrack])
 
-  // 3. Synchronize Position State (Timeline / Scrubber)
+  const lastPositionSyncRef = useRef({
+    timestamp: 0,
+    position: -1,
+    duration: 0,
+    trackKey: '',
+  })
+
+  // 3. Synchronize Position State (Timeline / Scrubber) with 5s throttle + seek bypass
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator)) return
-    if (!hasTrack || !duration || isNaN(duration) || duration <= 0) return
+    if (!hasTrack || !duration || isNaN(duration) || duration <= 0) {
+      lastPositionSyncRef.current.trackKey = ''
+      return
+    }
+    if (!('setPositionState' in navigator.mediaSession)) return
+
+    const safePosition = Math.min(Math.max(0, currentTime || 0), duration)
+    const now = performance.now()
+    const trackKey = `${trackTitle}::${trackArtist}::${trackAlbum}`
+    const prev = lastPositionSyncRef.current
+
+    const isTrackOrDurationChanged =
+      prev.trackKey !== trackKey || Math.abs(prev.duration - duration) > 0.5
+    const isReset = safePosition === 0 && prev.position !== 0
+    const elapsedSec = (now - prev.timestamp) / 1000
+    const expectedPosition = isPlayingRef.current ? prev.position + elapsedSec : prev.position
+    const isSeek = prev.position >= 0 && Math.abs(safePosition - expectedPosition) > 1.5
+    const isIntervalElapsed = now - prev.timestamp >= 5000
+
+    if (!isTrackOrDurationChanged && !isReset && !isSeek && !isIntervalElapsed) {
+      return
+    }
+
+    lastPositionSyncRef.current = {
+      timestamp: now,
+      position: safePosition,
+      duration,
+      trackKey,
+    }
 
     try {
-      if ('setPositionState' in navigator.mediaSession) {
-        const safePosition = Math.min(Math.max(0, currentTime || 0), duration)
-        navigator.mediaSession.setPositionState({
-          duration: Math.max(1, duration),
-          playbackRate: 1.0,
-          position: safePosition,
-        })
-      }
+      navigator.mediaSession.setPositionState({
+        duration: Math.max(1, duration),
+        playbackRate: 1.0,
+        position: safePosition,
+      })
     } catch (err) {
       // Ignored if invoked during stream buffer transitions
     }
-  }, [currentTime, duration, hasTrack])
+  }, [currentTime, duration, hasTrack, trackTitle, trackArtist, trackAlbum])
 
   // 4. Register Action Handlers (Hardware Keys & OS Widget Buttons)
   useEffect(() => {

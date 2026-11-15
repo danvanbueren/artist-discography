@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, Stack, IconButton, Slider, Badge } from '@mui/material'
 import QueueMusicRoundedIcon from '@mui/icons-material/QueueMusicRounded'
 import ShareRoundedIcon from '@mui/icons-material/ShareRounded'
@@ -24,7 +25,7 @@ import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded'
  * @param {Function} props.onVolumeChange - Volume slider handler
  * @param {React.ComponentType<any>} props.VolumeIconComponent - Dynamic volume icon
  */
-export default function DesktopPlayerRightControls({
+function DesktopPlayerRightControls({
   copiedShare = false,
   onShareTrack,
   onOpenQueue,
@@ -177,3 +178,5 @@ export default function DesktopPlayerRightControls({
     </Stack>
   )
 }
+
+export default memo(DesktopPlayerRightControls)

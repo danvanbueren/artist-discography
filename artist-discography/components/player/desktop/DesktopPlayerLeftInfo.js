@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, Stack, Typography } from '@mui/material'
 import MusicNoteRoundedIcon from '@mui/icons-material/MusicNoteRounded'
 import ProgressiveImage from '@/components/ui/ProgressiveImage'
@@ -16,7 +17,7 @@ import AudioQualityPill from '../AudioQualityPill'
  * @param {boolean} [props.isStuttering=false] - Stutter warning state
  * @param {Function} [props.onOpenQualityModal] - Quality modal trigger
  */
-export default function DesktopPlayerLeftInfo({
+function DesktopPlayerLeftInfo({
   playingTrack,
   coverArt,
   onNavigateToCurrentTrack,
@@ -144,3 +145,5 @@ export default function DesktopPlayerLeftInfo({
     </Stack>
   )
 }
+
+export default memo(DesktopPlayerLeftInfo)

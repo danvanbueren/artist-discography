@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Button } from '@mui/material'
+import { Box, Button, Tooltip } from '@mui/material'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import LinkIcon from '@mui/icons-material/Link'
@@ -10,7 +10,9 @@ import DataSaverOnRoundedIcon from '@mui/icons-material/DataSaverOnRounded'
 import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded'
 import LockRoundedIcon from '@mui/icons-material/LockRounded'
 import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded'
+import SpeedIcon from '@mui/icons-material/Speed'
 import { SOCIAL_ICONS } from '@/components/discography/ArtistHero'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 /**
  * Settings mode toolbar for Theme, Platform, Audio Quality, and Private Access.
@@ -41,6 +43,19 @@ export default function NavBarSettingsBar({
   isPrivateAuthenticated = false,
   settingsDrag,
 }) {
+  const { modeOverride, isLiteMode, diagnostics, cycleModeOverride } = usePerformanceMode()
+
+  const graphicsLabel =
+    modeOverride === 'auto'
+      ? isLiteMode
+        ? 'Graphics: Auto (Lite)'
+        : 'Graphics: Auto'
+      : modeOverride === 'lite'
+        ? 'Graphics: Lite'
+        : 'Graphics: High'
+
+  const graphicsTooltip = `Detection: ${diagnostics.reason}. Click to cycle Auto / Lite / High.`
+
   return (
     <Box
       ref={settingsDrag.ref}
@@ -219,6 +234,37 @@ export default function NavBarSettingsBar({
       >
         Theme
       </Button>
+
+      {/* Graphics Mode Toggle */}
+      <Tooltip title={graphicsTooltip} arrow>
+        <Button
+          size='medium'
+          variant='outlined'
+          onClick={() => {
+            if (settingsDrag.hasDraggedRef.current) return
+            cycleModeOverride()
+          }}
+          startIcon={<SpeedIcon fontSize='small' />}
+          sx={{
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            borderRadius: 3,
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            py: 1,
+            px: 2,
+            color: isLiteMode ? 'info.main' : 'text.primary',
+            borderColor: isLiteMode ? 'info.main' : 'divider',
+            '&:hover': {
+              borderColor: isLiteMode ? 'info.main' : 'text.primary',
+              bgcolor: 'action.hover',
+            },
+          }}
+        >
+          {graphicsLabel}
+        </Button>
+      </Tooltip>
 
       {/* Private Gated Access */}
       <Button
