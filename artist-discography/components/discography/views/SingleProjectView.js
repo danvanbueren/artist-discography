@@ -104,8 +104,8 @@ export default function SingleProjectView({
           playingTrack={playingTrack}
           isPlaying={isPlaying}
           highlightedTrackSlug={highlightedTrackSlug}
-          onSelectTrackRow={(track) => onSelectTrackRow(track, selectedProject)}
-          onSelectTrackTitle={(track) => onSelectTrackTitle(track, selectedProject)}
+          onSelectTrackRow={onSelectTrackRow}
+          onSelectTrackTitle={onSelectTrackTitle}
           selectedPlatform={selectedPlatform}
           isPrivateAuthenticated={isPrivateAuthenticated}
         />

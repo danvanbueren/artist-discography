@@ -70,7 +70,7 @@ export default function AllProjectsGridView({
                   isPlaying={isPlaying}
                   highlightedTrackSlug={highlightedTrackSlug}
                   onSelectTrackRow={null}
-                  onSelectTrackTitle={(track) => onSelectTrackTitle(track, proj)}
+                  onSelectTrackTitle={onSelectTrackTitle}
                   selectedPlatform={selectedPlatform}
                   isPrivateAuthenticated={isPrivateAuthenticated}
                 />

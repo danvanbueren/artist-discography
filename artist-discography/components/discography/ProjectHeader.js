@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Box, Stack, Typography, Chip, Tooltip, useTheme } from '@mui/material'
 import AlbumRoundedIcon from '@mui/icons-material/AlbumRounded'
 import ZoomInRoundedIcon from '@mui/icons-material/ZoomInRounded'
@@ -18,7 +18,7 @@ import ProjectArtLightboxModal from './header/ProjectArtLightboxModal'
  * Top metadata hero component for each project, displaying square artwork thumbnail,
  * release type badge, project name, artist, release date, and external streaming link buttons.
  */
-export default function ProjectHeader({
+const ProjectHeader = memo(function ProjectHeader({
   project,
   artistName,
   onSelectProject,
@@ -293,4 +293,6 @@ export default function ProjectHeader({
       />
     </>
   )
-}
+})
+
+export default ProjectHeader

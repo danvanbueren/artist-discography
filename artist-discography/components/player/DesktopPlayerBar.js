@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useCallback } from 'react'
 import { Box } from '@mui/material'
 import DesktopPlayerLeftInfo from './desktop/DesktopPlayerLeftInfo'
 import DesktopPlayerTransport from './desktop/DesktopPlayerTransport'
@@ -42,23 +43,25 @@ export default function DesktopPlayerBar({
   VolumeIconComponent,
 }) {
   const hasNextTrack = manualQueue.length > 0 || autoplayTracks.length > 0 || repeatMode === 'all'
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
 
-  const handleSkipBackClick = () => {
-    if (currentTime > 3) {
+  const handleSkipBackClick = useCallback(() => {
+    if (currentTimeRef.current > 3) {
       if (onSeek) onSeek(0)
     } else if (onSkipPrev) {
       onSkipPrev()
     }
-  }
+  }, [onSeek, onSkipPrev])
 
-  const handleSkipForwardClick = () => {
+  const handleSkipForwardClick = useCallback(() => {
     if (!hasNextTrack) {
       if (onSeek) onSeek(0)
     }
     if (onSkipNext) {
       onSkipNext()
     }
-  }
+  }, [hasNextTrack, onSeek, onSkipNext])
 
   return (
     <Box

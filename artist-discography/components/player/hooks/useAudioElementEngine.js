@@ -82,6 +82,8 @@ export function useAudioElementEngine({
 
   const pendingResumeTimeRef = useRef(null)
   const shouldResumeAfterQualitySwitchRef = useRef(false)
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
 
   // Seamlessly update audio stream when user changes quality tier
   const prevTierRef = useRef(activeTier)
@@ -89,13 +91,13 @@ export function useAudioElementEngine({
     if (prevTierRef.current !== activeTier) {
       prevTierRef.current = activeTier
       if (audioRef.current && playingTrack) {
-        const currentPos = audioRef.current.currentTime || currentTime
+        const currentPos = audioRef.current.currentTime || currentTimeRef.current
         const wasPlaying = isPlaying && !audioRef.current.paused
         pendingResumeTimeRef.current = currentPos
         shouldResumeAfterQualitySwitchRef.current = wasPlaying
       }
     }
-  }, [activeTier, playingTrack, isPlaying, currentTime])
+  }, [activeTier, playingTrack, isPlaying])
 
   // Track duration in seconds
   const duration = realDuration || playingTrack?.durationSeconds || playingTrack?.duration || 215

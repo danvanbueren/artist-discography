@@ -18,7 +18,13 @@ export default function HeaderLogo({ onClick, ambientImage }) {
     ? 'drop-shadow(0px 6px 16px rgba(0,0,0,0.35))'
     : 'drop-shadow(0px 6px 16px rgba(0,0,0,0.15))'
 
-  const animatedFilterStyles = getDynamicLogoFilter(baseShadow)
+  const isLowContrast = Boolean(
+    analysis?.isMonochrome &&
+      ((isDarkMode && analysis?.isDark) || (!isDarkMode && analysis?.isLight)),
+  )
+  const logoFilterStyles = getDynamicLogoFilter(baseShadow, {
+    isLowContrast,
+  })
 
   return (
     <Box
@@ -41,9 +47,9 @@ export default function HeaderLogo({ onClick, ambientImage }) {
           aspectRatio: analysis?.aspectRatio ? `${analysis.aspectRatio}` : 'auto',
           cursor: onClick ? 'pointer' : 'default',
           flexShrink: 0,
-          transition: 'transform 0.25s ease-in-out',
           ...logoGradientSx,
-          ...animatedFilterStyles,
+          ...logoFilterStyles,
+          transition: 'transform 0.25s ease-in-out, opacity 0.3s ease',
           '&:hover': onClick
             ? {
                 transform: 'scale(1.04)',

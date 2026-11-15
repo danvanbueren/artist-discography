@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, Stack, Typography } from '@mui/material'
 import AudioQualityPill from '../AudioQualityPill'
 
@@ -13,7 +14,7 @@ import AudioQualityPill from '../AudioQualityPill'
  * @param {Function} [props.onOpenQualityModal] - Quality modal open trigger
  * @param {boolean} [props.isDesktop=false] - Desktop grid mode styling
  */
-export default function FullScreenTrackMeta({
+function FullScreenTrackMeta({
   playingTrack,
   audioQualityLabel,
   isStuttering = false,
@@ -83,3 +84,5 @@ export default function FullScreenTrackMeta({
     </Box>
   )
 }
+
+export default memo(FullScreenTrackMeta)

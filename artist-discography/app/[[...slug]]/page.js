@@ -1,14 +1,13 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { loadArtistData, normalizeSiteUrl } from '@/lib/data/artistData'
 import DiscographyApp from '@/components/discography/DiscographyApp'
 import { slugify, findProjectBySlug, findTrackBySlug } from '@/lib/data/slugs'
 import { formatProjectDate } from '@/lib/data/dateUtils'
-import {
-  resolveGeneralOgContext,
-  resolveProjectOgContext,
-  resolveTrackOgContext,
-} from '@/lib/media/og/ogEntityResolver'
+import { resolveOgMetadataFast } from '@/lib/media/og/ogEntityResolver'
+
+const getCachedPageArtistData = cache(() => loadArtistData())
 
 const STATIC_ASSET_REGEX =
   /\.(js|mjs|cjs|css|map|json|png|jpg|jpeg|webp|gif|svg|ico|txt|xml|woff|woff2|ttf|eot)$/i
@@ -29,7 +28,7 @@ export async function generateMetadata({ params }) {
 
   let dataResult = null
   try {
-    dataResult = loadArtistData()
+    dataResult = getCachedPageArtistData()
   } catch (err) {}
 
   const data = dataResult?.data ?? {}
@@ -66,9 +65,12 @@ export async function generateMetadata({ params }) {
 
         let trackContext = null
         try {
-          trackContext = await resolveTrackOgContext(projSlug, trkSlug)
+          trackContext = await resolveOgMetadataFast(
+            { type: 'track', projectSlug: projSlug, trackSlug: trkSlug },
+            data,
+          )
         } catch (ogErr) {
-          console.warn('Error resolving track OG context:', ogErr.message)
+          console.warn('Error resolving track OG metadata:', ogErr.message)
         }
 
         const ogVersion = trackContext?.hash ? `&v=${trackContext.hash}` : ''
@@ -122,9 +124,12 @@ export async function generateMetadata({ params }) {
 
       let projContext = null
       try {
-        projContext = await resolveProjectOgContext(projSlug)
+        projContext = await resolveOgMetadataFast(
+          { type: 'project', projectSlug: projSlug },
+          data,
+        )
       } catch (ogErr) {
-        console.warn('Error resolving project OG context:', ogErr.message)
+        console.warn('Error resolving project OG metadata:', ogErr.message)
       }
 
       const ogVersion = projContext?.hash ? `&v=${projContext.hash}` : ''
@@ -181,9 +186,9 @@ export async function generateMetadata({ params }) {
 
   let generalContext = null
   try {
-    generalContext = await resolveGeneralOgContext()
+    generalContext = await resolveOgMetadataFast({ type: 'general' }, data)
   } catch (ogErr) {
-    console.warn('Error resolving general OG context:', ogErr.message)
+    console.warn('Error resolving general OG metadata:', ogErr.message)
   }
 
   const ogVersion = generalContext?.hash ? `?v=${generalContext.hash}` : ''
@@ -242,7 +247,7 @@ export default async function Page({ params }) {
 
   let dataResult = null
   try {
-    dataResult = loadArtistData()
+    dataResult = getCachedPageArtistData()
   } catch (err) {
     console.error('Error loading artist data in Page:', err)
   }
@@ -254,9 +259,22 @@ export default async function Page({ params }) {
     issues: ['Failed to load data'],
   }
 
+  // Never serialize server secrets into the public client RSC payload
+  const { adminPassword: _ap, privateAccessCode: _pac, config: rawNestedConfig, ...restData } = data
+  const safeNestedConfig =
+    rawNestedConfig && typeof rawNestedConfig === 'object'
+      ? (({ adminPassword: _nap, privateAccessCode: _npac, ...restConfig }) => restConfig)(
+          rawNestedConfig,
+        )
+      : undefined
+  const clientData = {
+    ...restData,
+    ...(safeNestedConfig ? { config: safeNestedConfig } : {}),
+  }
+
   return (
     <DiscographyApp
-      data={data}
+      data={clientData}
       health={health}
       initialSlug={resolvedParams?.slug ?? []}
       initialThemeMode={initialThemeMode}

@@ -44,27 +44,11 @@ export default function DiscographyHeaderSection({
               py: { xs: 0.75, sm: 1.25 },
               bgcolor: '#b71c1c',
               color: '#ffffff',
-              backdropFilter: 'blur(16px)',
               border: '1px solid rgba(255, 255, 255, 0.25)',
               boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
               display: 'flex',
               alignItems: 'center',
               gap: { xs: 0.75, sm: 1.5 },
-              animation: 'pulseAdminAlert 2s infinite ease-in-out',
-              '@keyframes pulseAdminAlert': {
-                '0%': {
-                  backgroundColor: '#b71c1c',
-                  boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)',
-                },
-                '50%': {
-                  backgroundColor: '#d32f2f',
-                  boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)',
-                },
-                '100%': {
-                  backgroundColor: '#b71c1c',
-                  boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)',
-                },
-              },
             }}
           >
             <LockOpenIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }} />
@@ -122,9 +106,11 @@ export default function DiscographyHeaderSection({
       )}
 
       {/* Screen-Height Hero Section */}
-      <Box sx={{ display: isSingleView ? 'none' : 'block' }}>
-        <ArtistHero artist={artist} onLogoClick={undefined} ambientImage={ambientImage} />
-      </Box>
+      {!isSingleView && (
+        <Box>
+          <ArtistHero artist={artist} onLogoClick={undefined} ambientImage={ambientImage} />
+        </Box>
+      )}
     </>
   )
 }

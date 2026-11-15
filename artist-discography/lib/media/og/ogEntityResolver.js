@@ -14,7 +14,17 @@ import {
 } from './ogAudioDuration'
 import { extractOgPalette } from './ogColorExtractor'
 import { renderOgBlurredBackground } from './ogBackgroundRenderer'
-import { computeEntityFingerprint } from './ogSidecarManager'
+import {
+  OG_CACHE_DIR,
+  computeEntityFingerprint,
+  getFileStatInfo,
+  readSidecar,
+} from './ogSidecarManager'
+
+const MAX_DATA_URL_CACHE = 30
+const DATA_URL_CACHE = new Map()
+const ENTITY_SIDECAR_INDEX = new Map()
+let sidecarIndexInitialized = false
 
 const ORDERED_PLATFORM_KEYS = [
   'spotify',
@@ -111,6 +121,17 @@ export async function fileToBase64DataUrl(filePath, options = {}) {
 
   try {
     if (fs.existsSync(filePath)) {
+      const stat = fs.statSync(filePath)
+      const cacheKey = `${filePath}:${Math.floor(stat.mtimeMs)}:${stat.size}:${maxDim}:${isLogo ? 1 : 0}`
+      if (DATA_URL_CACHE.has(cacheKey)) {
+        const cached = DATA_URL_CACHE.get(cacheKey)
+        // Refresh insertion order for LRU eviction
+        DATA_URL_CACHE.delete(cacheKey)
+        DATA_URL_CACHE.set(cacheKey, cached)
+        return cached
+      }
+
+      let dataUrl = null
       const sharp = await getSharp()
       if (sharp) {
         if (isLogo) {
@@ -118,27 +139,36 @@ export async function fileToBase64DataUrl(filePath, options = {}) {
             .resize(maxDim, maxDim, { fit: 'inside', withoutEnlargement: true })
             .png()
             .toBuffer()
-          return `data:image/png;base64,${buffer.toString('base64')}`
+          dataUrl = `data:image/png;base64,${buffer.toString('base64')}`
+        } else {
+          const buffer = await sharp(filePath)
+            .resize(maxDim, maxDim, { fit: 'cover', withoutEnlargement: true })
+            .jpeg({ quality: 85, progressive: true })
+            .toBuffer()
+          dataUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`
         }
-
-        const buffer = await sharp(filePath)
-          .resize(maxDim, maxDim, { fit: 'cover', withoutEnlargement: true })
-          .jpeg({ quality: 85, progressive: true })
-          .toBuffer()
-        return `data:image/jpeg;base64,${buffer.toString('base64')}`
+      } else {
+        const buffer = fs.readFileSync(filePath)
+        const ext = path.extname(filePath).toLowerCase().replace('.', '')
+        const mime =
+          ext === 'png'
+            ? 'image/png'
+            : ext === 'webp'
+              ? 'image/webp'
+              : ext === 'svg'
+                ? 'image/svg+xml'
+                : 'image/jpeg'
+        dataUrl = `data:${mime};base64,${buffer.toString('base64')}`
       }
 
-      const buffer = fs.readFileSync(filePath)
-      const ext = path.extname(filePath).toLowerCase().replace('.', '')
-      const mime =
-        ext === 'png'
-          ? 'image/png'
-          : ext === 'webp'
-            ? 'image/webp'
-            : ext === 'svg'
-              ? 'image/svg+xml'
-              : 'image/jpeg'
-      return `data:${mime};base64,${buffer.toString('base64')}`
+      if (dataUrl) {
+        if (DATA_URL_CACHE.size >= MAX_DATA_URL_CACHE) {
+          const oldestKey = DATA_URL_CACHE.keys().next().value
+          DATA_URL_CACHE.delete(oldestKey)
+        }
+        DATA_URL_CACHE.set(cacheKey, dataUrl)
+      }
+      return dataUrl
     }
   } catch {}
   return null
@@ -377,4 +407,227 @@ export async function resolveTrackOgContext(projectSlug, trackSlug) {
     logoDataUrl,
     backgroundDataUrl,
   }
+}
+
+function fileStatsMatch(prevStat, filePath) {
+  if (!prevStat) return !filePath
+  const current = getFileStatInfo(filePath)
+  return (
+    current.exists === prevStat.exists &&
+    current.mtimeMs === prevStat.mtimeMs &&
+    current.size === prevStat.size
+  )
+}
+
+function findMatchingSidecar(entityType, slug, filePaths = {}) {
+  const indexKey = `${entityType}:${slug || ''}`
+
+  const validateCandidate = (entry) => {
+    if (!entry?.sidecar?.themeColorHex || !entry.hash) return null
+    const prevFiles = entry.sidecar.sourceFingerprint?.files || {}
+    if (
+      !fileStatsMatch(prevFiles.artwork, filePaths.artworkPath) ||
+      !fileStatsMatch(prevFiles.logo, filePaths.logoPath) ||
+      !fileStatsMatch(prevFiles.config, path.join(process.cwd(), 'data', 'config.json'))
+    ) {
+      return null
+    }
+    if (
+      filePaths.projectJsonPath &&
+      !fileStatsMatch(prevFiles.projectJson, filePaths.projectJsonPath)
+    ) {
+      return null
+    }
+    return { hash: entry.hash, sidecar: entry.sidecar }
+  }
+
+  if (ENTITY_SIDECAR_INDEX.has(indexKey)) {
+    const validated = validateCandidate(ENTITY_SIDECAR_INDEX.get(indexKey))
+    if (validated) return validated
+    ENTITY_SIDECAR_INDEX.delete(indexKey)
+  }
+
+  if (!sidecarIndexInitialized) {
+    sidecarIndexInitialized = true
+    try {
+      if (fs.existsSync(OG_CACHE_DIR)) {
+        const files = fs.readdirSync(OG_CACHE_DIR)
+        for (const file of files) {
+          if (!file.endsWith('.json')) continue
+          const hash = file.slice(0, -5)
+          const sidecar = readSidecar(hash)
+          if (sidecar && sidecar.entityType) {
+            ENTITY_SIDECAR_INDEX.set(`${sidecar.entityType}:${sidecar.slug || ''}`, {
+              hash,
+              sidecar,
+            })
+          }
+        }
+      }
+    } catch {}
+
+    if (ENTITY_SIDECAR_INDEX.has(indexKey)) {
+      return validateCandidate(ENTITY_SIDECAR_INDEX.get(indexKey))
+    }
+  }
+
+  return null
+}
+
+/**
+ * Fast metadata-only OG resolver for SSR `generateMetadata`.
+ * Uses disk/memory JSON sidecars in <1ms and skips Sharp backdrop rendering,
+ * Base64 data URL generation, and ffprobe execution completely.
+ *
+ * @param {Object} params
+ * @param {'general' | 'project' | 'track'} [params.type='general']
+ * @param {string} [params.projectSlug]
+ * @param {string} [params.trackSlug]
+ * @param {Object|null} [preloadedDiscography=null] - Preloaded artist data from Page/generateMetadata
+ * @returns {Promise<{ hash: string, themeColorHex: string, palette: { themeColorHex: string } }|null>}
+ */
+export async function resolveOgMetadataFast(
+  { type = 'general', projectSlug = '', trackSlug = '' } = {},
+  preloadedDiscography = null,
+) {
+  const discography = preloadedDiscography || loadArtistData()?.data || {}
+  const publicProjects = (discography?.projects ?? []).filter((p) => p.visibility !== 'private')
+  const defaultArtist = discography?.artist?.name?.trim() || 'Artist'
+
+  const logoDetails = getLogoDetails()
+  const logoPath = logoDetails.exists ? logoDetails.fullPath : null
+
+  if (type === 'track') {
+    const project = findProjectBySlug(publicProjects, projectSlug)
+    if (!project) return null
+    const track = findTrackBySlug(project.tracks || [], trackSlug)
+    if (!track) return null
+
+    const trackName = track.name || 'Untitled Track'
+    const trackArtist = track.artist || project.artist || defaultArtist
+    const projectName = project.name || ''
+    const projectType = project.type || 'Single'
+    const resolvedCoverPath =
+      resolveCoverFilePath(projectSlug, track.cover) ||
+      resolveCoverFilePath(projectSlug, project.cover)
+    const projectJsonPath = path.join(process.cwd(), 'data', 'projects', projectSlug, 'project.json')
+
+    const matched = findMatchingSidecar('track', `${projectSlug}/${trackSlug}`, {
+      artworkPath: resolvedCoverPath,
+      logoPath,
+      projectJsonPath,
+    })
+
+    if (matched) {
+      const hex = matched.sidecar.themeColorHex || '#5865F2'
+      return { hash: matched.hash, themeColorHex: hex, palette: { themeColorHex: hex } }
+    }
+
+    const palette = await extractOgPalette(resolvedCoverPath || logoPath)
+    const { hash } = computeEntityFingerprint('track', {
+      slug: `${projectSlug}/${trackSlug}`,
+      name: trackName,
+      artist: trackArtist,
+      date: project.date || '',
+      projectName,
+      projectType,
+      artworkPath: resolvedCoverPath,
+      logoPath,
+      projectJsonPath,
+      stats: { durationSeconds: 0 },
+    })
+    const hex = palette?.themeColorHex || '#5865F2'
+    return { hash, themeColorHex: hex, palette: { themeColorHex: hex } }
+  }
+
+  if (type === 'project') {
+    const project = findProjectBySlug(publicProjects, projectSlug)
+    if (!project) return null
+
+    const projectName = project.name || 'Project'
+    const projectArtist = project.artist || defaultArtist
+    const projectType = project.type || 'Single'
+    const tracks = project.tracks || []
+    const resolvedCoverPath = resolveCoverFilePath(projectSlug, project.cover)
+    const projectJsonPath = path.join(process.cwd(), 'data', 'projects', projectSlug, 'project.json')
+
+    const matched = findMatchingSidecar('project', projectSlug, {
+      artworkPath: resolvedCoverPath,
+      logoPath,
+      projectJsonPath,
+    })
+
+    if (matched) {
+      const hex = matched.sidecar.themeColorHex || '#5865F2'
+      return { hash: matched.hash, themeColorHex: hex, palette: { themeColorHex: hex } }
+    }
+
+    const palette = await extractOgPalette(resolvedCoverPath || logoPath)
+    const { hash } = computeEntityFingerprint('project', {
+      slug: projectSlug,
+      name: projectName,
+      artist: projectArtist,
+      date: project.date || '',
+      type: projectType,
+      artworkPath: resolvedCoverPath,
+      logoPath,
+      projectJsonPath,
+      stats: { totalTracks: tracks.length, totalSeconds: 0 },
+    })
+    const hex = palette?.themeColorHex || '#5865F2'
+    return { hash, themeColorHex: hex, palette: { themeColorHex: hex } }
+  }
+
+  // General Discography fallback
+  const artistName = defaultArtist
+  const bio = discography?.artist?.bio?.trim() || ''
+  const socialLinks = {
+    ...(discography?.artist?.links?.platforms || {}),
+    ...(discography?.artist?.links?.socials || {}),
+    ...(discography?.artist?.platforms || {}),
+    ...(discography?.artist?.socials || {}),
+  }
+
+  let totalTracks = 0
+  for (const proj of publicProjects) {
+    totalTracks += (proj.tracks || []).length
+  }
+  const activePlatformsCount = Object.values(socialLinks).filter(
+    (u) => typeof u === 'string' && u.trim() !== '',
+  ).length
+
+  const bgDetails = getBackgroundDetails()
+  let bgPath = bgDetails.exists ? bgDetails.fullPath : null
+  if (!bgPath && publicProjects.length > 0) {
+    const newestProject = publicProjects[0]
+    const pSlug = newestProject.slug || slugify(newestProject.name)
+    bgPath = resolveCoverFilePath(pSlug, newestProject.cover)
+  }
+
+  const { hash } = computeEntityFingerprint('general', {
+    name: artistName,
+    bio,
+    socials: socialLinks,
+    stats: {
+      totalProjects: publicProjects.length,
+      totalTracks,
+      totalPlatforms: activePlatformsCount,
+    },
+    artworkPath: bgPath,
+    logoPath,
+    backgroundPath: bgPath,
+  })
+
+  const sidecar = readSidecar(hash)
+  if (sidecar?.themeColorHex) {
+    return {
+      hash,
+      themeColorHex: sidecar.themeColorHex,
+      palette: { themeColorHex: sidecar.themeColorHex },
+    }
+  }
+
+  const palette = await extractOgPalette(bgPath || logoPath)
+  const hex = palette?.themeColorHex || '#5865F2'
+  return { hash, themeColorHex: hex, palette: { themeColorHex: hex } }
 }

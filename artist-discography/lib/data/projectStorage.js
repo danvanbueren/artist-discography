@@ -38,6 +38,15 @@ export const DEFAULT_PROJECT_SCAFFOLD = {
 
 const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
 const SUPPORTED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif']
+const GLOBAL_DATA_MUTATION_KEY = '__artistDataMutationVersion'
+
+/**
+ * Increments the process-wide data mutation version so in-memory data loaders
+ * invalidate immediately even across separate module chunks or same-tick writes.
+ */
+function bumpArtistDataMutationVersion() {
+  globalThis[GLOBAL_DATA_MUTATION_KEY] = (globalThis[GLOBAL_DATA_MUTATION_KEY] || 0) + 1
+}
 
 /**
  * Returns the absolute path to data/projects directory.
@@ -93,6 +102,95 @@ export function validateAndResolveProject(
   let repaired = false
   const proj = typeof raw === 'object' && raw !== null ? { ...raw } : {}
   const dataDir = path.join(process.cwd(), 'data')
+  const projectDir = projectSlug ? path.join(dataDir, 'projects', projectSlug) : null
+
+  // Single readdirSync per project avoids repeated existsSync/statSync probes across extensions
+  let projectDirFiles = null
+  let projectDirFilesLower = null
+  if (projectDir) {
+    try {
+      const entries = fs.readdirSync(projectDir, { withFileTypes: true })
+      projectDirFiles = new Set()
+      if (process.platform === 'win32') {
+        projectDirFilesLower = new Map()
+      }
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          projectDirFiles.add(entry.name)
+          if (projectDirFilesLower) {
+            projectDirFilesLower.set(entry.name.toLowerCase(), entry.name)
+          }
+        }
+      }
+    } catch {
+      projectDirFiles = null
+      projectDirFilesLower = null
+    }
+  }
+
+  /**
+   * Resolves a single-segment filename inside the project folder using the
+   * pre-read directory Set, avoiding per-file statSync syscalls.
+   */
+  const resolveInProjectDir = (fileName) => {
+    if (
+      !projectDirFiles ||
+      !fileName ||
+      fileName.includes('/') ||
+      fileName.includes('\\') ||
+      fileName.includes('..')
+    ) {
+      return null
+    }
+
+    let matchedName = projectDirFiles.has(fileName) ? fileName : null
+    if (!matchedName && projectDirFilesLower) {
+      matchedName = projectDirFilesLower.get(fileName.toLowerCase()) || null
+    }
+    if (!matchedName) return null
+
+    const fullPath = path.resolve(
+      /*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ projectDir, matchedName),
+    )
+    return fullPath.startsWith(dataDir) ? fullPath : null
+  }
+
+  /**
+   * Resolves a single-segment asset candidate inside projectDir when its listing
+   * is available, falling back to resolveLocalPath for nested relative paths.
+   */
+  const resolveProjectRelativeAsset = (relName) => {
+    if (
+      projectDirFiles &&
+      relName &&
+      !relName.includes('/') &&
+      !relName.includes('\\') &&
+      !relName.includes('..')
+    ) {
+      return resolveInProjectDir(relName)
+    }
+    return resolveLocalPath(dataDir, path.join('projects', projectSlug, relName))
+  }
+
+  /**
+   * Resolves a project or track cover field against local project and fallback directories.
+   */
+  const resolveCoverField = (rawCover) => {
+    const trimCover = rawCover.trim()
+    if (/^https?:\/\//i.test(trimCover)) {
+      return trimCover
+    }
+
+    const matchPath =
+      resolveProjectRelativeAsset(trimCover) ||
+      resolveLocalPath(dataDir, path.join('projects', trimCover)) ||
+      resolveLocalPath(dataDir, path.join('covers', trimCover)) ||
+      resolveLocalPath(dataDir, trimCover)
+
+    if (!matchPath) return null
+    const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
+    return `/api/media/${relPath}`
+  }
 
   if (typeof proj.name !== 'string' || !proj.name.trim()) {
     proj.name = projectSlug
@@ -130,28 +228,16 @@ export function validateAndResolveProject(
   let resolvedCover = null
   let hasCover = false
   if (typeof proj.cover === 'string' && proj.cover.trim() !== '') {
-    const trimCover = proj.cover.trim()
-    if (/^https?:\/\//i.test(trimCover)) {
-      resolvedCover = trimCover
+    const candidateCoverUrl = resolveCoverField(proj.cover)
+    if (candidateCoverUrl) {
+      resolvedCover = candidateCoverUrl
       hasCover = true
-    } else {
-      const matchPath =
-        resolveLocalPath(dataDir, path.join('projects', projectSlug, trimCover)) ||
-        resolveLocalPath(dataDir, path.join('projects', trimCover)) ||
-        resolveLocalPath(dataDir, path.join('covers', trimCover)) ||
-        resolveLocalPath(dataDir, trimCover)
-      if (matchPath) {
-        const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
-        resolvedCover = `/api/media/${relPath}`
-        hasCover = true
-      }
     }
   }
 
   if (!hasCover && projectSlug) {
     for (const ext of SUPPORTED_IMAGE_EXTS) {
-      const candidateRel = path.join('projects', projectSlug, `art${ext}`)
-      const matchPath = resolveLocalPath(dataDir, candidateRel)
+      const matchPath = resolveProjectRelativeAsset(`art${ext}`)
       if (matchPath) {
         const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
         resolvedCover = `/api/media/${relPath}`
@@ -193,8 +279,7 @@ export function validateAndResolveProject(
 
       if (trackSlug) {
         for (const ext of SUPPORTED_AUDIO_EXTS) {
-          const candidateRel = path.join('projects', projectSlug, `${trackSlug}${ext}`)
-          const matchPath = resolveLocalPath(dataDir, candidateRel)
+          const matchPath = resolveProjectRelativeAsset(`${trackSlug}${ext}`)
           if (matchPath) {
             const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
             resolvedAudioUrl = `/api/audio/${relPath}`
@@ -210,19 +295,9 @@ export function validateAndResolveProject(
       // Track cover fallback
       let resolvedTrackCover = resolvedCover
       if (typeof updatedTrack.cover === 'string' && updatedTrack.cover.trim() !== '') {
-        const trimTCover = updatedTrack.cover.trim()
-        if (/^https?:\/\//i.test(trimTCover)) {
-          resolvedTrackCover = trimTCover
-        } else {
-          const matchPath =
-            resolveLocalPath(dataDir, path.join('projects', projectSlug, trimTCover)) ||
-            resolveLocalPath(dataDir, path.join('projects', trimTCover)) ||
-            resolveLocalPath(dataDir, path.join('covers', trimTCover)) ||
-            resolveLocalPath(dataDir, trimTCover)
-          if (matchPath) {
-            const relPath = path.relative(dataDir, matchPath).replace(/\\/g, '/')
-            resolvedTrackCover = `/api/media/${relPath}`
-          }
+        const candidateTrackCoverUrl = resolveCoverField(updatedTrack.cover)
+        if (candidateTrackCoverUrl) {
+          resolvedTrackCover = candidateTrackCoverUrl
         }
       }
       updatedTrack.cover = resolvedTrackCover
@@ -383,6 +458,7 @@ export function saveProjectFile(projectSlug, projectData) {
     }
 
     atomicWriteJson(filePath, cleanedProject)
+    bumpArtistDataMutationVersion()
     return { success: true }
   } catch (err) {
     console.error(`Error saving project ${projectSlug}:`, err)
@@ -402,6 +478,7 @@ export function deleteProjectDirectory(projectSlug) {
     if (fs.existsSync(projDir)) {
       fs.rmSync(projDir, { recursive: true, force: true })
     }
+    bumpArtistDataMutationVersion()
     return { success: true }
   } catch (err) {
     console.error(`Error deleting project ${projectSlug}:`, err)

@@ -47,11 +47,16 @@ export default function CompactArtistHeader({
   })
 
   const isGradient = shouldApplyLogoGradient(logoAnalysis, isDarkMode)
+  const isLowContrast = Boolean(
+    logoAnalysis?.isMonochrome &&
+      ((isDarkMode && logoAnalysis?.isDark) || (!isDarkMode && logoAnalysis?.isLight)),
+  )
   const baseShadow = isDarkMode
     ? 'drop-shadow(0px 4px 14px rgba(0,0,0,0.35))'
     : 'drop-shadow(0px 4px 14px rgba(0,0,0,0.15))'
   const dynamicFilter = getDynamicLogoFilter(
     isGradient ? baseShadow : getLogoFilter(logoAnalysis, isDarkMode, baseShadow),
+    { isLowContrast },
   )
 
   return (
@@ -134,8 +139,6 @@ export default function CompactArtistHeader({
                 ? {
                     ...logoGradientSx,
                     ...dynamicFilter,
-                    animation:
-                      'logoGradientShift 14s ease infinite alternate, logoGlowPulse 10s ease-in-out infinite alternate',
                   }
                 : {
                     ...dynamicFilter,

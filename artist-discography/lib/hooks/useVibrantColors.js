@@ -11,12 +11,36 @@ const DEFAULT_FALLBACK_COLORS = [
 ]
 
 const VIBRANT_PALETTE_CACHE = new Map()
+const IN_FLIGHT_COLOR_PROMISES = new Map()
 
 const DEFAULT_PALETTE_STATE = {
   colors: DEFAULT_FALLBACK_COLORS,
   isMonochrome: false,
   avgSaturation: 0,
   isLoaded: false,
+}
+
+/**
+ * Downscales internal media URLs to a 48px WebP thumbnail for fast palette sampling.
+ *
+ * @param {string} url - Candidate image URL
+ * @returns {string} Normalized thumbnail URL
+ */
+function normalizeSamplingUrl(url) {
+  if (!url || typeof url !== 'string') return ''
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url
+  if (
+    url.startsWith('/api/media') ||
+    url.startsWith('/api/logo') ||
+    url.startsWith('/api/icon') ||
+    url.startsWith('/api/og') ||
+    url.startsWith('/api/background')
+  ) {
+    if (/[?&]w=\d+/.test(url)) return url
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}w=48&q=20&fmt=webp`
+  }
+  return url
 }
 
 function getCachedVibrantPalette(imageSrc) {
@@ -56,24 +80,198 @@ function saveCachedVibrantPalette(imageSrc, data) {
   }
 }
 
+function buildFallbackPalette() {
+  return {
+    colors: DEFAULT_FALLBACK_COLORS,
+    isMonochrome: false,
+    avgSaturation: 0,
+    isLoaded: true,
+  }
+}
+
+function extractPaletteFromImage(img) {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return buildFallbackPalette()
+
+  const width = 32
+  const height = Math.max(1, Math.round((img.height / img.width) * width))
+  canvas.width = width
+  canvas.height = height
+
+  ctx.drawImage(img, 0, 0, width, height)
+  const data = ctx.getImageData(0, 0, width, height).data
+
+  const allPixels = []
+  let totalSat = 0
+  let opaqueCount = 0
+
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3]
+    if (a < 50) continue
+
+    const rNorm = data[i] / 255
+    const gNorm = data[i + 1] / 255
+    const bNorm = data[i + 2] / 255
+
+    const max = Math.max(rNorm, gNorm, bNorm)
+    const min = Math.min(rNorm, gNorm, bNorm)
+    const d = max - min
+
+    let h = 0
+    let s = 0
+    const l = (max + min) / 2
+
+    if (d !== 0) {
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+      switch (max) {
+        case rNorm:
+          h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)
+          break
+        case gNorm:
+          h = (bNorm - rNorm) / d + 2
+          break
+        case bNorm:
+          h = (rNorm - gNorm) / d + 4
+          break
+      }
+      h /= 6
+    }
+
+    const hueDeg = Math.round(h * 360)
+    const satPct = Math.round(s * 100)
+    const lightPct = Math.round(l * 100)
+
+    totalSat += satPct
+    opaqueCount++
+
+    if (lightPct >= 5 && lightPct <= 95) {
+      allPixels.push({ h: hueDeg, s: satPct, l: lightPct })
+    }
+  }
+
+  if (opaqueCount === 0) return buildFallbackPalette()
+
+  const avgSat = Math.round(totalSat / opaqueCount)
+  const isMonochrome = avgSat < 20
+  const selected = []
+
+  if (isMonochrome) {
+    const sortedByLightness = [...allPixels].sort((a, b) => b.l - a.l)
+    const step = Math.max(1, Math.floor(sortedByLightness.length / 5))
+    for (let i = 0; i < 5; i++) {
+      const sample = sortedByLightness[Math.min(i * step, sortedByLightness.length - 1)] || {
+        h: 0,
+        s: 0,
+        l: 50,
+      }
+      selected.push({
+        h: sample.h,
+        s: Math.min(sample.s, 10),
+        l: Math.min(75, Math.max(20, sample.l)),
+      })
+    }
+  } else {
+    const colorful = allPixels.filter((p) => p.s >= 15)
+    colorful.sort((a, b) => b.s * 1.5 + (50 - Math.abs(b.l - 50)) - (a.s * 1.5 + (50 - Math.abs(a.l - 50))))
+
+    const minHueDiff = 25
+    for (const sample of colorful) {
+      if (selected.length >= 5) break
+      const isFarEnough = selected.every((sel) => {
+        const diff = Math.abs(sel.h - sample.h)
+        return Math.min(diff, 360 - diff) >= minHueDiff
+      })
+      if (isFarEnough || selected.length === 0) {
+        selected.push({
+          h: sample.h,
+          s: sample.s,
+          l: Math.min(75, Math.max(25, sample.l)),
+        })
+      }
+    }
+
+    if (selected.length < 5 && selected.length > 0) {
+      const baseCount = selected.length
+      let idx = 0
+      while (selected.length < 5) {
+        const base = selected[idx % baseCount]
+        const lightMod = (selected.length % 2 === 0 ? 18 : -18) + idx * 4
+        selected.push({
+          h: base.h,
+          s: base.s,
+          l: Math.min(78, Math.max(22, base.l + lightMod)),
+        })
+        idx++
+      }
+    }
+  }
+
+  const finalColors =
+    selected.length >= 3
+      ? selected.slice(0, 5).map((c) => `hsl(${c.h}, ${c.s}%, ${c.l}%)`)
+      : DEFAULT_FALLBACK_COLORS
+
+  return {
+    colors: finalColors,
+    isMonochrome,
+    avgSaturation: avgSat,
+    isLoaded: true,
+  }
+}
+
+function sampleVibrantPalette(imageSrc) {
+  if (IN_FLIGHT_COLOR_PROMISES.has(imageSrc)) {
+    return IN_FLIGHT_COLOR_PROMISES.get(imageSrc)
+  }
+
+  const promise = new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+
+    img.onload = () => {
+      try {
+        const result = extractPaletteFromImage(img)
+        saveCachedVibrantPalette(imageSrc, result)
+        resolve(result)
+      } catch {
+        const fallback = buildFallbackPalette()
+        saveCachedVibrantPalette(imageSrc, fallback)
+        resolve(fallback)
+      }
+    }
+
+    img.onerror = () => {
+      const fallback = buildFallbackPalette()
+      saveCachedVibrantPalette(imageSrc, fallback)
+      resolve(fallback)
+    }
+
+    img.src = imageSrc
+  }).finally(() => {
+    IN_FLIGHT_COLOR_PROMISES.delete(imageSrc)
+  })
+
+  IN_FLIGHT_COLOR_PROMISES.set(imageSrc, promise)
+  return promise
+}
+
 /**
  * Custom hook to analyze an image and sample its true color palette.
- * Accurately handles monochromatic/black & white images by preserving low saturation
- * and true image hues rather than forcing artificial bright colors.
+ * Deduplicates concurrent image decodes and samples 32px thumbnails.
+ *
+ * @param {string|null} rawImageSrc - Artwork URL
+ * @returns {{ colors: string[], isMonochrome: boolean, avgSaturation: number, isLoaded: boolean }}
  */
-export function useVibrantColors(imageSrc) {
+export function useVibrantColors(rawImageSrc) {
+  const imageSrc = normalizeSamplingUrl(rawImageSrc)
   const [palette, setPalette] = useState(() => getCachedVibrantPalette(imageSrc))
 
   useEffect(() => {
     if (!imageSrc) {
       setPalette((prev) => {
         if (prev.isLoaded && prev.colors === DEFAULT_FALLBACK_COLORS) return prev
-        return {
-          colors: DEFAULT_FALLBACK_COLORS,
-          isMonochrome: false,
-          avgSaturation: 0,
-          isLoaded: true,
-        }
+        return buildFallbackPalette()
       })
       return
     }
@@ -85,210 +283,23 @@ export function useVibrantColors(imageSrc) {
     }
 
     let isMounted = true
-    const img = new Image()
-    img.crossOrigin = 'Anonymous'
-
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          if (isMounted) setPalette((p) => ({ ...p, isLoaded: true }))
-          return
+    sampleVibrantPalette(imageSrc).then((result) => {
+      if (!isMounted) return
+      setPalette((prev) => {
+        const sameColors =
+          prev.colors.length === result.colors.length &&
+          prev.colors.every((col, i) => col === result.colors[i])
+        if (
+          sameColors &&
+          prev.isMonochrome === result.isMonochrome &&
+          prev.avgSaturation === result.avgSaturation &&
+          prev.isLoaded === result.isLoaded
+        ) {
+          return prev
         }
-
-        const width = 64
-        const height = Math.max(1, Math.round((img.height / img.width) * width))
-        canvas.width = width
-        canvas.height = height
-
-        ctx.drawImage(img, 0, 0, width, height)
-        const imageData = ctx.getImageData(0, 0, width, height)
-        const data = imageData.data
-
-        const allPixels = []
-        let totalSat = 0
-        let opaqueCount = 0
-
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i]
-          const g = data[i + 1]
-          const b = data[i + 2]
-          const a = data[i + 3]
-
-          if (a < 50) continue
-
-          const rNorm = r / 255
-          const gNorm = g / 255
-          const bNorm = b / 255
-
-          const max = Math.max(rNorm, gNorm, bNorm)
-          const min = Math.min(rNorm, gNorm, bNorm)
-          const d = max - min
-
-          let h = 0
-          let s = 0
-          const l = (max + min) / 2
-
-          if (d !== 0) {
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-            switch (max) {
-              case rNorm:
-                h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)
-                break
-              case gNorm:
-                h = (bNorm - rNorm) / d + 2
-                break
-              case bNorm:
-                h = (rNorm - gNorm) / d + 4
-                break
-            }
-            h /= 6
-          }
-
-          const hueDeg = Math.round(h * 360)
-          const satPct = Math.round(s * 100)
-          const lightPct = Math.round(l * 100)
-
-          totalSat += satPct
-          opaqueCount++
-
-          // Ignore extreme black and pure white for sample selection
-          if (lightPct >= 5 && lightPct <= 95) {
-            allPixels.push({
-              h: hueDeg,
-              s: satPct,
-              l: lightPct,
-            })
-          }
-        }
-
-        if (opaqueCount === 0) {
-          if (isMounted) setPalette((p) => ({ ...p, isLoaded: true }))
-          return
-        }
-
-        const avgSat = Math.round(totalSat / opaqueCount)
-        const isMonochrome = avgSat < 20
-
-        const selected = []
-
-        if (isMonochrome) {
-          // For monochromatic images, extract shades of gray/slate matching actual image lightness
-          const sortedByLightness = [...allPixels].sort((a, b) => b.l - a.l)
-          const step = Math.max(1, Math.floor(sortedByLightness.length / 5))
-          for (let i = 0; i < 5; i++) {
-            const sample = sortedByLightness[Math.min(i * step, sortedByLightness.length - 1)] || {
-              h: 0,
-              s: 0,
-              l: 50,
-            }
-            selected.push({
-              h: sample.h,
-              s: Math.min(sample.s, 10), // Strictly low saturation for monochrome
-              l: Math.min(75, Math.max(20, sample.l)),
-            })
-          }
-        } else {
-          // Filter pixels with actual color saturation
-          const colorful = allPixels.filter((p) => p.s >= 15)
-
-          // Sort by color saturation & balanced lightness
-          colorful.sort((a, b) => {
-            const scoreA = a.s * 1.5 + (50 - Math.abs(a.l - 50))
-            const scoreB = b.s * 1.5 + (50 - Math.abs(b.l - 50))
-            return scoreB - scoreA
-          })
-
-          const minHueDiff = 25
-          for (const sample of colorful) {
-            if (selected.length >= 5) break
-            const isFarEnough = selected.every((sel) => {
-              const diff = Math.abs(sel.h - sample.h)
-              const circularDiff = Math.min(diff, 360 - diff)
-              return circularDiff >= minHueDiff
-            })
-
-            if (isFarEnough || selected.length === 0) {
-              selected.push({
-                h: sample.h,
-                s: sample.s, // Preserves true image saturation
-                l: Math.min(75, Math.max(25, sample.l)),
-              })
-            }
-          }
-
-          // If image is duo-tone or limited in hue spectrum, pad by varying lightness of sampled hues
-          if (selected.length < 5 && selected.length > 0) {
-            const baseCount = selected.length
-            let idx = 0
-            while (selected.length < 5) {
-              const base = selected[idx % baseCount]
-              const lightMod = (selected.length % 2 === 0 ? 18 : -18) + idx * 4
-              const newL = Math.min(78, Math.max(22, base.l + lightMod))
-              selected.push({
-                h: base.h,
-                s: base.s,
-                l: newL,
-              })
-              idx++
-            }
-          }
-        }
-
-        const finalColors =
-          selected.length >= 3
-            ? selected.slice(0, 5).map((c) => `hsl(${c.h}, ${c.s}%, ${c.l}%)`)
-            : DEFAULT_FALLBACK_COLORS
-
-        const result = {
-          colors: finalColors,
-          isMonochrome,
-          avgSaturation: avgSat,
-          isLoaded: true,
-        }
-
-        saveCachedVibrantPalette(imageSrc, result)
-
-        if (isMounted) {
-          setPalette((prev) => {
-            const sameColors =
-              prev.colors.length === finalColors.length &&
-              prev.colors.every((col, i) => col === finalColors[i])
-            if (sameColors && prev.isMonochrome === isMonochrome && prev.avgSaturation === avgSat) {
-              return prev
-            }
-            return result
-          })
-        }
-      } catch {
-        const fallbackData = {
-          colors: DEFAULT_FALLBACK_COLORS,
-          isMonochrome: false,
-          avgSaturation: 0,
-          isLoaded: true,
-        }
-        saveCachedVibrantPalette(imageSrc, fallbackData)
-        if (isMounted) {
-          setPalette(fallbackData)
-        }
-      }
-    }
-
-    img.onerror = () => {
-      const fallbackData = {
-        colors: DEFAULT_FALLBACK_COLORS,
-        isMonochrome: false,
-        avgSaturation: 0,
-        isLoaded: true,
-      }
-      saveCachedVibrantPalette(imageSrc, fallbackData)
-      if (isMounted) {
-        setPalette(fallbackData)
-      }
-    }
-
-    img.src = imageSrc
+        return result
+      })
+    })
 
     return () => {
       isMounted = false

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Box, Dialog, IconButton, Skeleton, CircularProgress } from '@mui/material'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 /**
  * Fullscreen lightbox modal for high-res project artwork zoom and examination.
@@ -15,6 +16,7 @@ import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
  * @param {string} props.name - Project name for alt text
  */
 export default function ProjectArtLightboxModal({ open, onClose, cover, name }) {
+  const { isLiteMode } = usePerformanceMode()
   const isApiMedia = typeof cover === 'string' && cover.startsWith('/api/media')
   const previewUrl = isApiMedia
     ? cover.includes('?')
@@ -69,7 +71,8 @@ export default function ProjectArtLightboxModal({ open, onClose, cover, name }) 
       slotProps={{
         backdrop: {
           sx: {
-            backdropFilter: 'blur(12px)',
+            backdropFilter: isLiteMode ? 'none' : 'blur(12px)',
+            WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(12px)',
             bgcolor: 'rgba(0, 0, 0, 0.85)',
           },
         },
@@ -109,7 +112,8 @@ export default function ProjectArtLightboxModal({ open, onClose, cover, name }) 
             zIndex: 10,
             boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
             border: '1px solid rgba(255,255,255,0.15)',
-            backdropFilter: 'blur(8px)',
+            backdropFilter: isLiteMode ? 'none' : 'blur(8px)',
+            WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(8px)',
             '&:hover': {
               bgcolor: 'rgba(50, 50, 65, 0.95)',
               transform: 'scale(1.1)',
@@ -136,10 +140,10 @@ export default function ProjectArtLightboxModal({ open, onClose, cover, name }) 
             justifyContent: 'center',
           }}
         >
-          {/* 1. Base Skeleton Wave Background */}
+          {/* 1. Base Skeleton Background */}
           <Skeleton
             variant='rectangular'
-            animation='wave'
+            animation={isLiteMode ? false : 'wave'}
             sx={{
               position: 'absolute',
               inset: 0,
@@ -208,8 +212,9 @@ export default function ProjectArtLightboxModal({ open, onClose, cover, name }) 
               width: { xs: 36, sm: 40 },
               height: { xs: 36, sm: 40 },
               borderRadius: '50%',
-              bgcolor: 'rgba(15, 15, 25, 0.78)',
-              backdropFilter: 'blur(12px)',
+              bgcolor: 'rgba(15, 15, 25, 0.88)',
+              backdropFilter: isLiteMode ? 'none' : 'blur(12px)',
+              WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(12px)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.55)',
               pointerEvents: 'none',

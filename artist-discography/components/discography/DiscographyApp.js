@@ -6,17 +6,14 @@ import {
   Container,
   ThemeProvider,
   createTheme,
-  CssBaseline,
   GlobalStyles,
   useMediaQuery,
-  CircularProgress,
   Snackbar,
   Alert,
 } from '@mui/material'
 import { slugify, findProjectBySlug } from '@/lib/data/slugs'
 import { getCookie, setCookie } from '@/lib/data/cookies'
-import { useLogoAnalysis } from '@/lib/hooks/useLogoAnalysis'
-import { mediaPreloader } from '@/lib/media/mediaPreloader'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 import {
   getSavedAudioQuality,
   saveAudioQuality,
@@ -55,7 +52,7 @@ export default function MainDiscographyApp({
   initialSlug = [],
   initialThemeMode = null,
 }) {
-  const [mounted, setMounted] = useState(false)
+  const { isLiteMode } = usePerformanceMode()
 
   // 1. Theme State
   const systemPrefersDark = useMediaQuery('(prefers-color-scheme: dark)')
@@ -64,7 +61,6 @@ export default function MainDiscographyApp({
     if (initialThemeMode === 'light') return false
     return true
   })
-  const logoAnalysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
 
   useEffect(() => {
     const savedTheme = getCookie('theme_mode') || localStorage.getItem('themeMode')
@@ -357,42 +353,7 @@ export default function MainDiscographyApp({
     [showToast],
   )
 
-  // 10. Preload Essential Visual Assets Before Revealing UI
-  useEffect(() => {
-    let isCurrent = true
-    const essentialImages = [
-      '/api/logo?w=320&fmt=webp',
-      '/api/logo?w=96&fmt=webp',
-      '/api/logo?w=640&fmt=webp',
-    ]
-    if (ambientImage && !essentialImages.includes(ambientImage)) {
-      essentialImages.push(ambientImage)
-    }
-
-    const loadPromises = essentialImages.map((src) => {
-      return new Promise((resolve) => {
-        const img = new Image()
-        img.src = src
-        if (img.decode) {
-          img.decode().then(resolve).catch(resolve)
-        } else {
-          img.onload = resolve
-          img.onerror = resolve
-        }
-      })
-    })
-
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800))
-    Promise.race([Promise.allSettled(loadPromises), timeoutPromise]).then(() => {
-      if (isCurrent) setMounted(true)
-    })
-
-    return () => {
-      isCurrent = false
-    }
-  }, [ambientImage])
-
-  // 11. Theme Object
+  // 10. Theme Object
   const theme = useMemo(
     () =>
       createTheme({
@@ -412,9 +373,8 @@ export default function MainDiscographyApp({
     [darkMode],
   )
 
-  // 12. Dynamic Title & Ambient Image
+  // 11. Dynamic Document Title
   useEffect(() => {
-    if (!mounted) return
     const artistName = artist?.name?.trim() || 'Artist'
     if (playingTrack?.name) {
       const projName =
@@ -434,7 +394,6 @@ export default function MainDiscographyApp({
       document.title = `${artistName} | Discography`
     }
   }, [
-    mounted,
     artist?.name,
     playingTrack?.name,
     playingTrack?.project,
@@ -446,6 +405,11 @@ export default function MainDiscographyApp({
   // Scroll aware Jump to Top & Dynamic Masking
   const mainScrollRef = useRef(null)
   const projectsContainerRef = useRef(null)
+  const lastMaskKeyRef = useRef('')
+  const applyCachedMaskRef = useRef(null)
+  const hasPlayingTrack = Boolean(playingTrack)
+  const hasPlayingTrackRef = useRef(hasPlayingTrack)
+  hasPlayingTrackRef.current = hasPlayingTrack
   const [showScrollTop, setShowScrollTop] = useState(false)
 
   const scrollToTop = useCallback(() => {
@@ -455,39 +419,74 @@ export default function MainDiscographyApp({
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
-  const applyMask = useCallback(() => {
+  useEffect(() => {
     const el = projectsContainerRef.current
     const scrollEl = mainScrollRef.current
     if (!el || !scrollEl) return
 
-    const rect = el.getBoundingClientRect()
-    const scrollRect = scrollEl.getBoundingClientRect()
-    const containerTop = scrollRect.top
-    const containerHeight = scrollRect.height
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 600
+    if (isLiteMode) {
+      el.style.maskImage = ''
+      el.style.webkitMaskImage = ''
+      lastMaskKeyRef.current = ''
+    }
 
-    const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : isMobile ? 76 : 88
-    const PLAYER_H = isMobile ? 80 : 120
-    const FADE = isMobile ? 24 : 50
+    let cachedElOffsetTop = 0
+    let cachedElHeight = 0
+    let cachedContainerHeight = 0
+    let cachedIsMobile = false
+    let rafId = null
 
-    const navBottomY = containerTop + NAV_H
-    const isNavSticky = rect.top <= navBottomY + 4
-    const showTop = rect.top < navBottomY && rect.bottom > navBottomY
+    const measureLayout = () => {
+      const rect = el.getBoundingClientRect()
+      const scrollRect = scrollEl.getBoundingClientRect()
+      cachedElOffsetTop = rect.top - scrollRect.top + scrollEl.scrollTop
+      cachedElHeight = rect.height
+      cachedContainerHeight = scrollRect.height
+      cachedIsMobile = typeof window !== 'undefined' && window.innerWidth < 600
+    }
 
-    setShowScrollTop((prev) => (prev !== isNavSticky ? isNavSticky : prev))
+    const applyCachedMask = () => {
+      rafId = null
+      const scrollTop = scrollEl.scrollTop
+      const relTop = cachedElOffsetTop - scrollTop
+      const relBottom = relTop + cachedElHeight
 
-    const playerTopY = containerTop + containerHeight - PLAYER_H
-    const showBottom = Boolean(playingTrack) && rect.bottom > playerTopY && rect.top < playerTopY
+      const NAV_H = currentView === 'SINGLE_PROJECT' ? 0 : cachedIsMobile ? 76 : 88
+      const PLAYER_H = cachedIsMobile ? 80 : 120
+      const FADE = cachedIsMobile ? 24 : 50
 
-    let mask = 'none'
-    if (showTop || showBottom) {
-      const topFadeStart = showTop ? Math.max(0, navBottomY - rect.top) : 0
-      const topFadeEnd = showTop ? topFadeStart + FADE : 0
-      const bottomFadeEnd = showBottom
-        ? Math.min(rect.height, Math.max(topFadeEnd, playerTopY - rect.top))
-        : rect.height
-      const bottomFadeStart = showBottom ? Math.max(topFadeEnd, bottomFadeEnd - FADE) : rect.height
+      const isNavSticky = relTop <= NAV_H + 4
+      setShowScrollTop((prev) => (prev !== isNavSticky ? isNavSticky : prev))
 
+      if (isLiteMode) return
+
+      const showTop = relTop < NAV_H && relBottom > NAV_H
+      const playerTopY = cachedContainerHeight - PLAYER_H
+      const showBottom =
+        hasPlayingTrackRef.current && relBottom > playerTopY && relTop < playerTopY
+
+      let topFadeStart = 0
+      let topFadeEnd = 0
+      let bottomFadeStart = Math.round(cachedElHeight)
+      let bottomFadeEnd = Math.round(cachedElHeight)
+
+      if (showTop) {
+        topFadeStart = Math.max(0, Math.round(NAV_H - relTop))
+        topFadeEnd = topFadeStart + FADE
+      }
+
+      if (showBottom) {
+        bottomFadeEnd = Math.round(
+          Math.min(cachedElHeight, Math.max(topFadeEnd, playerTopY - relTop)),
+        )
+        bottomFadeStart = Math.max(topFadeEnd, bottomFadeEnd - FADE)
+      }
+
+      const maskKey = `${showTop ? 1 : 0}:${showBottom ? 1 : 0}:${topFadeStart}:${topFadeEnd}:${bottomFadeStart}:${bottomFadeEnd}`
+      if (maskKey === lastMaskKeyRef.current) return
+      lastMaskKeyRef.current = maskKey
+
+      let mask = 'none'
       if (showTop && showBottom && bottomFadeStart > topFadeEnd) {
         mask = `linear-gradient(to bottom, transparent 0px, transparent ${topFadeStart}px, black ${topFadeEnd}px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px, transparent 100%)`
       } else if (showTop) {
@@ -495,41 +494,57 @@ export default function MainDiscographyApp({
       } else if (showBottom) {
         mask = `linear-gradient(to bottom, black 0px, black ${bottomFadeStart}px, transparent ${bottomFadeEnd}px, transparent 100%)`
       }
+
+      el.style.maskImage = mask
+      el.style.webkitMaskImage = mask
     }
 
-    el.style.maskImage = mask
-    el.style.webkitMaskImage = mask
-  }, [currentView, playingTrack])
+    applyCachedMaskRef.current = applyCachedMask
 
-  useEffect(() => {
-    if (!mounted) return
-    const scrollEl = mainScrollRef.current
-    const projectsEl = projectsContainerRef.current
+    const scheduleMask = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(applyCachedMask)
+    }
 
-    const handleScroll = () => applyMask()
-    if (scrollEl) scrollEl.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', handleScroll, { passive: true })
+    const handleLayoutChange = () => {
+      measureLayout()
+      scheduleMask()
+    }
+
+    measureLayout()
+    applyCachedMask()
+
+    scrollEl.addEventListener('scroll', scheduleMask, { passive: true })
+    window.addEventListener('resize', handleLayoutChange, { passive: true })
 
     let resizeObserver = null
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => handleScroll())
-      if (projectsEl) resizeObserver.observe(projectsEl)
-      if (scrollEl) resizeObserver.observe(scrollEl)
+      resizeObserver = new ResizeObserver(handleLayoutChange)
+      resizeObserver.observe(el)
+      resizeObserver.observe(scrollEl)
+      for (const child of scrollEl.children) {
+        resizeObserver.observe(child)
+      }
     }
 
-    handleScroll()
     return () => {
-      if (scrollEl) scrollEl.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
+      applyCachedMaskRef.current = null
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      scrollEl.removeEventListener('scroll', scheduleMask)
+      window.removeEventListener('resize', handleLayoutChange)
       if (resizeObserver) resizeObserver.disconnect()
     }
-  }, [mounted, applyMask, filteredProjects, selectedProject, currentView, playingTrack])
+  }, [isLiteMode, currentView])
+
+  useEffect(() => {
+    if (!isLiteMode) {
+      applyCachedMaskRef.current?.()
+    }
+  }, [hasPlayingTrack, isLiteMode])
 
   // Auto-scroll to target project when navigating back to all projects from single project view
   useEffect(() => {
-    if (!mounted || !pendingScrollProjectSlug || currentView !== 'ALL_PROJECTS') return
+    if (!pendingScrollProjectSlug || currentView !== 'ALL_PROJECTS') return
 
     let isCancelled = false
     const targetSlug = pendingScrollProjectSlug
@@ -568,85 +583,25 @@ export default function MainDiscographyApp({
       cancelAnimationFrame(frameId)
       clearTimeout(timeoutId)
     }
-  }, [mounted, pendingScrollProjectSlug, currentView, clearPendingScrollProjectSlug])
+  }, [pendingScrollProjectSlug, currentView, clearPendingScrollProjectSlug])
 
-  if (!mounted) {
-    return (
-      <Box
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          bgcolor: '#0a0a0f',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 3,
-          zIndex: 9999,
-        }}
-      >
-        <Box
-          component='img'
-          src='/api/logo?w=320&fmt=webp'
-          alt='Loading'
-          draggable={false}
-          sx={{
-            maxHeight: 90,
-            maxWidth: 180,
-            objectFit: 'contain',
-            opacity: 0.8,
-            animation: 'pulse 1.8s infinite ease-in-out',
-            '@keyframes pulse': {
-              '0%, 100%': { opacity: 0.35, transform: 'scale(0.97)' },
-              '50%': { opacity: 0.95, transform: 'scale(1.03)' },
-            },
-          }}
-        />
-        <CircularProgress size={36} thickness={4} sx={{ color: '#90caf9' }} />
-      </Box>
-    )
-  }
+  const handleDismissPlatformOnboarding = useCallback(() => {
+    setPlatformOnboardingCompleted(true)
+  }, [])
 
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />
       <GlobalStyles
         styles={{
-          '*': {
-            userSelect: 'none !important',
-            WebkitUserSelect: 'none !important',
+          ':root': {
+            '--scrollbar-thumb': darkMode
+              ? 'rgba(255, 255, 255, 0.45)'
+              : 'rgba(0, 0, 0, 0.45)',
           },
-          '[draggable="true"], [draggable="true"] *': {
-            WebkitUserDrag: 'element !important',
-          },
-          'img, picture, video, canvas': {
-            userSelect: 'none !important',
-            WebkitUserDrag: 'none !important',
-            pointerEvents: 'none',
-          },
-          'input, textarea, [contenteditable="true"]': {
-            userSelect: 'text !important',
-            pointerEvents: 'auto',
-          },
-          ':root, html, body, *': {
-            scrollbarWidth: 'thin',
-            scrollbarColor: darkMode
-              ? 'rgba(255, 255, 255, 0.45) transparent'
-              : 'rgba(0, 0, 0, 0.45) transparent',
-          },
-          '*::-webkit-scrollbar': {
-            width: '8px',
-            height: '8px',
-            background: 'transparent !important',
-          },
-          '*::-webkit-scrollbar-thumb': {
-            background: darkMode
-              ? 'rgba(255, 255, 255, 0.45) !important'
-              : 'rgba(0, 0, 0, 0.45) !important',
-            borderRadius: '99px !important',
+          body: {
+            backgroundColor: theme.palette.background.default,
+            color: theme.palette.text.primary,
+            transition: 'background-color 0.3s ease, color 0.3s ease',
           },
         }}
       />
@@ -687,30 +642,29 @@ export default function MainDiscographyApp({
           />
 
           {/* Floating Sticky Nav Bar */}
-          <FloatingNavBar
-            activeTypes={activeTypes}
-            onToggleType={handleToggleType}
-            onResetTypes={handleResetTypes}
-            sortOrder={sortOrder}
-            onSortChange={setSortOrder}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            darkMode={darkMode}
-            onToggleTheme={handleToggleTheme}
-            selectedPlatform={selectedPlatform}
-            onOpenPlatformModal={() => setPlatformModalOpen(true)}
-            hasAvailablePlatforms={availablePlatformIds.length > 0}
-            audioQuality={audioQuality}
-            isStuttering={isPlaybackStuttering}
-            onOpenQualityModal={() => setQualityModalOpen(true)}
-            isPrivateAuthenticated={isPrivateAccessAuthenticated}
-            onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
-            showScrollTop={showScrollTop}
-            onScrollToTop={scrollToTop}
-            sx={{
-              display: currentView === 'SINGLE_PROJECT' ? 'none' : 'block',
-            }}
-          />
+          {currentView !== 'SINGLE_PROJECT' && (
+            <FloatingNavBar
+              activeTypes={activeTypes}
+              onToggleType={handleToggleType}
+              onResetTypes={handleResetTypes}
+              sortOrder={sortOrder}
+              onSortChange={setSortOrder}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              darkMode={darkMode}
+              onToggleTheme={handleToggleTheme}
+              selectedPlatform={selectedPlatform}
+              onOpenPlatformModal={() => setPlatformModalOpen(true)}
+              hasAvailablePlatforms={availablePlatformIds.length > 0}
+              audioQuality={audioQuality}
+              isStuttering={isPlaybackStuttering}
+              onOpenQualityModal={() => setQualityModalOpen(true)}
+              isPrivateAuthenticated={isPrivateAccessAuthenticated}
+              onOpenPrivateAccessModal={() => setPrivateAccessModalOpen(true)}
+              showScrollTop={showScrollTop}
+              onScrollToTop={scrollToTop}
+            />
+          )}
 
           {/* Main Content Projects Container */}
           <Container
@@ -815,7 +769,7 @@ export default function MainDiscographyApp({
         <OnboardingPlatformBanner
           onOpenPlatformModal={() => setPlatformModalOpen(true)}
           isPlayerOpen={Boolean(playingTrack)}
-          onDismiss={() => setPlatformOnboardingCompleted(true)}
+          onDismiss={handleDismissPlatformOnboarding}
         />
 
         <OnboardingThemeBanner

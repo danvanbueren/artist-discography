@@ -28,6 +28,83 @@ import {
 import { normalizeSiteUrl, normalizeArtistDataUrls } from './urlNormalization'
 import { getBackgroundDetails } from '@/lib/media/backgroundUtils'
 
+const GLOBAL_DATA_MUTATION_KEY = '__artistDataMutationVersion'
+let cachedArtistDataEntry = null
+
+/**
+ * Invalidates the in-memory unified artist data cache and increments
+ * the process-wide data mutation counter.
+ */
+export function invalidateArtistDataCache() {
+  cachedArtistDataEntry = null
+  globalThis[GLOBAL_DATA_MUTATION_KEY] = (globalThis[GLOBAL_DATA_MUTATION_KEY] || 0) + 1
+}
+
+/**
+ * Computes a lightweight filesystem stat signature covering config.json,
+ * custom background media, and per-project directories/project.json files.
+ *
+ * @param {string|null} [cachedBgPath=null] - Previously discovered background file path
+ * @returns {string}
+ */
+function computeArtistDataSignature(cachedBgPath = null) {
+  const parts = [`v:${globalThis[GLOBAL_DATA_MUTATION_KEY] || 0}`]
+  const configPath = getConfigFilePath()
+
+  try {
+    const cfgStat = fs.statSync(configPath)
+    parts.push(`cfg:${cfgStat.mtimeMs}:${cfgStat.size}`)
+  } catch {
+    parts.push('cfg:missing')
+  }
+
+  const dataDir = path.dirname(configPath)
+  try {
+    const dataStat = fs.statSync(dataDir)
+    parts.push(`data:${dataStat.mtimeMs}`)
+  } catch {
+    parts.push('data:missing')
+  }
+
+  if (cachedBgPath) {
+    try {
+      const bgStat = fs.statSync(/*turbopackIgnore: true*/ cachedBgPath)
+      parts.push(`bg:${bgStat.mtimeMs}:${bgStat.size}`)
+    } catch {
+      parts.push('bg:missing')
+    }
+  }
+
+  const projectsDir = getProjectsDirPath()
+  try {
+    const dirStat = fs.statSync(projectsDir)
+    parts.push(`pdir:${dirStat.mtimeMs}`)
+    const entries = fs
+      .readdirSync(projectsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    for (const entry of entries) {
+      const slugDir = path.join(projectsDir, entry.name)
+      const projJson = path.join(slugDir, 'project.json')
+      let slugMtime = 'x'
+      let jsonSig = 'missing'
+      try {
+        slugMtime = String(fs.statSync(slugDir).mtimeMs)
+      } catch {}
+      try {
+        const jStat = fs.statSync(projJson)
+        jsonSig = `${jStat.mtimeMs}:${jStat.size}`
+      } catch {}
+      parts.push(`${entry.name}:${slugMtime}:${jsonSig}`)
+    }
+  } catch {
+    parts.push('pdir:missing')
+  }
+
+  return parts.join('|')
+}
+
 export const DEFAULT_DATA_SCAFFOLD = {
   ...DEFAULT_CONFIG_SCAFFOLD,
   projects: [DEFAULT_PROJECT_SCAFFOLD],
@@ -189,9 +266,17 @@ export class ArtistDataManager {
   }
 
   /**
-   * Unified data loader that combines config.json and all project.json files.
+   * Unified data loader that combines config.json and all project.json files,
+   * reusing a stat-validated in-memory snapshot when nothing on disk changed.
    */
   static loadData() {
+    if (cachedArtistDataEntry) {
+      const currentSignature = computeArtistDataSignature(cachedArtistDataEntry.bgPath)
+      if (currentSignature === cachedArtistDataEntry.signature) {
+        return structuredClone(cachedArtistDataEntry.result)
+      }
+    }
+
     const { data: configData, health: configHealth } = this.loadConfig()
     const artistName = configData.artist?.name || 'Artist'
     const projects = this.loadAllProjects(artistName)
@@ -224,13 +309,14 @@ export class ArtistDataManager {
       )
     }
 
+    const backgroundInfo = getBackgroundDetails()
     const unifiedData = {
       ...configData,
       projects,
-      backgroundInfo: getBackgroundDetails(),
+      backgroundInfo,
     }
 
-    return {
+    const result = {
       data: unifiedData,
       health: {
         isHealthy: configHealth.isHealthy && issues.length === 0,
@@ -238,18 +324,33 @@ export class ArtistDataManager {
         issues,
       },
     }
+
+    const bgPath = backgroundInfo?.fullPath || null
+    cachedArtistDataEntry = {
+      bgPath,
+      signature: computeArtistDataSignature(bgPath),
+      result: structuredClone(result),
+    }
+
+    return result
   }
 
   static saveConfig(configData) {
-    return saveConfigFile(configData)
+    const result = saveConfigFile(configData)
+    invalidateArtistDataCache()
+    return result
   }
 
   static saveProject(projectSlug, projectData) {
-    return saveProjectFile(projectSlug, projectData)
+    const result = saveProjectFile(projectSlug, projectData)
+    invalidateArtistDataCache()
+    return result
   }
 
   static deleteProject(projectSlug) {
-    return deleteProjectDirectory(projectSlug)
+    const result = deleteProjectDirectory(projectSlug)
+    invalidateArtistDataCache()
+    return result
   }
 
   static saveData(data) {
@@ -271,6 +372,7 @@ export class ArtistDataManager {
         }
       }
 
+      invalidateArtistDataCache()
       return { success: true }
     } catch (err) {
       console.error('Error saving artist data:', err)

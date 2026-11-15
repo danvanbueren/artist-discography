@@ -1,11 +1,12 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, Stack, Typography, Divider } from '@mui/material'
 import TrackRow from './TrackRow'
 import SubduedText from '@/components/ui/SubduedText'
 import { slugify } from '@/lib/data/slugs'
 
-export default function TrackList({
+const TrackList = memo(function TrackList({
   project,
   tracks = [],
   projectArtist = '',
@@ -48,7 +49,7 @@ export default function TrackList({
             onAddToQueue={onAddToQueue}
             onShowToast={onShowToast}
             isPlayingThisTrack={isPlayingThisTrack}
-            isPlaying={isPlaying}
+            isPlaying={isPlayingThisTrack && isPlaying}
             isPlayerActive={isPlayerActive}
             isHighlighted={isHighlighted}
             onSelectTrack={onSelectTrack}
@@ -60,4 +61,6 @@ export default function TrackList({
       })}
     </Stack>
   )
-}
+})
+
+export default TrackList

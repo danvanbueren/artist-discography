@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Box, Container, Paper, IconButton, useTheme, Fade } from '@mui/material'
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded'
 import { useDragScroll } from '@/lib/hooks/useDragScroll'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 import NavBarMainToolbar from './navbar/NavBarMainToolbar'
 import NavBarSearchBar from './navbar/NavBarSearchBar'
 import NavBarFilterBar, { FILTER_OPTIONS } from './navbar/NavBarFilterBar'
@@ -40,6 +41,7 @@ export default function FloatingNavBar({
   sx = {},
 }) {
   const theme = useTheme()
+  const { isLiteMode } = usePerformanceMode()
   const [navMode, setNavMode] = useState('main') // 'main' | 'search' | 'filter' | 'sort' | 'settings'
   const navRef = useRef(null)
   const inactivityTimerRef = useRef(null)
@@ -147,11 +149,16 @@ export default function FloatingNavBar({
             borderRadius: 4,
             py: 0,
             px: { xs: 2, sm: 3 },
-            backdropFilter: 'blur(16px)',
+            backdropFilter: isLiteMode ? 'none' : 'blur(16px)',
+            WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(16px)',
             bgcolor:
               theme.palette.mode === 'dark'
-                ? 'rgba(18, 18, 26, 0.88)'
-                : 'rgba(255, 255, 255, 0.88)',
+                ? isLiteMode
+                  ? 'rgba(18, 18, 22, 0.95)'
+                  : 'rgba(18, 18, 26, 0.88)'
+                : isLiteMode
+                  ? 'rgba(255, 255, 255, 0.96)'
+                  : 'rgba(255, 255, 255, 0.88)',
             border: '1px solid',
             borderColor:
               theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',

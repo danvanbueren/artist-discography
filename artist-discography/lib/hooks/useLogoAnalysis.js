@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 
 const LOGO_ANALYSIS_CACHE = new Map()
+const IN_FLIGHT_LOGO_PROMISES = new Map()
 
 const DEFAULT_LOGO_ANALYSIS = {
   isMonochrome: false,
@@ -42,23 +43,12 @@ function saveCachedLogoAnalysis(imageSrc, data) {
   }
 }
 
-/**
- * Custom hook to analyze an image (like an artist logo) for luminance, color saturation, and aspect ratio.
- * Determines if an image is monochrome (flat black/white) and light vs dark.
- */
-export function useLogoAnalysis(imageSrc) {
-  const [analysis, setAnalysis] = useState(() => getCachedLogoAnalysis(imageSrc))
+function analyzeLogoImage(imageSrc) {
+  if (IN_FLIGHT_LOGO_PROMISES.has(imageSrc)) {
+    return IN_FLIGHT_LOGO_PROMISES.get(imageSrc)
+  }
 
-  useEffect(() => {
-    if (!imageSrc) return
-
-    const cached = getCachedLogoAnalysis(imageSrc)
-    if (cached.loaded) {
-      setAnalysis(cached)
-      return
-    }
-
-    let isMounted = true
+  const promise = new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'Anonymous'
 
@@ -69,7 +59,7 @@ export function useLogoAnalysis(imageSrc) {
         const aspectRatio = naturalWidth / naturalHeight
 
         const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })
         if (!ctx) {
           const fallbackData = {
             isMonochrome: false,
@@ -79,18 +69,17 @@ export function useLogoAnalysis(imageSrc) {
             loaded: true,
           }
           saveCachedLogoAnalysis(imageSrc, fallbackData)
-          if (isMounted) setAnalysis(fallbackData)
+          resolve(fallbackData)
           return
         }
 
-        const width = 64
+        const width = 48
         const height = Math.max(1, Math.round((naturalHeight / naturalWidth) * width))
         canvas.width = width
         canvas.height = height
 
         ctx.drawImage(img, 0, 0, width, height)
-        const imageData = ctx.getImageData(0, 0, width, height)
-        const data = imageData.data
+        const data = ctx.getImageData(0, 0, width, height).data
 
         let totalLuminance = 0
         let totalSaturation = 0
@@ -104,11 +93,8 @@ export function useLogoAnalysis(imageSrc) {
 
           if (a > 30) {
             opaquePixelCount++
-            const luminance = 0.299 * r + 0.587 * g + 0.114 * b
-            totalLuminance += luminance
-            const max = Math.max(r, g, b)
-            const min = Math.min(r, g, b)
-            totalSaturation += max - min
+            totalLuminance += 0.299 * r + 0.587 * g + 0.114 * b
+            totalSaturation += Math.max(r, g, b) - Math.min(r, g, b)
           }
         }
 
@@ -121,7 +107,7 @@ export function useLogoAnalysis(imageSrc) {
             loaded: true,
           }
           saveCachedLogoAnalysis(imageSrc, fallbackData)
-          if (isMounted) setAnalysis(fallbackData)
+          resolve(fallbackData)
           return
         }
 
@@ -129,22 +115,17 @@ export function useLogoAnalysis(imageSrc) {
         const avgSaturation = totalSaturation / opaquePixelCount
 
         const isMonochrome = avgSaturation < 32
-        const isLight = isMonochrome && avgLuminance > 140
-        const isDark = isMonochrome && avgLuminance <= 140
-
         const result = {
           isMonochrome,
-          isLight,
-          isDark,
+          isLight: isMonochrome && avgLuminance > 140,
+          isDark: isMonochrome && avgLuminance <= 140,
           aspectRatio,
           loaded: true,
         }
 
         saveCachedLogoAnalysis(imageSrc, result)
-        if (isMounted) {
-          setAnalysis(result)
-        }
-      } catch (err) {
+        resolve(result)
+      } catch {
         const errorResult = {
           isMonochrome: false,
           isLight: false,
@@ -153,9 +134,7 @@ export function useLogoAnalysis(imageSrc) {
           loaded: true,
         }
         saveCachedLogoAnalysis(imageSrc, errorResult)
-        if (isMounted) {
-          setAnalysis(errorResult)
-        }
+        resolve(errorResult)
       }
     }
 
@@ -168,12 +147,41 @@ export function useLogoAnalysis(imageSrc) {
         loaded: true,
       }
       saveCachedLogoAnalysis(imageSrc, errorResult)
-      if (isMounted) {
-        setAnalysis(errorResult)
-      }
+      resolve(errorResult)
     }
 
     img.src = imageSrc
+  }).finally(() => {
+    IN_FLIGHT_LOGO_PROMISES.delete(imageSrc)
+  })
+
+  IN_FLIGHT_LOGO_PROMISES.set(imageSrc, promise)
+  return promise
+}
+
+/**
+ * Custom hook to analyze an image (like an artist logo) for luminance, color saturation, and aspect ratio.
+ * Deduplicates concurrent image decodes across multiple mounted header components.
+ *
+ * @param {string} imageSrc - Logo URL
+ * @returns {{ isMonochrome: boolean, isLight: boolean, isDark: boolean, aspectRatio: number|null, loaded: boolean }}
+ */
+export function useLogoAnalysis(imageSrc) {
+  const [analysis, setAnalysis] = useState(() => getCachedLogoAnalysis(imageSrc))
+
+  useEffect(() => {
+    if (!imageSrc) return
+
+    const cached = getCachedLogoAnalysis(imageSrc)
+    if (cached.loaded) {
+      setAnalysis((prev) => (prev === cached ? prev : cached))
+      return
+    }
+
+    let isMounted = true
+    analyzeLogoImage(imageSrc).then((result) => {
+      if (isMounted) setAnalysis(result)
+    })
 
     return () => {
       isMounted = false
@@ -184,7 +192,7 @@ export function useLogoAnalysis(imageSrc) {
 }
 
 /**
- * Helper to determine if the logo should be masked with the hero text gradient
+ * Helper to determine if the logo should be masked with the hero text gradient.
  */
 export function shouldApplyLogoGradient(analysis, isDarkMode) {
   if (!analysis || !analysis.loaded) {
@@ -197,7 +205,7 @@ export function shouldApplyLogoGradient(analysis, isDarkMode) {
 }
 
 /**
- * Helper to compute CSS filter based on logo analysis and current theme mode
+ * Helper to compute CSS filter based on logo analysis and current theme mode.
  */
 export function getLogoFilter(
   analysis,

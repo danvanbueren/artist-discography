@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Box, Button, IconButton, Paper, Slide, Typography, useTheme } from '@mui/material'
 import HeadphonesRoundedIcon from '@mui/icons-material/HeadphonesRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
@@ -12,6 +12,8 @@ export default function OnboardingPlatformBanner({
 }) {
   const theme = useTheme()
   const [visible, setVisible] = useState(false)
+  const onDismissRef = useRef(onDismiss)
+  onDismissRef.current = onDismiss
 
   useEffect(() => {
     try {
@@ -19,11 +21,11 @@ export default function OnboardingPlatformBanner({
       if (!dismissed) {
         const timer = setTimeout(() => setVisible(true), 1500)
         return () => clearTimeout(timer)
-      } else if (onDismiss) {
-        onDismiss()
+      } else if (onDismissRef.current) {
+        onDismissRef.current()
       }
     } catch {}
-  }, [onDismiss])
+  }, [])
 
   const handleDismiss = () => {
     setVisible(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Button, Paper } from '@mui/material'
+import { Box, Button, Paper, Tooltip } from '@mui/material'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import LinkIcon from '@mui/icons-material/Link'
@@ -11,8 +11,10 @@ import DataSaverOnRoundedIcon from '@mui/icons-material/DataSaverOnRounded'
 import PriorityHighRoundedIcon from '@mui/icons-material/PriorityHighRounded'
 import LockRoundedIcon from '@mui/icons-material/LockRounded'
 import LockOpenRoundedIcon from '@mui/icons-material/LockOpenRounded'
+import SpeedIcon from '@mui/icons-material/Speed'
 import { SOCIAL_ICONS } from '@/components/discography/ArtistHero'
 import { useDragScroll } from '@/lib/hooks/useDragScroll'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 /**
  * Compact horizontal action pill bar (Home, Platform, Quality, Theme, Unlocked) in CompactArtistHeader.
@@ -43,12 +45,19 @@ export default function CompactHeaderActions({
   onOpenPrivateAccessModal,
   isPrivateAuthenticated = false,
 }) {
-  const {
-    ref: headerDragRef,
-    bind: headerDragBind,
-    isDragging: isHeaderDragging,
-    hasDraggedRef,
-  } = useDragScroll()
+  const { modeOverride, isLiteMode, diagnostics, cycleModeOverride } = usePerformanceMode()
+  const { ref: headerDragRef, bind: headerDragBind, hasDraggedRef } = useDragScroll()
+
+  const graphicsLabel =
+    modeOverride === 'auto'
+      ? isLiteMode
+        ? 'Graphics: Auto (Lite)'
+        : 'Graphics: Auto'
+      : modeOverride === 'lite'
+        ? 'Graphics: Lite'
+        : 'Graphics: High'
+
+  const graphicsTooltip = `Detection: ${diagnostics.reason}. Click to cycle Auto / Lite / High.`
 
   return (
     <Paper
@@ -56,9 +65,16 @@ export default function CompactHeaderActions({
       sx={{
         borderRadius: 4,
         p: { xs: 0.5, sm: 0.75 },
-        backdropFilter: 'blur(16px)',
+        backdropFilter: isLiteMode ? 'none' : 'blur(16px)',
+        WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(16px)',
         bgcolor: (theme) =>
-          theme.palette.mode === 'dark' ? 'rgba(18, 18, 26, 0.75)' : 'rgba(255, 255, 255, 0.75)',
+          theme.palette.mode === 'dark'
+            ? isLiteMode
+              ? 'rgba(18, 18, 22, 0.94)'
+              : 'rgba(18, 18, 26, 0.75)'
+            : isLiteMode
+              ? 'rgba(255, 255, 255, 0.95)'
+              : 'rgba(255, 255, 255, 0.75)',
         border: '1px solid',
         borderColor: (theme) =>
           theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
@@ -89,7 +105,7 @@ export default function CompactHeaderActions({
           justifyContent: { xs: 'flex-start', sm: 'center' },
           py: 0.5,
           px: 0.5,
-          cursor: isHeaderDragging ? 'grabbing' : 'grab',
+          cursor: 'grab',
           userSelect: 'none',
           scrollbarWidth: 'none',
           '&::-webkit-scrollbar': { display: 'none' },
@@ -260,6 +276,33 @@ export default function CompactHeaderActions({
         >
           Theme
         </Button>
+
+        <Tooltip title={graphicsTooltip} arrow>
+          <Button
+            size='medium'
+            variant='text'
+            onClick={() => {
+              if (hasDraggedRef.current) return
+              cycleModeOverride()
+            }}
+            startIcon={<SpeedIcon fontSize='small' />}
+            sx={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: { xs: '0.85rem', sm: '0.92rem' },
+              borderRadius: 3,
+              px: { xs: 1.25, sm: 2 },
+              py: 0.85,
+              minWidth: 0,
+              color: isLiteMode ? 'info.main' : 'text.primary',
+              '&:hover': { bgcolor: 'action.hover' },
+            }}
+          >
+            {graphicsLabel}
+          </Button>
+        </Tooltip>
 
         <Button
           size='medium'

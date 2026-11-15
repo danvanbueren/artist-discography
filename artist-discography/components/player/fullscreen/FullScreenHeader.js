@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Box, Typography, IconButton, Stack, Tooltip } from '@mui/material'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded'
@@ -24,7 +25,7 @@ import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded'
  * @param {boolean} [props.isTouch=false] - Touch device detection
  * @param {Function} [props.onTogglePip] - Toggle PiP
  */
-export default function FullScreenHeader({
+function FullScreenHeader({
   playingTrack,
   onClose,
   onClosePlayer,
@@ -264,3 +265,5 @@ export default function FullScreenHeader({
     </Box>
   )
 }
+
+export default memo(FullScreenHeader)

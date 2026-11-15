@@ -1,7 +1,7 @@
 'use client'
 
-import { forwardRef } from 'react'
-import { Box, Dialog, Slide } from '@mui/material'
+import { forwardRef, useRef, useCallback } from 'react'
+import { Box, Dialog, Slide, useMediaQuery } from '@mui/material'
 import { useSwipeToDismiss } from './fullscreen/useSwipeToDismiss'
 import FullScreenHeader from './fullscreen/FullScreenHeader'
 import FullScreenArtwork from './fullscreen/FullScreenArtwork'
@@ -70,24 +70,27 @@ export default function FullScreenPlayerModal({
   onPromptCast,
   VolumeIconComponent,
 }) {
+  const isLgUp = useMediaQuery((theme) => theme.breakpoints.up('lg'))
   const hasNextTrack = manualQueue.length > 0 || autoplayTracks.length > 0 || repeatMode === 'all'
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
 
-  const handleSkipBackClick = () => {
-    if (currentTime > 3) {
+  const handleSkipBackClick = useCallback(() => {
+    if (currentTimeRef.current > 3) {
       if (onSeek) onSeek(0)
     } else if (onSkipPrev) {
       onSkipPrev()
     }
-  }
+  }, [onSeek, onSkipPrev])
 
-  const handleSkipForwardClick = () => {
+  const handleSkipForwardClick = useCallback(() => {
     if (!hasNextTrack) {
       if (onSeek) onSeek(0)
     }
     if (onSkipNext) {
       onSkipNext()
     }
-  }
+  }, [hasNextTrack, onSeek, onSkipNext])
 
   const { handleTouchStart, handleTouchMove, handleTouchEnd } = useSwipeToDismiss(onClose)
 
@@ -95,13 +98,12 @@ export default function FullScreenPlayerModal({
     coverArt &&
     typeof coverArt === 'string' &&
     (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
-      ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=48&q=20&blur=8&fmt=webp`
+      ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=64&q=25&blur=20&fmt=webp`
       : coverArt
 
   return (
     <Dialog
       fullScreen
-      keepMounted
       open={Boolean(open && playingTrack)}
       onClose={onClose}
       slots={{ transition: FullScreenSlideTransition }}
@@ -149,7 +151,7 @@ export default function FullScreenPlayerModal({
         },
       }}
     >
-      {/* Ambient background glow matching artwork */}
+      {/* Server-blurred ambient background glow matching artwork (zero client blur filter) */}
       {ambientCover && (
         <Box
           aria-hidden
@@ -159,12 +161,9 @@ export default function FullScreenPlayerModal({
             backgroundImage: `url(${ambientCover})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            filter: 'blur(40px)',
             opacity: 0.18,
-            transform: 'translateZ(0) scale(1.2)',
             pointerEvents: 'none',
             zIndex: 0,
-            willChange: 'opacity',
           }}
         />
       )}
@@ -200,26 +199,81 @@ export default function FullScreenPlayerModal({
         {/* Center Artwork */}
         <FullScreenArtwork coverArt={coverArt} trackName={playingTrack?.name} />
 
-        {/* Bottom Control Area: Compact Stack for < lg */}
-        <Box
-          sx={{
-            display: { xs: 'block', lg: 'none' },
-            width: '100%',
-            position: 'relative',
-            zIndex: 1,
-            pb: { xs: 2.5, sm: 3 },
-            flexShrink: 0,
-          }}
-        >
-          {/* Track Info & Actions Row */}
+        {/* Bottom Control Area: Single active responsive branch */}
+        {!isLgUp ? (
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: 'block',
               width: '100%',
-              mb: { xs: 3, sm: 3.5 },
-              gap: 1.5,
+              position: 'relative',
+              zIndex: 1,
+              pb: { xs: 2.5, sm: 3 },
+              flexShrink: 0,
+            }}
+          >
+            {/* Track Info & Actions Row */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                mb: { xs: 3, sm: 3.5 },
+                gap: 1.5,
+              }}
+            >
+              <FullScreenTrackMeta
+                playingTrack={playingTrack}
+                audioQualityLabel={audioQualityLabel}
+                isStuttering={isStuttering}
+                onOpenQualityModal={onOpenQualityModal}
+                isDesktop={false}
+              />
+
+              <FullScreenVolumeAndActions
+                copiedShare={copiedShare}
+                onShareTrack={onShareTrack}
+                onOpenQueue={onOpenQueue}
+                manualQueue={manualQueue}
+                isTouch={isTouch}
+                effectiveVolume={effectiveVolume}
+                isMuted={isMuted}
+                onToggleMute={onToggleMute}
+                onVolumeChange={onVolumeChange}
+                VolumeIconComponent={VolumeIconComponent}
+                isDesktop={false}
+              />
+            </Box>
+
+            {/* Main Transport Controls */}
+            <FullScreenTransportControls
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              duration={duration}
+              formatTime={formatTime}
+              isShuffle={isShuffle}
+              repeatMode={repeatMode}
+              onToggleShuffle={onToggleShuffle}
+              onSkipPrev={handleSkipBackClick}
+              onSkipNext={handleSkipForwardClick}
+              onDirectTogglePlay={onDirectTogglePlay}
+              onCycleRepeat={onCycleRepeat}
+              onSeek={onSeek}
+              isDesktop={false}
+            />
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
+              alignItems: 'center',
+              width: '100%',
+              columnGap: { lg: 3, xl: 4 },
+              position: 'relative',
+              zIndex: 1,
+              pb: { lg: 1, xl: 1.5 },
+              flexShrink: 0,
             }}
           >
             <FullScreenTrackMeta
@@ -227,7 +281,23 @@ export default function FullScreenPlayerModal({
               audioQualityLabel={audioQualityLabel}
               isStuttering={isStuttering}
               onOpenQualityModal={onOpenQualityModal}
-              isDesktop={false}
+              isDesktop
+            />
+
+            <FullScreenTransportControls
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              duration={duration}
+              formatTime={formatTime}
+              isShuffle={isShuffle}
+              repeatMode={repeatMode}
+              onToggleShuffle={onToggleShuffle}
+              onSkipPrev={handleSkipBackClick}
+              onSkipNext={handleSkipForwardClick}
+              onDirectTogglePlay={onDirectTogglePlay}
+              onCycleRepeat={onCycleRepeat}
+              onSeek={onSeek}
+              isDesktop
             />
 
             <FullScreenVolumeAndActions
@@ -241,80 +311,10 @@ export default function FullScreenPlayerModal({
               onToggleMute={onToggleMute}
               onVolumeChange={onVolumeChange}
               VolumeIconComponent={VolumeIconComponent}
-              isDesktop={false}
+              isDesktop
             />
           </Box>
-
-          {/* Main Transport Controls */}
-          <FullScreenTransportControls
-            isPlaying={isPlaying}
-            currentTime={currentTime}
-            duration={duration}
-            formatTime={formatTime}
-            isShuffle={isShuffle}
-            repeatMode={repeatMode}
-            onToggleShuffle={onToggleShuffle}
-            onSkipPrev={handleSkipBackClick}
-            onSkipNext={handleSkipForwardClick}
-            onDirectTogglePlay={onDirectTogglePlay}
-            onCycleRepeat={onCycleRepeat}
-            onSeek={onSeek}
-            isDesktop={false}
-          />
-        </Box>
-
-        {/* Bottom Control Area: 3-Column Fluid Layout for lg+ */}
-        <Box
-          sx={{
-            display: { xs: 'none', lg: 'grid' },
-            gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
-            alignItems: 'center',
-            width: '100%',
-            columnGap: { lg: 3, xl: 4 },
-            position: 'relative',
-            zIndex: 1,
-            pb: { lg: 1, xl: 1.5 },
-            flexShrink: 0,
-          }}
-        >
-          <FullScreenTrackMeta
-            playingTrack={playingTrack}
-            audioQualityLabel={audioQualityLabel}
-            isStuttering={isStuttering}
-            onOpenQualityModal={onOpenQualityModal}
-            isDesktop
-          />
-
-          <FullScreenTransportControls
-            isPlaying={isPlaying}
-            currentTime={currentTime}
-            duration={duration}
-            formatTime={formatTime}
-            isShuffle={isShuffle}
-            repeatMode={repeatMode}
-            onToggleShuffle={onToggleShuffle}
-            onSkipPrev={handleSkipBackClick}
-            onSkipNext={handleSkipForwardClick}
-            onDirectTogglePlay={onDirectTogglePlay}
-            onCycleRepeat={onCycleRepeat}
-            onSeek={onSeek}
-            isDesktop
-          />
-
-          <FullScreenVolumeAndActions
-            copiedShare={copiedShare}
-            onShareTrack={onShareTrack}
-            onOpenQueue={onOpenQueue}
-            manualQueue={manualQueue}
-            isTouch={isTouch}
-            effectiveVolume={effectiveVolume}
-            isMuted={isMuted}
-            onToggleMute={onToggleMute}
-            onVolumeChange={onVolumeChange}
-            VolumeIconComponent={VolumeIconComponent}
-            isDesktop
-          />
-        </Box>
+        )}
       </Box>
     </Dialog>
   )

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Box, Skeleton } from '@mui/material'
 import AlbumIcon from '@mui/icons-material/Album'
 import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 /**
  * High-performance progressive image component.
@@ -26,6 +27,7 @@ export default function ProgressiveImage({
   onLoad = null,
   ...rest
 }) {
+  const { isLiteMode } = usePerformanceMode()
   const isApiMedia = typeof src === 'string' && src.startsWith('/api/media')
 
   const targetHighResSrc =
@@ -38,8 +40,8 @@ export default function ProgressiveImage({
   const lowResSrc =
     isApiMedia && src
       ? src.includes('?')
-        ? `${src}&w=${placeholderWidth}&q=30&blur=${blur}`
-        : `${src}?w=${placeholderWidth}&q=30&blur=${blur}`
+        ? `${src}&w=${placeholderWidth}&q=30&blur=${blur}&fmt=webp`
+        : `${src}?w=${placeholderWidth}&q=30&blur=${blur}&fmt=webp`
       : src || ''
 
   const [imgSrc, setImgSrc] = useState(targetHighResSrc)
@@ -118,11 +120,11 @@ export default function ProgressiveImage({
       }}
       {...rest}
     >
-      {/* 0. Skeleton Wave Background (only when not yet loaded) */}
+      {/* 0. Skeleton Background (only when not yet loaded) */}
       {!isLoaded && (
         <Skeleton
           variant='rectangular'
-          animation='wave'
+          animation={isLiteMode ? false : 'wave'}
           sx={{
             position: 'absolute',
             top: 0,
@@ -135,7 +137,7 @@ export default function ProgressiveImage({
         />
       )}
 
-      {/* 1. Low-Resolution Blurred Placeholder (LQIP) - Skipped if already loaded */}
+      {/* 1. Low-Resolution Server-Blurred Placeholder (LQIP) - Skipped if already loaded */}
       {!isLoaded && isApiMedia && (
         <Box
           component='img'
@@ -149,8 +151,6 @@ export default function ProgressiveImage({
             width: '100%',
             height: '100%',
             objectFit,
-            filter: 'blur(6px)',
-            transform: 'scale(1.06)',
             opacity: 1,
             pointerEvents: 'none',
             zIndex: 1,

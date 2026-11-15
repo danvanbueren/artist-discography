@@ -56,51 +56,71 @@ export function useQueueDragAndDrop({
     }
   }, [])
 
-  // Helper to determine drop target from (clientX, clientY) coordinates
-  const updateDropTargetFromCoords = useCallback((clientX, clientY) => {
-    if (!contentRef.current) return
-
-    const queueContainer = contentRef.current.querySelector('[data-queue-section="queue"]')
-    const autoplayContainer = contentRef.current.querySelector('[data-queue-section="autoplay"]')
-
-    const autoplayRect = autoplayContainer?.getBoundingClientRect()
-    let targetList = 'queue'
-    if (autoplayRect && clientY >= autoplayRect.top) {
-      targetList = 'autoplay'
-    }
-
-    const listItems = contentRef.current.querySelectorAll(`[data-list-type="${targetList}"]`)
-    if (listItems.length === 0) {
-      setDragOverItem({ listType: targetList, targetIndex: 0, itemIndex: 0, position: 'top' })
-      return
-    }
-
-    let found = false
-    listItems.forEach((el, index) => {
-      const rect = el.getBoundingClientRect()
-      if (clientY >= rect.top && clientY <= rect.bottom) {
-        const position = clientY < rect.top + rect.height / 2 ? 'top' : 'bottom'
-        const targetIndex = position === 'top' ? index : index + 1
-        setDragOverItem({ listType: targetList, targetIndex, itemIndex: index, position })
-        found = true
+  const updateDragOverItem = useCallback((next) => {
+    setDragOverItem((prev) => {
+      if (next === null) {
+        return prev === null ? prev : null
       }
+      if (
+        prev &&
+        prev.listType === next.listType &&
+        prev.targetIndex === next.targetIndex &&
+        prev.itemIndex === next.itemIndex &&
+        prev.position === next.position
+      ) {
+        return prev
+      }
+      return next
     })
-
-    if (!found) {
-      const firstRect = listItems[0].getBoundingClientRect()
-      const lastRect = listItems[listItems.length - 1].getBoundingClientRect()
-      if (clientY < firstRect.top) {
-        setDragOverItem({ listType: targetList, targetIndex: 0, itemIndex: 0, position: 'top' })
-      } else if (clientY > lastRect.bottom) {
-        setDragOverItem({
-          listType: targetList,
-          targetIndex: listItems.length,
-          itemIndex: listItems.length - 1,
-          position: 'bottom',
-        })
-      }
-    }
   }, [])
+
+  // Helper to determine drop target from (clientX, clientY) coordinates
+  const updateDropTargetFromCoords = useCallback(
+    (clientX, clientY) => {
+      if (!contentRef.current) return
+
+      const autoplayContainer = contentRef.current.querySelector('[data-queue-section="autoplay"]')
+
+      const autoplayRect = autoplayContainer?.getBoundingClientRect()
+      let targetList = 'queue'
+      if (autoplayRect && clientY >= autoplayRect.top) {
+        targetList = 'autoplay'
+      }
+
+      const listItems = contentRef.current.querySelectorAll(`[data-list-type="${targetList}"]`)
+      if (listItems.length === 0) {
+        updateDragOverItem({ listType: targetList, targetIndex: 0, itemIndex: 0, position: 'top' })
+        return
+      }
+
+      let found = false
+      listItems.forEach((el, index) => {
+        const rect = el.getBoundingClientRect()
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          const position = clientY < rect.top + rect.height / 2 ? 'top' : 'bottom'
+          const targetIndex = position === 'top' ? index : index + 1
+          updateDragOverItem({ listType: targetList, targetIndex, itemIndex: index, position })
+          found = true
+        }
+      })
+
+      if (!found) {
+        const firstRect = listItems[0].getBoundingClientRect()
+        const lastRect = listItems[listItems.length - 1].getBoundingClientRect()
+        if (clientY < firstRect.top) {
+          updateDragOverItem({ listType: targetList, targetIndex: 0, itemIndex: 0, position: 'top' })
+        } else if (clientY > lastRect.bottom) {
+          updateDragOverItem({
+            listType: targetList,
+            targetIndex: listItems.length,
+            itemIndex: listItems.length - 1,
+            position: 'bottom',
+          })
+        }
+      }
+    },
+    [updateDragOverItem],
+  )
 
   // Auto-scroll loop when dragging near boundary
   const autoScrollLoop = useCallback(() => {
@@ -151,12 +171,12 @@ export function useQueueDragAndDrop({
     if (!open) {
       stopAutoScroll()
       setDraggedItem(null)
-      setDragOverItem(null)
+      updateDragOverItem(null)
     }
     return () => {
       stopAutoScroll()
     }
-  }, [open, stopAutoScroll])
+  }, [open, stopAutoScroll, updateDragOverItem])
 
   // --- Touch Drag Gesture Handlers ---
   const handleTouchDragStart = (e, listType, index) => {
@@ -203,7 +223,7 @@ export function useQueueDragAndDrop({
 
       touchDragStateRef.current = { active: false, fromList: null, fromIndex: -1 }
       setDraggedItem(null)
-      setDragOverItem(null)
+      updateDragOverItem(null)
 
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', onTouchEnd)
@@ -236,14 +256,7 @@ export function useQueueDragAndDrop({
     const position = e.clientY - rect.top < rect.height / 2 ? 'top' : 'bottom'
     const targetIndex = position === 'top' ? index : index + 1
 
-    if (
-      !dragOverItem ||
-      dragOverItem.listType !== listType ||
-      dragOverItem.itemIndex !== index ||
-      dragOverItem.position !== position
-    ) {
-      setDragOverItem({ listType, targetIndex, itemIndex: index, position })
-    }
+    updateDragOverItem({ listType, targetIndex, itemIndex: index, position })
   }
 
   const handleListDragOver = (e, listType) => {
@@ -257,7 +270,7 @@ export function useQueueDragAndDrop({
     const itemElements = Array.from(listElement.children)
 
     if (itemElements.length === 0) {
-      setDragOverItem({ listType, targetIndex: 0, itemIndex: 0, position: 'top' })
+      updateDragOverItem({ listType, targetIndex: 0, itemIndex: 0, position: 'top' })
       return
     }
 
@@ -278,14 +291,7 @@ export function useQueueDragAndDrop({
 
     const targetIndex = closestPos === 'top' ? closestIndex : closestIndex + 1
 
-    if (
-      !dragOverItem ||
-      dragOverItem.listType !== listType ||
-      dragOverItem.itemIndex !== closestIndex ||
-      dragOverItem.position !== closestPos
-    ) {
-      setDragOverItem({ listType, targetIndex, itemIndex: closestIndex, position: closestPos })
-    }
+    updateDragOverItem({ listType, targetIndex, itemIndex: closestIndex, position: closestPos })
   }
 
   const handleDragLeave = (e) => {
@@ -307,7 +313,7 @@ export function useQueueDragAndDrop({
 
     if (!source) {
       setDraggedItem(null)
-      setDragOverItem(null)
+      updateDragOverItem(null)
       return
     }
 
@@ -325,13 +331,13 @@ export function useQueueDragAndDrop({
     }
 
     setDraggedItem(null)
-    setDragOverItem(null)
+    updateDragOverItem(null)
   }
 
   const handleDragEnd = () => {
     stopAutoScroll()
     setDraggedItem(null)
-    setDragOverItem(null)
+    updateDragOverItem(null)
   }
 
   return {
