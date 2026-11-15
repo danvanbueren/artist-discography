@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { slugify } from './slugs'
+import { bumpArtistDataMutationVersion } from './cacheSignal'
 import {
   atomicWriteJson,
   createRollingBackup,
@@ -38,15 +39,6 @@ export const DEFAULT_PROJECT_SCAFFOLD = {
 
 const SUPPORTED_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg', '.flac', '.aac', '.mp4', '.webm']
 const SUPPORTED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif', '.avif']
-const GLOBAL_DATA_MUTATION_KEY = '__artistDataMutationVersion'
-
-/**
- * Increments the process-wide data mutation version so in-memory data loaders
- * invalidate immediately even across separate module chunks or same-tick writes.
- */
-function bumpArtistDataMutationVersion() {
-  globalThis[GLOBAL_DATA_MUTATION_KEY] = (globalThis[GLOBAL_DATA_MUTATION_KEY] || 0) + 1
-}
 
 /**
  * Returns the absolute path to data/projects directory.

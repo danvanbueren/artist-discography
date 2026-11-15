@@ -44,10 +44,8 @@ export async function HEAD() {
     }
 
     const stat = fs.statSync(/*turbopackIgnore: true*/ faviconInfo.filePath)
-    const etag = `W/"favicon-${(faviconInfo.sizeBytes || stat.size).toString(16)}-${Math.floor(faviconInfo.mtimeMs || stat.mtimeMs).toString(16)}"`
-    const cacheControl = faviconInfo.isCustom
-      ? 'public, max-age=60, stale-while-revalidate=300'
-      : 'public, max-age=86400, stale-while-revalidate=604800'
+    const etag = `W/"favicon-${faviconInfo.isCustom ? 'c' : 'd'}-${(faviconInfo.sizeBytes || stat.size).toString(16)}-${Math.floor(faviconInfo.mtimeMs || stat.mtimeMs).toString(16)}"`
+    const cacheControl = 'public, max-age=0, must-revalidate'
 
     return new NextResponse(null, {
       status: 200,
@@ -89,10 +87,8 @@ export async function GET(request) {
     }
 
     const stat = fs.statSync(/*turbopackIgnore: true*/ faviconInfo.filePath)
-    const etag = `W/"favicon-${(faviconInfo.sizeBytes || stat.size).toString(16)}-${Math.floor(faviconInfo.mtimeMs || stat.mtimeMs).toString(16)}"`
-    const cacheControl = faviconInfo.isCustom
-      ? 'public, max-age=60, stale-while-revalidate=300'
-      : 'public, max-age=86400, stale-while-revalidate=604800'
+    const etag = `W/"favicon-${faviconInfo.isCustom ? 'c' : 'd'}-${(faviconInfo.sizeBytes || stat.size).toString(16)}-${Math.floor(faviconInfo.mtimeMs || stat.mtimeMs).toString(16)}"`
+    const cacheControl = 'public, max-age=0, must-revalidate'
 
     const ifNoneMatch = request?.headers?.get('if-none-match')
     if (ifNoneMatch && ifNoneMatch === etag) {

@@ -59,24 +59,11 @@ export function PerformanceModeProvider({ children }) {
     if (!mediaQuery) return
 
     const handleMotionChange = (event) => {
-      setDiagnostics((prev) => {
-        const prefersReduced = Boolean(event.matches)
-        const nextTier =
-          !prev.isHardwareAccelerated || prefersReduced || prev.isLowEndDevice ? 'lite' : 'high'
-        const nextReason = !prev.isHardwareAccelerated
-          ? prev.reason
-          : prefersReduced
-            ? 'prefers-reduced-motion'
-            : prev.isLowEndDevice
-              ? 'low-end-device'
-              : 'hardware-accelerated'
-        return {
-          ...prev,
-          prefersReducedMotion: prefersReduced,
-          recommendedTier: nextTier,
-          reason: nextReason,
-        }
-      })
+      const prefersReduced = Boolean(event.matches)
+      setDiagnostics((prev) => ({
+        ...prev,
+        prefersReducedMotion: prefersReduced,
+      }))
     }
 
     mediaQuery.addEventListener?.('change', handleMotionChange)

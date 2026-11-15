@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { bumpArtistDataMutationVersion } from '../data/cacheSignal'
 import { warmMediaFiles } from './mediaWarmer'
 
 export const BACKGROUND_IMAGE_MIME_TYPES = {
@@ -71,6 +72,7 @@ export function getBackgroundDetails() {
     const filename = path.basename(backgroundPath)
     const ext = path.extname(filename).toLowerCase()
     const mimeType = BACKGROUND_IMAGE_MIME_TYPES[ext] || 'image/jpeg'
+    const version = Math.floor(stats.mtimeMs || 0)
 
     return {
       exists: true,
@@ -80,7 +82,7 @@ export function getBackgroundDetails() {
       mimeType,
       sizeBytes: stats.size,
       mtimeMs: stats.mtimeMs,
-      url: '/api/background',
+      url: `/api/background?v=${version}`,
     }
   } catch (err) {
     console.error('Error getting background stats:', err)
@@ -144,6 +146,7 @@ export async function saveCustomBackground(buffer, originalName = 'background.jp
 
     fs.writeFileSync(tempPath, Buffer.from(buffer))
     fs.renameSync(tempPath, targetPath)
+    bumpArtistDataMutationVersion()
 
     // Pre-warm optimized media cache variants
     try {
@@ -191,6 +194,7 @@ export function deleteCustomBackground() {
       }
     }
 
+    bumpArtistDataMutationVersion()
     const updatedDetails = getBackgroundDetails()
     return {
       success: true,

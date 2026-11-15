@@ -26,9 +26,10 @@ import {
   deleteProjectDirectory,
 } from './projectStorage'
 import { normalizeSiteUrl, normalizeArtistDataUrls } from './urlNormalization'
+import { bumpArtistDataMutationVersion, getArtistDataMutationVersion } from './cacheSignal'
 import { getBackgroundDetails } from '@/lib/media/backgroundUtils'
+import { getLogoDetails } from '@/lib/media/logoUtils'
 
-const GLOBAL_DATA_MUTATION_KEY = '__artistDataMutationVersion'
 let cachedArtistDataEntry = null
 
 /**
@@ -37,18 +38,19 @@ let cachedArtistDataEntry = null
  */
 export function invalidateArtistDataCache() {
   cachedArtistDataEntry = null
-  globalThis[GLOBAL_DATA_MUTATION_KEY] = (globalThis[GLOBAL_DATA_MUTATION_KEY] || 0) + 1
+  bumpArtistDataMutationVersion()
 }
 
 /**
  * Computes a lightweight filesystem stat signature covering config.json,
- * custom background media, and per-project directories/project.json files.
+ * custom logo/background media, and per-project directories/project.json files.
  *
  * @param {string|null} [cachedBgPath=null] - Previously discovered background file path
+ * @param {string|null} [cachedLogoPath=null] - Previously discovered logo file path
  * @returns {string}
  */
-function computeArtistDataSignature(cachedBgPath = null) {
-  const parts = [`v:${globalThis[GLOBAL_DATA_MUTATION_KEY] || 0}`]
+function computeArtistDataSignature(cachedBgPath = null, cachedLogoPath = null) {
+  const parts = [`v:${getArtistDataMutationVersion()}`]
   const configPath = getConfigFilePath()
 
   try {
@@ -72,6 +74,15 @@ function computeArtistDataSignature(cachedBgPath = null) {
       parts.push(`bg:${bgStat.mtimeMs}:${bgStat.size}`)
     } catch {
       parts.push('bg:missing')
+    }
+  }
+
+  if (cachedLogoPath) {
+    try {
+      const logoStat = fs.statSync(/*turbopackIgnore: true*/ cachedLogoPath)
+      parts.push(`logo:${logoStat.mtimeMs}:${logoStat.size}`)
+    } catch {
+      parts.push('logo:missing')
     }
   }
 
@@ -271,7 +282,10 @@ export class ArtistDataManager {
    */
   static loadData() {
     if (cachedArtistDataEntry) {
-      const currentSignature = computeArtistDataSignature(cachedArtistDataEntry.bgPath)
+      const currentSignature = computeArtistDataSignature(
+        cachedArtistDataEntry.bgPath,
+        cachedArtistDataEntry.logoPath,
+      )
       if (currentSignature === cachedArtistDataEntry.signature) {
         return structuredClone(cachedArtistDataEntry.result)
       }
@@ -309,10 +323,12 @@ export class ArtistDataManager {
       )
     }
 
+    const logoInfo = getLogoDetails()
     const backgroundInfo = getBackgroundDetails()
     const unifiedData = {
       ...configData,
       projects,
+      logoInfo,
       backgroundInfo,
     }
 
@@ -326,9 +342,11 @@ export class ArtistDataManager {
     }
 
     const bgPath = backgroundInfo?.fullPath || null
+    const logoPath = logoInfo?.fullPath || null
     cachedArtistDataEntry = {
       bgPath,
-      signature: computeArtistDataSignature(bgPath),
+      logoPath,
+      signature: computeArtistDataSignature(bgPath, logoPath),
       result: structuredClone(result),
     }
 

@@ -5,6 +5,7 @@ import { Box, Container, useTheme } from '@mui/material'
 import HeaderLogo from '@/components/layout/HeaderLogo'
 import SubduedText from '@/components/ui/SubduedText'
 import { useDynamicThemeGradients } from '@/lib/hooks/useDynamicThemeGradients'
+import { withMediaQuery } from '@/lib/media/mediaUrl'
 
 export const SOCIAL_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -90,13 +91,13 @@ function partitionEvenly(items, rowCount) {
   return rows
 }
 
-export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
+export default function ArtistHero({ artist, onLogoClick, ambientImage, logoUrl = '/api/logo' }) {
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const name = artist?.name ?? ''
   const bio = artist?.bio ?? ''
-  const coverSrc = ambientImage || '/api/logo?w=640&fmt=webp'
-  const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(coverSrc, isDark)
+  const coverSrc = ambientImage || withMediaQuery(logoUrl || '/api/logo', { w: 640, fmt: 'webp' })
+  const { primaryTextSx, secondaryTextSx } = useDynamicThemeGradients(coverSrc, isDark, logoUrl)
 
   // Collect non-empty social and platform links in explicit order
   const activeLinks = useMemo(() => getSortedActiveLinks(artist), [artist])
@@ -187,7 +188,12 @@ export default function ArtistHero({ artist, onLogoClick, ambientImage }) {
         flexShrink: 0,
       }}
     >
-      <HeaderLogo onClick={onLogoClick} ambientImage={coverSrc} />
+      <HeaderLogo
+        onClick={onLogoClick}
+        ambientImage={coverSrc}
+        logoUrl={logoUrl}
+        artistName={name}
+      />
 
       <SubduedText
         value={name}

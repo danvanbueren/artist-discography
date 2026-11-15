@@ -40,6 +40,7 @@ export default function SingleProjectView({
   selectedPlatform,
   onOpenPlatformModal,
   ambientImage,
+  logoUrl = '/api/logo',
   hasAvailablePlatforms,
   audioQuality,
   isStuttering,
@@ -86,6 +87,7 @@ export default function SingleProjectView({
           selectedPlatform={selectedPlatform}
           onOpenPlatformModal={onOpenPlatformModal}
           ambientImage={ambientImage}
+          logoUrl={logoUrl}
           hasAvailablePlatforms={hasAvailablePlatforms}
           audioQuality={audioQuality}
           isStuttering={isStuttering}

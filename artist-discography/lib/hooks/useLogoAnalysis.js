@@ -20,7 +20,7 @@ function getCachedLogoAnalysis(imageSrc) {
   }
   if (typeof window !== 'undefined') {
     try {
-      const stored = sessionStorage.getItem(`logo_analysis_${imageSrc}`)
+      const stored = sessionStorage.getItem(`logo_analysis_v2_${imageSrc}`)
       if (stored) {
         const parsed = JSON.parse(stored)
         if (parsed && typeof parsed === 'object' && parsed.loaded) {
@@ -38,7 +38,7 @@ function saveCachedLogoAnalysis(imageSrc, data) {
   LOGO_ANALYSIS_CACHE.set(imageSrc, data)
   if (typeof window !== 'undefined') {
     try {
-      sessionStorage.setItem(`logo_analysis_${imageSrc}`, JSON.stringify(data))
+      sessionStorage.setItem(`logo_analysis_v2_${imageSrc}`, JSON.stringify(data))
     } catch {}
   }
 }
@@ -133,7 +133,6 @@ function analyzeLogoImage(imageSrc) {
           aspectRatio: null,
           loaded: true,
         }
-        saveCachedLogoAnalysis(imageSrc, errorResult)
         resolve(errorResult)
       }
     }
@@ -146,7 +145,6 @@ function analyzeLogoImage(imageSrc) {
         aspectRatio: null,
         loaded: true,
       }
-      saveCachedLogoAnalysis(imageSrc, errorResult)
       resolve(errorResult)
     }
 

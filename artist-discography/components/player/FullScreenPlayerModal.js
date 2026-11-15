@@ -2,6 +2,8 @@
 
 import { forwardRef, useRef, useCallback } from 'react'
 import { Box, Dialog, Slide, useMediaQuery } from '@mui/material'
+import { withMediaQuery } from '@/lib/media/mediaUrl'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 import { useSwipeToDismiss } from './fullscreen/useSwipeToDismiss'
 import FullScreenHeader from './fullscreen/FullScreenHeader'
 import FullScreenArtwork from './fullscreen/FullScreenArtwork'
@@ -92,14 +94,17 @@ export default function FullScreenPlayerModal({
     }
   }, [hasNextTrack, onSeek, onSkipNext])
 
+  const { isLiteMode } = usePerformanceMode()
   const { handleTouchStart, handleTouchMove, handleTouchEnd } = useSwipeToDismiss(onClose)
 
-  const ambientCover =
-    coverArt &&
+  const isApiArtwork =
     typeof coverArt === 'string' &&
     (coverArt.startsWith('/api/media') || coverArt.startsWith('/api/logo'))
-      ? `${coverArt}${coverArt.includes('?') ? '&' : '?'}w=64&q=25&blur=20&fmt=webp`
-      : coverArt
+  const ambientCover = isApiArtwork
+    ? isLiteMode
+      ? withMediaQuery(coverArt, { w: 64, q: 25, blur: 20, fmt: 'webp' })
+      : withMediaQuery(coverArt, { w: 48, q: 20, blur: 8, fmt: 'webp' })
+    : coverArt
 
   return (
     <Dialog
@@ -151,7 +156,7 @@ export default function FullScreenPlayerModal({
         },
       }}
     >
-      {/* Server-blurred ambient background glow matching artwork (zero client blur filter) */}
+      {/* Ambient background glow matching artwork */}
       {ambientCover && (
         <Box
           aria-hidden
@@ -161,9 +166,12 @@ export default function FullScreenPlayerModal({
             backgroundImage: `url(${ambientCover})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            filter: isLiteMode ? 'none' : 'blur(40px)',
+            transform: isLiteMode ? 'none' : 'translateZ(0) scale(1.2)',
             opacity: 0.18,
             pointerEvents: 'none',
             zIndex: 0,
+            willChange: isLiteMode ? 'auto' : 'opacity',
           }}
         />
       )}

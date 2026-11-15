@@ -8,6 +8,8 @@ import {
 } from '@/lib/hooks/useLogoAnalysis'
 import { useDynamicThemeGradients } from '@/lib/hooks/useDynamicThemeGradients'
 import { useFitTextWidth } from '@/lib/hooks/useFitTextWidth'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
+import { withMediaQuery } from '@/lib/media/mediaUrl'
 import CompactHeaderActions from './header/CompactHeaderActions'
 
 /**
@@ -23,6 +25,7 @@ export default function CompactArtistHeader({
   selectedPlatform,
   onOpenPlatformModal,
   ambientImage,
+  logoUrl = '/api/logo',
   hasAvailablePlatforms = true,
   audioQuality = '320k',
   isStuttering = false,
@@ -32,13 +35,17 @@ export default function CompactArtistHeader({
 }) {
   const theme = useTheme()
   const isDarkMode = theme.palette.mode === 'dark'
-  const logoAnalysis = useLogoAnalysis('/api/logo?w=96&fmt=webp')
-  const coverSrc = ambientImage || '/api/logo?w=640&fmt=webp'
+  const { isLiteMode } = usePerformanceMode()
+  const analysisUrl = withMediaQuery(logoUrl || '/api/logo', { w: 96, fmt: 'webp' })
+  const fallbackLogoCoverUrl = withMediaQuery(logoUrl || '/api/logo', { w: 640, fmt: 'webp' })
+  const compactLogoImgUrl = withMediaQuery(logoUrl || '/api/logo', { w: 320, fmt: 'webp' })
+  const logoAnalysis = useLogoAnalysis(analysisUrl)
+  const coverSrc = ambientImage || fallbackLogoCoverUrl
   const {
     primaryTextSx,
     logoGradientSx,
     getLogoFilter: getDynamicLogoFilter,
-  } = useDynamicThemeGradients(coverSrc, isDarkMode)
+  } = useDynamicThemeGradients(coverSrc, isDarkMode, logoUrl)
 
   const name = artist?.name ?? ''
   const { containerRef, dimensions: computedDimensions } = useFitTextWidth({
@@ -49,7 +56,7 @@ export default function CompactArtistHeader({
   const isGradient = shouldApplyLogoGradient(logoAnalysis, isDarkMode)
   const isLowContrast = Boolean(
     logoAnalysis?.isMonochrome &&
-      ((isDarkMode && logoAnalysis?.isDark) || (!isDarkMode && logoAnalysis?.isLight)),
+    ((isDarkMode && logoAnalysis?.isDark) || (!isDarkMode && logoAnalysis?.isLight)),
   )
   const baseShadow = isDarkMode
     ? 'drop-shadow(0px 4px 14px rgba(0,0,0,0.35))'
@@ -139,6 +146,12 @@ export default function CompactArtistHeader({
                 ? {
                     ...logoGradientSx,
                     ...dynamicFilter,
+                    ...(isLiteMode
+                      ? {}
+                      : {
+                          animation:
+                            'logoGradientShift 14s ease infinite alternate, logoGlowPulse 10s ease-in-out infinite alternate',
+                        }),
                   }
                 : {
                     ...dynamicFilter,
@@ -148,7 +161,7 @@ export default function CompactArtistHeader({
             {!isGradient && (
               <Box
                 component='img'
-                src='/api/logo?w=320&fmt=webp'
+                src={compactLogoImgUrl}
                 alt={name || 'Artist'}
                 draggable={false}
                 sx={{

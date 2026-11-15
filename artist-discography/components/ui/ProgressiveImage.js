@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Box, Skeleton } from '@mui/material'
 import AlbumIcon from '@mui/icons-material/Album'
 import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
@@ -47,6 +47,7 @@ export default function ProgressiveImage({
   const [imgSrc, setImgSrc] = useState(targetHighResSrc)
   const [isLoaded, setIsLoaded] = useState(() => isHighResCached(targetHighResSrc))
   const [hasError, setHasError] = useState(false)
+  const highResImgRef = useRef(null)
   const onLoadRef = useRef(onLoad)
   onLoadRef.current = onLoad
   const prevSrcRef = useRef(targetHighResSrc)
@@ -69,6 +70,39 @@ export default function ProgressiveImage({
     setHasError(false)
   }, [targetHighResSrc])
 
+  const handleLoad = useCallback(() => {
+    setIsLoaded(true)
+    if (imgSrc) {
+      markHighResCached(imgSrc)
+    }
+    if (onLoadRef.current) {
+      onLoadRef.current()
+    }
+  }, [imgSrc])
+
+  const handleError = useCallback(() => {
+    // If the optimized webp failed, fall back to original image
+    if (imgSrc && imgSrc !== src) {
+      setImgSrc(src)
+    } else {
+      setHasError(true)
+    }
+  }, [imgSrc, src])
+
+  // Catch images that already finished loading during SSR before React attached onLoad
+  useEffect(() => {
+    if (isLoaded || !imgSrc) return
+    const node = highResImgRef.current
+    if (!node || node.getAttribute('src') !== imgSrc) return
+    if (node.complete) {
+      if (node.naturalWidth > 0) {
+        handleLoad()
+      } else {
+        handleError()
+      }
+    }
+  }, [imgSrc, isLoaded, handleLoad, handleError])
+
   if (!src || hasError) {
     if (fallback) return fallback
     return (
@@ -88,25 +122,6 @@ export default function ProgressiveImage({
         <AlbumIcon sx={{ fontSize: '40%', opacity: 0.5 }} />
       </Box>
     )
-  }
-
-  const handleLoad = () => {
-    setIsLoaded(true)
-    if (imgSrc) {
-      markHighResCached(imgSrc)
-    }
-    if (onLoadRef.current) {
-      onLoadRef.current()
-    }
-  }
-
-  const handleError = () => {
-    // If the optimized webp failed, fall back to original image
-    if (imgSrc && imgSrc !== src) {
-      setImgSrc(src)
-    } else {
-      setHasError(true)
-    }
   }
 
   return (
@@ -137,7 +152,7 @@ export default function ProgressiveImage({
         />
       )}
 
-      {/* 1. Low-Resolution Server-Blurred Placeholder (LQIP) - Skipped if already loaded */}
+      {/* 1. Low-Resolution Placeholder (LQIP) - Unmounted once sharp image loads */}
       {!isLoaded && isApiMedia && (
         <Box
           component='img'
@@ -151,6 +166,8 @@ export default function ProgressiveImage({
             width: '100%',
             height: '100%',
             objectFit,
+            filter: isLiteMode ? 'none' : 'blur(8px)',
+            transform: isLiteMode ? 'none' : 'scale(1.06)',
             opacity: 1,
             pointerEvents: 'none',
             zIndex: 1,
@@ -160,6 +177,7 @@ export default function ProgressiveImage({
 
       {/* 2. Main High-Resolution Image */}
       <Box
+        ref={highResImgRef}
         component='img'
         src={imgSrc}
         alt={alt}
@@ -173,7 +191,7 @@ export default function ProgressiveImage({
           height: '100%',
           objectFit,
           opacity: isLoaded ? 1 : 0,
-          transition: isLoaded ? 'none' : 'opacity 0.25s ease-in-out',
+          transition: isLiteMode ? 'none' : 'opacity 0.25s ease-in-out',
           zIndex: 2,
         }}
       />

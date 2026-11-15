@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { bumpArtistDataMutationVersion } from './cacheSignal'
 import {
   atomicWriteJson,
   createRollingBackup,
@@ -8,7 +9,6 @@ import {
 } from './atomicStorage'
 
 const CONFIG_CACHE_VERSION_KEY = '__configCacheVersion'
-const GLOBAL_DATA_MUTATION_KEY = '__artistDataMutationVersion'
 let cachedConfigEntry = null
 
 /**
@@ -18,7 +18,7 @@ let cachedConfigEntry = null
 export function invalidateConfigCache() {
   cachedConfigEntry = null
   globalThis[CONFIG_CACHE_VERSION_KEY] = (globalThis[CONFIG_CACHE_VERSION_KEY] || 0) + 1
-  globalThis[GLOBAL_DATA_MUTATION_KEY] = (globalThis[GLOBAL_DATA_MUTATION_KEY] || 0) + 1
+  bumpArtistDataMutationVersion()
 }
 
 export const DEFAULT_CONFIG_SCAFFOLD = {

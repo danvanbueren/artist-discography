@@ -1,8 +1,5 @@
 const SOFTWARE_RENDERER_PATTERN =
-  /swiftshader|llvmpipe|softpipe|software|microsoft basic render|basic render driver|mesa offscreen/i
-
-const KNOWN_GPU_VENDOR_PATTERN =
-  /nvidia|amd|radeon|intel|apple|adreno|mali|powervr|qualcomm|geforce|gtx|rtx|arc/i
+  /swiftshader|llvmpipe|softpipe|software|microsoft basic render|basic render driver|mesa offscreen|gdi generic/i
 
 let cachedDetectionResult = null
 
@@ -15,7 +12,10 @@ let cachedDetectionResult = null
 function probeWebglRenderer(canvas) {
   let gl = null
   try {
-    gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    gl =
+      canvas.getContext('webgl2') ||
+      canvas.getContext('webgl') ||
+      canvas.getContext('experimental-webgl')
   } catch {
     return { hasWebgl: false, isSoftware: true, renderer: '', vendor: '' }
   }
@@ -50,35 +50,19 @@ function probeWebglRenderer(canvas) {
   }
 
   const combined = `${vendor} ${renderer}`.trim()
-  const matchesSoftwarePattern = SOFTWARE_RENDERER_PATTERN.test(combined)
-  const matchesGenericChromiumSoftware =
-    /\bchromium\b/i.test(renderer) && !KNOWN_GPU_VENDOR_PATTERN.test(combined)
-
-  let hasMajorCaveat = false
-  if (!matchesSoftwarePattern && !matchesGenericChromiumSoftware) {
-    try {
-      const strictCanvas = document.createElement('canvas')
-      const strictGl = strictCanvas.getContext('webgl', { failIfMajorPerformanceCaveat: true })
-      if (!strictGl) {
-        hasMajorCaveat = true
-      } else {
-        strictGl.getExtension('WEBGL_lose_context')?.loseContext()
-      }
-    } catch {
-      // Non-fatal if browser ignores failIfMajorPerformanceCaveat
-    }
-  }
+  const isSoftware = SOFTWARE_RENDERER_PATTERN.test(combined)
 
   return {
     hasWebgl: true,
-    isSoftware: matchesSoftwarePattern || matchesGenericChromiumSoftware || hasMajorCaveat,
+    isSoftware,
     renderer,
     vendor,
   }
 }
 
 /**
- * Detects client hardware acceleration status, low-end CPU/RAM signals, and reduced motion preference.
+ * Detects client hardware acceleration status.
+ * Lite mode is only recommended when WebGL is missing or backed by an explicit software rasterizer.
  * Result is memoized in module scope after the first client invocation.
  *
  * @returns {{
@@ -114,24 +98,21 @@ export function detectHardwareAcceleration() {
   const webglInfo = probeWebglRenderer(canvas)
   const isHardwareAccelerated = webglInfo.hasWebgl && !webglInfo.isSoftware
 
-  const cpuCores = typeof navigator.hardwareConcurrency === 'number' ? navigator.hardwareConcurrency : 0
+  const cpuCores =
+    typeof navigator.hardwareConcurrency === 'number' ? navigator.hardwareConcurrency : 0
   const deviceRam = typeof navigator.deviceMemory === 'number' ? navigator.deviceMemory : 0
-  const isLowEndDevice =
-    (cpuCores > 0 && cpuCores <= 2) || (deviceRam > 0 && deviceRam <= 2)
+  const isLowEndDevice = (cpuCores > 0 && cpuCores <= 2) || (deviceRam > 0 && deviceRam <= 2)
 
   let reason = 'hardware-accelerated'
   if (!webglInfo.hasWebgl) {
     reason = 'no-webgl-context'
   } else if (webglInfo.isSoftware) {
-    reason = webglInfo.renderer ? `software-rasterizer (${webglInfo.renderer})` : 'software-rasterizer'
-  } else if (prefersReducedMotion) {
-    reason = 'prefers-reduced-motion'
-  } else if (isLowEndDevice) {
-    reason = 'low-end-device'
+    reason = webglInfo.renderer
+      ? `software-rasterizer (${webglInfo.renderer})`
+      : 'software-rasterizer'
   }
 
-  const recommendedTier =
-    !isHardwareAccelerated || prefersReducedMotion || isLowEndDevice ? 'lite' : 'high'
+  const recommendedTier = !isHardwareAccelerated ? 'lite' : 'high'
 
   cachedDetectionResult = {
     isHardwareAccelerated,

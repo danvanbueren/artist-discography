@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { withMediaQuery } from '@/lib/media/mediaUrl'
 
 export function useArtistProfile(
   initialData = {},
@@ -39,7 +40,7 @@ export function useArtistProfile(
       },
   )
   const [logoTimestamp, setLogoTimestamp] = useState(() => Date.now())
-  const [logoPreview, setLogoPreview] = useState(() => `/api/logo?t=${Date.now()}`)
+  const [logoPreview, setLogoPreview] = useState(() => initialData?.logoInfo?.url || '/api/logo')
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [isResettingLogo, setIsResettingLogo] = useState(false)
 
@@ -54,7 +55,7 @@ export function useArtistProfile(
   )
   const [backgroundTimestamp, setBackgroundTimestamp] = useState(() => Date.now())
   const [backgroundPreview, setBackgroundPreview] = useState(
-    () => `/api/background?t=${Date.now()}`,
+    () => initialData?.backgroundInfo?.url || '/api/background',
   )
   const [isUploadingBackground, setIsUploadingBackground] = useState(false)
   const [isResettingBackground, setIsResettingBackground] = useState(false)
@@ -123,9 +124,15 @@ export function useArtistProfile(
     }
     if (initialData?.logoInfo) {
       setLogoInfo(initialData.logoInfo)
+      if (initialData.logoInfo.url) {
+        setLogoPreview(initialData.logoInfo.url)
+      }
     }
     if (initialData?.backgroundInfo) {
       setBackgroundInfo(initialData.backgroundInfo)
+      if (initialData.backgroundInfo.url) {
+        setBackgroundPreview(initialData.backgroundInfo.url)
+      }
     }
   }, [initialData, defaultArtistName])
 
@@ -188,7 +195,7 @@ export function useArtistProfile(
           const now = Date.now()
           setLogoInfo(result.logo || {})
           setLogoTimestamp(now)
-          setLogoPreview(`/api/logo?t=${now}`)
+          setLogoPreview(withMediaQuery(result.logo?.url || '/api/logo', { t: now }))
           setStatusMessage?.(result.message || 'Logo uploaded successfully!')
           return true
         }
@@ -225,7 +232,7 @@ export function useArtistProfile(
           const now = Date.now()
           setLogoInfo(result.logo || {})
           setLogoTimestamp(now)
-          setLogoPreview(`/api/logo?t=${now}`)
+          setLogoPreview(withMediaQuery(result.logo?.url || '/api/logo', { t: now }))
           setStatusMessage?.(result.message || 'Logo reset to default.')
           return true
         }
@@ -263,7 +270,9 @@ export function useArtistProfile(
           const now = Date.now()
           setBackgroundInfo(result.background || {})
           setBackgroundTimestamp(now)
-          setBackgroundPreview(`/api/background?t=${now}`)
+          setBackgroundPreview(
+            withMediaQuery(result.background?.url || '/api/background', { t: now }),
+          )
           setStatusMessage?.(result.message || 'Background uploaded successfully!')
           return true
         }
@@ -300,7 +309,9 @@ export function useArtistProfile(
           const now = Date.now()
           setBackgroundInfo(result.background || {})
           setBackgroundTimestamp(now)
-          setBackgroundPreview(`/api/background?t=${now}`)
+          setBackgroundPreview(
+            withMediaQuery(result.background?.url || '/api/background', { t: now }),
+          )
           setStatusMessage?.(result.message || 'Background reset to default.')
           return true
         }

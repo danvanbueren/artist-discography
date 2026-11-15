@@ -3,6 +3,7 @@
 import { Box, Stack, Paper, Typography, Tooltip, IconButton } from '@mui/material'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 import ArtistHero from '../ArtistHero'
 
 /**
@@ -11,15 +12,19 @@ import ArtistHero from '../ArtistHero'
  * @param {Object} props
  * @param {Object} props.artist - Artist configuration
  * @param {string|null} props.ambientImage - Ambient background image URL
+ * @param {string} [props.logoUrl='/api/logo'] - Versioned artist logo URL
  * @param {boolean} [props.hasAdminAccess=false] - True if admin routes are enabled
  * @param {boolean} [props.isSingleView=false] - Hide hero if in single project view
  */
 export default function DiscographyHeaderSection({
   artist,
   ambientImage,
+  logoUrl = '/api/logo',
   hasAdminAccess = false,
   isSingleView = false,
 }) {
+  const { isLiteMode } = usePerformanceMode()
+
   return (
     <>
       {/* Floating Admin Alert Banner (Top Left) */}
@@ -44,11 +49,32 @@ export default function DiscographyHeaderSection({
               py: { xs: 0.75, sm: 1.25 },
               bgcolor: '#b71c1c',
               color: '#ffffff',
+              backdropFilter: isLiteMode ? 'none' : 'blur(16px)',
+              WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(16px)',
               border: '1px solid rgba(255, 255, 255, 0.25)',
               boxShadow: '0 8px 24px rgba(183, 28, 28, 0.45)',
               display: 'flex',
               alignItems: 'center',
               gap: { xs: 0.75, sm: 1.5 },
+              ...(isLiteMode
+                ? {}
+                : {
+                    animation: 'pulseAdminAlert 2s infinite ease-in-out',
+                    '@keyframes pulseAdminAlert': {
+                      '0%': {
+                        backgroundColor: '#b71c1c',
+                        boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)',
+                      },
+                      '50%': {
+                        backgroundColor: '#d32f2f',
+                        boxShadow: '0 10px 28px rgba(211, 47, 47, 0.65)',
+                      },
+                      '100%': {
+                        backgroundColor: '#b71c1c',
+                        boxShadow: '0 6px 18px rgba(183, 28, 28, 0.4)',
+                      },
+                    },
+                  }),
             }}
           >
             <LockOpenIcon sx={{ fontSize: { xs: 18, sm: 20 }, color: '#ffffff', flexShrink: 0 }} />
@@ -108,7 +134,12 @@ export default function DiscographyHeaderSection({
       {/* Screen-Height Hero Section */}
       {!isSingleView && (
         <Box>
-          <ArtistHero artist={artist} onLogoClick={undefined} ambientImage={ambientImage} />
+          <ArtistHero
+            artist={artist}
+            onLogoClick={undefined}
+            ambientImage={ambientImage}
+            logoUrl={logoUrl}
+          />
         </Box>
       )}
     </>

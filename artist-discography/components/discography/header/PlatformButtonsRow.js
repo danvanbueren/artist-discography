@@ -3,6 +3,7 @@
 import { Box, Paper, IconButton } from '@mui/material'
 import LaunchRoundedIcon from '@mui/icons-material/LaunchRounded'
 import { useDragScroll } from '@/lib/hooks/useDragScroll'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 
 export const PLATFORM_ICONS = {
   spotify: '/platforms/spotify.webp',
@@ -27,6 +28,7 @@ export const PLATFORM_ICONS = {
  */
 export default function PlatformButtonsRow({ links = {}, selectedPlatform, isDarkMode = true }) {
   const platformDrag = useDragScroll()
+  const { isLiteMode } = usePerformanceMode()
 
   const availablePlatforms = []
   for (const [key, url] of Object.entries(links)) {
@@ -49,7 +51,15 @@ export default function PlatformButtonsRow({ links = {}, selectedPlatform, isDar
         maxWidth: '100%',
         borderRadius: 3.5,
         p: { xs: 0.5, sm: 0.75 },
-        bgcolor: isDarkMode ? 'rgba(18, 18, 26, 0.88)' : 'rgba(255, 255, 255, 0.9)',
+        bgcolor: isLiteMode
+          ? isDarkMode
+            ? 'rgba(18, 18, 26, 0.88)'
+            : 'rgba(255, 255, 255, 0.9)'
+          : isDarkMode
+            ? 'rgba(18, 18, 26, 0.75)'
+            : 'rgba(255, 255, 255, 0.75)',
+        backdropFilter: isLiteMode ? 'none' : 'blur(16px)',
+        WebkitBackdropFilter: isLiteMode ? 'none' : 'blur(16px)',
         border: '1px solid',
         borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
         boxShadow: isDarkMode ? '0 4px 20px rgba(0, 0, 0, 0.35)' : '0 4px 16px rgba(0, 0, 0, 0.06)',

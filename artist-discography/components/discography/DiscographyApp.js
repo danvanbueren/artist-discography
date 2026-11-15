@@ -118,6 +118,7 @@ export default function MainDiscographyApp({
   }, [])
 
   const artist = useMemo(() => data?.artist ?? {}, [data?.artist])
+  const logoUrl = data?.logoInfo?.url || '/api/logo'
   const rawProjects = useMemo(() => data?.projects ?? [], [data])
 
   // Contextually filter and gate projects based on private access authorization
@@ -637,6 +638,7 @@ export default function MainDiscographyApp({
           <DiscographyHeaderSection
             artist={artist}
             ambientImage={ambientImage}
+            logoUrl={logoUrl}
             hasAdminAccess={data?.adminAccess !== false}
             isSingleView={currentView === 'SINGLE_PROJECT'}
           />
@@ -688,6 +690,7 @@ export default function MainDiscographyApp({
                 selectedPlatform={selectedPlatform}
                 onOpenPlatformModal={() => setPlatformModalOpen(true)}
                 ambientImage={ambientImage}
+                logoUrl={logoUrl}
                 hasAvailablePlatforms={availablePlatformIds.length > 0}
                 audioQuality={audioQuality}
                 isStuttering={isPlaybackStuttering}

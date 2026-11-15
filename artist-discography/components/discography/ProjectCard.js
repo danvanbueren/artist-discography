@@ -2,6 +2,8 @@
 
 import { memo } from 'react'
 import { Paper, Box } from '@mui/material'
+import { withMediaQuery } from '@/lib/media/mediaUrl'
+import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
 import ProjectHeader from './ProjectHeader'
 import TrackList from './TrackList'
 
@@ -23,11 +25,14 @@ const ProjectCard = memo(function ProjectCard({
   selectedPlatform,
   isPrivateAuthenticated = false,
 }) {
+  const { isLiteMode } = usePerformanceMode()
   const cover = project?.cover ?? project?.image ?? ''
-  const ambientCover =
-    cover && typeof cover === 'string' && cover.startsWith('/api/media')
-      ? `${cover}${cover.includes('?') ? '&' : '?'}w=64&q=25&blur=20&fmt=webp`
-      : cover
+  const isApiMedia = typeof cover === 'string' && cover.startsWith('/api/media')
+  const ambientCover = isApiMedia
+    ? isLiteMode
+      ? withMediaQuery(cover, { w: 64, q: 25, blur: 20, fmt: 'webp' })
+      : withMediaQuery(cover, { w: 48, q: 20, blur: 8, fmt: 'webp' })
+    : cover
 
   return (
     <Paper
@@ -40,8 +45,6 @@ const ProjectCard = memo(function ProjectCard({
         border: '1px solid',
         borderColor: 'divider',
         position: 'relative',
-        contentVisibility: isSingleView ? 'visible' : 'auto',
-        containIntrinsicSize: isSingleView ? 'none' : '0 320px',
         transition: 'transform 0.25s ease, box-shadow 0.25s ease',
         '&:hover': !isSingleView
           ? {
@@ -50,7 +53,7 @@ const ProjectCard = memo(function ProjectCard({
           : {},
       }}
     >
-      {/* Server-blurred album art ambient background (zero client blur filter) */}
+      {/* Ambient album art glow behind project card */}
       {ambientCover && (
         <Box
           aria-hidden
@@ -60,7 +63,9 @@ const ProjectCard = memo(function ProjectCard({
             backgroundImage: `url(${ambientCover})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: 0.1,
+            filter: isLiteMode ? 'none' : 'blur(40px) saturate(1.4)',
+            transform: isLiteMode ? 'none' : 'scale(1.15)',
+            opacity: isLiteMode ? 0.1 : 0.08,
             pointerEvents: 'none',
             zIndex: 0,
           }}

@@ -45,10 +45,8 @@ export async function GET(request) {
         : 'original')
     const blur = searchParams.get('blur')
 
-    const etag = `W/"logo-${(sizeBytes || 0).toString(16)}-${Math.floor(mtimeMs || 0).toString(16)}-w${width || 'orig'}-q${quality || 'def'}-f${format}-b${blur || 0}"`
-    const cacheControl = isCustom
-      ? 'public, max-age=60, stale-while-revalidate=300'
-      : 'public, max-age=86400, stale-while-revalidate=604800'
+    const etag = `W/"logo-${isCustom ? 'c' : 'd'}-${(sizeBytes || 0).toString(16)}-${Math.floor(mtimeMs || 0).toString(16)}-w${width || 'orig'}-q${quality || 'def'}-f${format}-b${blur || 0}"`
+    const cacheControl = 'public, max-age=0, must-revalidate'
 
     const ifNoneMatch = request?.headers?.get('if-none-match')
     if (ifNoneMatch && ifNoneMatch === etag) {

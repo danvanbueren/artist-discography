@@ -57,7 +57,7 @@ function getCachedVibrantPalette(imageSrc) {
   }
   if (typeof window !== 'undefined') {
     try {
-      const stored = sessionStorage.getItem(`vibrant_palette_${imageSrc}`)
+      const stored = sessionStorage.getItem(`vibrant_palette_v2_${imageSrc}`)
       if (stored) {
         const parsed = JSON.parse(stored)
         if (parsed && Array.isArray(parsed.colors) && parsed.isLoaded) {
@@ -75,7 +75,7 @@ function saveCachedVibrantPalette(imageSrc, data) {
   VIBRANT_PALETTE_CACHE.set(imageSrc, data)
   if (typeof window !== 'undefined') {
     try {
-      sessionStorage.setItem(`vibrant_palette_${imageSrc}`, JSON.stringify(data))
+      sessionStorage.setItem(`vibrant_palette_v2_${imageSrc}`, JSON.stringify(data))
     } catch {}
   }
 }
@@ -235,16 +235,12 @@ function sampleVibrantPalette(imageSrc) {
         saveCachedVibrantPalette(imageSrc, result)
         resolve(result)
       } catch {
-        const fallback = buildFallbackPalette()
-        saveCachedVibrantPalette(imageSrc, fallback)
-        resolve(fallback)
+        resolve(buildFallbackPalette())
       }
     }
 
     img.onerror = () => {
-      const fallback = buildFallbackPalette()
-      saveCachedVibrantPalette(imageSrc, fallback)
-      resolve(fallback)
+      resolve(buildFallbackPalette())
     }
 
     img.src = imageSrc

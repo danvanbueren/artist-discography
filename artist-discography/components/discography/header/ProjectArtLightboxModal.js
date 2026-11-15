@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Box, Dialog, IconButton, Skeleton, CircularProgress } from '@mui/material'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import { isHighResCached, markHighResCached } from '@/lib/media/mediaPreloader'
@@ -30,6 +30,17 @@ export default function ProjectArtLightboxModal({ open, onClose, cover, name }) 
     : cover || ''
 
   const [isMasterLoaded, setIsMasterLoaded] = useState(false)
+  const masterImgRef = useRef(null)
+
+  // Recover missed load events if the master image completed synchronously or from cache
+  useEffect(() => {
+    const node = masterImgRef.current
+    if (!open || isMasterLoaded || !node?.complete) return
+    if (node.naturalWidth > 0) {
+      markHighResCached(masterHighResUrl)
+    }
+    setIsMasterLoaded(true)
+  }, [open, masterHighResUrl, isMasterLoaded])
 
   // Asynchronously upgrade to the highest quality original media when modal opens
   useEffect(() => {
@@ -175,6 +186,7 @@ export default function ProjectArtLightboxModal({ open, onClose, cover, name }) 
           {/* 3. Ultra High-Res Master Image Layer */}
           {masterHighResUrl && (
             <Box
+              ref={masterImgRef}
               component='img'
               src={masterHighResUrl}
               alt={name || 'Project Cover Art'}

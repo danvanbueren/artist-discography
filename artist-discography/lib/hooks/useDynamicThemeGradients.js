@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useVibrantColors } from './useVibrantColors'
 import { usePerformanceMode } from '@/lib/performance/PerformanceModeContext'
+import { withMediaQuery } from '@/lib/media/mediaUrl'
 
 function parseHsl(hslStr) {
   const match = hslStr ? hslStr.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i) : null
@@ -15,13 +16,14 @@ function parseHsl(hslStr) {
 }
 
 /**
- * Custom hook to generate dynamic static text and logo gradient styles
+ * Custom hook to generate dynamic text and logo gradient styles
  * derived directly from the artwork image's sampled color palette.
- * Lightness is adaptively adjusted for dark/light themes to guarantee AAA contrast.
+ * Animates gradients and glow filters in High Mode and stays static in Lite Mode.
  */
-export function useDynamicThemeGradients(imageSrc, isDarkMode) {
+export function useDynamicThemeGradients(imageSrc, isDarkMode, logoUrl = '/api/logo') {
   const { isLiteMode } = usePerformanceMode()
   const { colors, isMonochrome, isLoaded } = useVibrantColors(imageSrc)
+  const maskLogoUrl = withMediaQuery(logoUrl || '/api/logo', { w: 640, fmt: 'webp' })
 
   return useMemo(() => {
     const parsed = colors.map(parseHsl)
@@ -80,30 +82,60 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
     return {
       primaryTextSx: {
         background: primaryGradient,
-        backgroundSize: '100% 100%',
+        backgroundSize: isLiteMode ? '100% 100%' : '250% 250%',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        transition: isLoaded && !isLiteMode ? 'background 0.8s ease-in-out' : 'none',
+        transition: isLoaded && !isLiteMode ? 'background 1.2s ease-in-out' : 'none',
+        ...(isLiteMode
+          ? {}
+          : {
+              animation: 'headingGradientShift 14s ease infinite alternate',
+              '@keyframes headingGradientShift': {
+                '0%': { backgroundPosition: '0% 50%' },
+                '50%': { backgroundPosition: '100% 50%' },
+                '100%': { backgroundPosition: '0% 50%' },
+              },
+            }),
       },
       secondaryTextSx: {
         background: secondaryGradient,
-        backgroundSize: '100% 100%',
+        backgroundSize: isLiteMode ? '100% 100%' : '250% 250%',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        transition: isLoaded && !isLiteMode ? 'background 0.8s ease-in-out' : 'none',
+        transition: isLoaded && !isLiteMode ? 'background 1.2s ease-in-out' : 'none',
+        ...(isLiteMode
+          ? {}
+          : {
+              animation: 'bioGradientShift 18s ease infinite alternate',
+              '@keyframes bioGradientShift': {
+                '0%': { backgroundPosition: '0% 50%' },
+                '50%': { backgroundPosition: '100% 50%' },
+                '100%': { backgroundPosition: '0% 50%' },
+              },
+            }),
       },
       logoGradientSx: {
         background: primaryGradient,
-        backgroundSize: '100% 100%',
-        transition: isLoaded && !isLiteMode ? 'background 0.8s ease-in-out' : 'none',
-        WebkitMaskImage: 'url(/api/logo?w=640&fmt=webp)',
-        maskImage: 'url(/api/logo?w=640&fmt=webp)',
+        backgroundSize: isLiteMode ? '100% 100%' : '250% 250%',
+        transition: isLoaded && !isLiteMode ? 'background 1.2s ease-in-out' : 'none',
+        WebkitMaskImage: `url("${maskLogoUrl}")`,
+        maskImage: `url("${maskLogoUrl}")`,
         WebkitMaskSize: 'contain',
         maskSize: 'contain',
         WebkitMaskRepeat: 'no-repeat',
         maskRepeat: 'no-repeat',
         WebkitMaskPosition: 'center',
         maskPosition: 'center',
+        ...(isLiteMode
+          ? {}
+          : {
+              animation: 'logoGradientShift 14s ease infinite alternate',
+              '@keyframes logoGradientShift': {
+                '0%': { backgroundPosition: '0% 50%' },
+                '50%': { backgroundPosition: '100% 50%' },
+                '100%': { backgroundPosition: '0% 50%' },
+              },
+            }),
       },
       getLogoFilter: (baseFilter = '', options = {}) => {
         const cleanBase = baseFilter === 'none' ? '' : baseFilter
@@ -118,9 +150,21 @@ export function useDynamicThemeGradients(imageSrc, isDarkMode) {
         }
         return {
           filter: `drop-shadow(0px 6px 20px ${glowColors[0]}) ${cleanBase}`.trim(),
+          animation: 'logoGlowPulse 10s ease-in-out infinite alternate',
+          '@keyframes logoGlowPulse': {
+            '0%': {
+              filter: `drop-shadow(0px 6px 20px ${glowColors[0]}) ${cleanBase}`.trim(),
+            },
+            '50%': {
+              filter: `drop-shadow(0px 6px 20px ${glowColors[1]}) ${cleanBase}`.trim(),
+            },
+            '100%': {
+              filter: `drop-shadow(0px 6px 20px ${glowColors[2]}) ${cleanBase}`.trim(),
+            },
+          },
         }
       },
       isMonochrome,
     }
-  }, [colors, isMonochrome, isLoaded, isDarkMode, isLiteMode])
+  }, [colors, isMonochrome, isLoaded, isDarkMode, isLiteMode, maskLogoUrl])
 }

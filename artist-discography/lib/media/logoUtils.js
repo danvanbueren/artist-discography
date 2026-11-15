@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { bumpArtistDataMutationVersion } from '../data/cacheSignal'
 import { warmMediaFiles } from './mediaWarmer'
 import { LOGO_IMAGE_MIME_TYPES, SUPPORTED_LOGO_EXTS, findLogoFile } from './logoConstants'
 import {
@@ -65,6 +66,7 @@ export function getLogoDetails() {
     const filename = path.basename(logoPath)
     const ext = path.extname(filename).toLowerCase()
     const mimeType = LOGO_IMAGE_MIME_TYPES[ext] || 'image/png'
+    const version = Math.floor(stats.mtimeMs || 0)
 
     return {
       exists: true,
@@ -75,7 +77,7 @@ export function getLogoDetails() {
       mimeType,
       sizeBytes: stats.size,
       mtimeMs: stats.mtimeMs,
-      url: '/api/logo',
+      url: isCustom ? `/api/logo?v=${version}` : `/api/logo?v=default-${version}`,
     }
   } catch (err) {
     console.error('Error getting logo stats:', err)
@@ -130,7 +132,13 @@ export async function saveCustomLogo(buffer, originalName = 'logo.png') {
     }
 
     const targetPath = path.join(dataDir, `logo${ext}`)
-    fs.writeFileSync(targetPath, Buffer.from(buffer))
+    const tempPath = path.join(
+      dataDir,
+      `.tmp.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`,
+    )
+    fs.writeFileSync(tempPath, Buffer.from(buffer))
+    fs.renameSync(tempPath, targetPath)
+    bumpArtistDataMutationVersion()
 
     // Pre-generate full favicon suite and pre-warm media variants
     try {
@@ -189,6 +197,7 @@ export function deleteCustomLogo() {
       }
     }
 
+    bumpArtistDataMutationVersion()
     const updatedDetails = getLogoDetails()
     return {
       success: true,
